@@ -1,13 +1,5 @@
-"""Клиент модели: OpenRouter через OpenAI-совместимый API (`openai` SDK).
-
-Что важно для эксперимента:
-- провайдер закреплён (`provider.order` + `allow_fallbacks: false`) — запросы не расползаются
-  по разным хостерам с разной квантизацией;
-- стоимость берём из ответа OpenRouter (`usage.cost`), а не считаем по своей таблице цен;
-- повторы при ошибках API — свои (у SDK max_retries=0), чтобы знать, сколько их было,
-  и помечать такие эпизоды;
-- сообщение ассистента возвращается в историю целиком, включая `reasoning_details`.
-"""
+"""Провайдер закреплён: иначе OpenRouter раскидает запросы по хостерам с разной квантизацией.
+`reasoning_details` надо возвращать в историю без изменений."""
 
 import os
 import time
@@ -25,11 +17,11 @@ MAX_RETRIES = 3
 class ModelSettings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    model: str  # например "qwen/qwen3.7-flash"
-    provider: str  # slug провайдера в OpenRouter: "alibaba", "deepseek", "z-ai", "anthropic"
-    temperature: float | None = None  # None — не передаём (Haiku 5.5 его не принимает)
-    seed: int | None = None  # сид модели; НЕ сид мира. None — не передаём
-    reasoning_effort: str | None = None  # "low" | "medium" | "high"; None — по умолчанию модели
+    model: str
+    provider: str
+    temperature: float | None = None  # Haiku 5.5 не принимает temperature
+    seed: int | None = None  # сид модели, не сид мира
+    reasoning_effort: str | None = None
     max_tokens: int | None = None
 
 
@@ -38,7 +30,7 @@ class ToolCall(BaseModel):
 
     id: str
     name: str
-    arguments: str  # сырой JSON от модели; разбирает агентный цикл
+    arguments: str
 
 
 class Usage(BaseModel):
@@ -53,23 +45,19 @@ class Usage(BaseModel):
 
 
 class ModelResponse(BaseModel):
-    # Сообщение ассистента в том виде, в котором его надо вернуть в историю.
     message: dict[str, Any]
     tool_calls: list[ToolCall]
     text: str | None
     finish_reason: str | None
     usage: Usage
-    model: str | None  # что ответило на самом деле
+    model: str | None
     provider: str | None
     retries: int
     latency_s: float
-    raw: dict[str, Any]  # ответ целиком, для логов
+    raw: dict[str, Any]
 
 
 class ModelCallFailed(Exception):
-    """Вызов модели не удался: повторы кончились (retryable=True) или ошибка не повторяемая
-    (400, 401, 403, 404…, retryable=False). Агентный цикл завершает агента с api_error."""
-
     def __init__(self, retries: int, error: Exception, *, retryable: bool = True) -> None:
         super().__init__(f"model call failed after {retries} retries: {error!r}")
         self.retries = retries
@@ -84,7 +72,6 @@ class ModelClient(Protocol):
 
 
 RETRYABLE = (openai.APIConnectionError, openai.RateLimitError, openai.InternalServerError)
-# Остальные ошибки API (400, 401, 403, 404, 422…) не повторяем, но и не роняем эпизод.
 FATAL = (openai.APIError,)
 
 
@@ -96,11 +83,6 @@ async def with_retries[T](
     max_retries: int = MAX_RETRIES,
     base_delay: float = 1.0,
 ) -> tuple[T, int]:
-    """fn() с повторами: 1 с, 2 с, 4 с… Возвращает (результат, число повторов).
-
-    retryable — повторяем, потом ModelCallFailed; fatal — сразу ModelCallFailed(retryable=False);
-    всё прочее (ошибки в нашем коде) пробрасывается как есть.
-    """
     retries = 0
     while True:
         try:
@@ -115,7 +97,7 @@ async def with_retries[T](
 
 
 class EmptyResponse(Exception):
-    """Ответ без choices (OpenRouter так иногда передаёт ошибку провайдера) — повторяем."""
+    pass
 
 
 class OpenRouterClient:
@@ -182,7 +164,6 @@ def parse_completion(raw: dict[str, Any], retries: int, latency_s: float) -> Mod
         ToolCall(id=tc["id"], name=tc["function"]["name"], arguments=tc["function"]["arguments"])
         for tc in msg.get("tool_calls") or []
     ]
-    # В историю — всё, что прислала модель (в т. ч. reasoning / reasoning_details), кроме None.
     message = {k: v for k, v in msg.items() if v is not None}
     message["role"] = "assistant"
 

@@ -8,4 +8,4 @@ def test_existing_journal_is_not_silently_overwritten(tmp_path) -> None:
     EffectJournal(path)
     with pytest.raises(FileExistsError):
         EffectJournal(path)
-    EffectJournal(path, overwrite=True)  # сознательно — можно
+    EffectJournal(path, overwrite=True)

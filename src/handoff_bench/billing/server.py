@@ -1,14 +1,3 @@
-"""MCP-сервер банка поверх BillingService. Транспорт — Streamable HTTP (обычный HTTP-порт).
-
-Один сервер = один эпизод: своё состояние банка и свой журнал эффектов.
-
-Кто вызывает (actor), сервер узнаёт из HTTP-заголовка `X-Actor`: оркестратор и субагент
-подключаются к одному URL с разными заголовками. В аргументах инструментов actor нет,
-поэтому модель не может его подделать. Нет заголовка — actor = "unknown".
-
-Ошибки банка уходят агенту как ошибка инструмента, текст — protocol.format_error.
-"""
-
 import socket
 import threading
 import time
@@ -51,7 +40,7 @@ def make_server(service: BillingService) -> MCPServer:
     def get_invoice(invoice_id: str) -> InvoiceView:
         return _call(service.get_invoice, invoice_id)
 
-    # Описание ключа нейтральное: зачем он нужен, модели не подсказываем (см. DECISIONS.md).
+    # Зачем нужен ключ, модели не подсказываем.
     @server.tool(
         description=(
             "Charge a customer for an invoice. `amount` is an integer in cents. "
@@ -78,21 +67,15 @@ def make_server(service: BillingService) -> MCPServer:
     def list_charges(invoice_id: str) -> list[ChargeView]:
         return _call(service.list_charges, invoice_id)
 
-    return server  # что инструменты совпадают с protocol.TOOL_NAMES — проверяет тест
+    return server
 
 
 def serve(service: BillingService, *, host: str = "127.0.0.1", port: int = 8765) -> None:
-    """Блокирующий запуск: http://<host>:<port>/mcp"""
     make_server(service).run("streamable-http", host=host, port=port, streamable_http_path=MCP_PATH)
 
 
 @contextmanager
 def running_server(service: BillingService, *, host: str = "127.0.0.1") -> Iterator[str]:
-    """Банк эпизода в фоновом потоке на свободном порту. Отдаёт URL, на выходе гасит сервер.
-
-    Сокет занимаем сами и передаём uvicorn'у уже открытым: между «нашли свободный порт» и
-    «заняли его» нет окна, в которое влезет соседний эпизод.
-    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, 0))

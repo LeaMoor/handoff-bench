@@ -1,25 +1,12 @@
-"""Общие типы инструментов: что агент получает в ответ, ошибки, описание инструмента, бэкенды.
-
-Бэкенд — источник инструментов для шлюза. Сейчас их два:
-    LocalBackend  — функции Python (finish, позже delegate и finish_report);
-    McpBackend    — инструменты MCP-сервера (банк), см. agents/mcp_backend.py.
-Шлюз про банк ничего не знает: он спрашивает у бэкендов, какие у них инструменты, и вызывает.
-"""
-
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-# ok — успех; error — инструмент вернул ошибку; timeout — банк ответил таймаутом;
-# dropped — вызов не исполнялся (его перехватил инжектор), агенту ничего не вернулось;
-# infra_error — сбой нашей инфраструктуры (нет связи с банком): эпизод недействителен.
 Outcome = Literal["ok", "error", "timeout", "dropped", "infra_error"]
 
 
 class ToolResult(BaseModel):
-    """То, что получает агент в ответ на вызов."""
-
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     outcome: Outcome
@@ -34,8 +21,6 @@ def error_result(code: str, message: str) -> ToolResult:
 
 
 class ToolCallError(Exception):
-    """Инструмент сообщает об ошибке так — агент получит outcome=error с кодом."""
-
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
@@ -43,8 +28,7 @@ class ToolCallError(Exception):
 
 
 class InfraError(Exception):
-    """Сбой инфраструктуры стенда (сеть, сервер банка). Агенту не показывается, эпизод
-    останавливается с stop_reason="infra_error" и не идёт в результаты."""
+    """Сбой стенда, а не ответ банка: агенту не показывается, эпизод не идёт в результаты."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
@@ -53,8 +37,6 @@ class InfraError(Exception):
 
 
 class ToolSpec(BaseModel):
-    """Описание инструмента для модели."""
-
     model_config = ConfigDict(frozen=True)
 
     name: str
@@ -75,13 +57,10 @@ class ToolSpec(BaseModel):
 class ToolBackend(Protocol):
     def specs(self) -> list[ToolSpec]: ...
 
-    async def call(self, actor: str, tool: str, args: dict[str, Any]) -> ToolResult:
-        """Ошибка инструмента — ToolResult (error/timeout); сбой связи — raise InfraError."""
-        ...
+    async def call(self, actor: str, tool: str, args: dict[str, Any]) -> ToolResult: ...
 
 
 LocalTool = Callable[[str, dict[str, Any]], Awaitable[Any]]
-"""Локальный инструмент: (actor, args) -> данные ответа; ошибка — raise ToolCallError."""
 
 EMPTY_PARAMS: dict[str, Any] = {"type": "object", "properties": {}}
 

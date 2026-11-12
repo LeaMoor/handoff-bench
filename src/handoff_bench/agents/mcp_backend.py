@@ -1,14 +1,3 @@
-"""Бэкенд шлюза для MCP-сервера по HTTP (сейчас — банк).
-
-На каждого агента своя MCP-сессия со своим заголовком X-Actor: оркестратор и субагент ходят
-на один URL, а банк видит, кто из них вызвал. Список инструментов берётся у сервера при
-подключении, а не прописывается вручную.
-
-Использование:
-    async with McpBackend(url) as bank:
-        gateway = ToolGateway(..., backends=[bank])
-"""
-
 from contextlib import AsyncExitStack
 from typing import Any, Self
 
@@ -20,7 +9,7 @@ from mcp.types import CallToolResult, TextContent
 from handoff_bench.agents.tools import InfraError, ToolResult, ToolSpec, error_result
 from handoff_bench.billing.protocol import ACTOR_HEADER, parse_error
 
-_DISCOVERY_ACTOR = "gateway"  # сессия только для list_tools; в журналы банка не попадает
+_DISCOVERY_ACTOR = "gateway"
 
 
 class McpBackend:
@@ -60,7 +49,7 @@ class McpBackend:
             raw = await client.call_tool(tool, args)
         except InfraError:
             raise
-        except Exception as e:  # сеть, сервер упал, протокол — всё это не ответ банка
+        except Exception as e:
             raise InfraError("transport_error", f"{tool} via {self.url}: {e!r}") from e
         return parse_result(tool, raw)
 
@@ -78,11 +67,6 @@ class McpBackend:
 
 
 def parse_result(tool: str, raw: CallToolResult) -> ToolResult:
-    """Ответ MCP-сервера → ToolResult.
-
-    Ошибка — текст в формате billing.protocol (код + сообщение); непонятный текст → bank_error.
-    Список в structured_content SDK заворачивает в {"result": [...]} — разворачиваем.
-    """
     if raw.is_error:
         text = "".join(c.text for c in raw.content if isinstance(c, TextContent))
         parsed = parse_error(tool, text)

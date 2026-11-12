@@ -1,11 +1,3 @@
-"""Ядро банка: счета, списания, правила ключа идемпотентности, таймаут и задержка видимости.
-
-Без MCP — это обычный класс. MCP-обёртка (server.py) только переводит вызовы сюда.
-
-Виртуальные часы: каждый вызов get_invoice / create_charge / list_charges увеличивает `step`
-на 1 (в том числе вызов, закончившийся ошибкой). Runner может двигать часы и сам — через tick().
-"""
-
 import random
 import sqlite3
 import threading
@@ -45,7 +37,6 @@ CREATE TABLE charges (
     step            INTEGER NOT NULL,
     visible_from    INTEGER NOT NULL
 );
--- Сохранённые ключи: параметры первого запроса и его результат.
 CREATE TABLE idempotency_keys (
     key         TEXT PRIMARY KEY,
     invoice_id  TEXT NOT NULL,
@@ -69,10 +60,9 @@ class BillingService:
         self.episode_id = episode_id
         self.config = config or BankConfig()
         self.journal = journal or EffectJournal()
-        self._rng = random.Random(id_seed)  # свой генератор: номера ch_… воспроизводимы по сиду
+        self._rng = random.Random(id_seed)
         self._step = 0
         self._timeouts_fired = 0
-        # MCP SDK может вызывать синхронные инструменты из пула потоков — сериализуем доступ.
         self._lock = threading.Lock()
         if str(db_path) != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -80,23 +70,19 @@ class BillingService:
         self._db.row_factory = sqlite3.Row
         self._db.executescript(_SCHEMA)
 
-    # --- служебное ----------------------------------------------------------------------
-
     @property
     def step(self) -> int:
         return self._step
 
     def tick(self) -> int:
-        """Сдвинуть часы снаружи (runner). Инструменты двигают их сами через _tick()."""
         with self._lock:
             return self._tick()
 
-    def _tick(self) -> int:  # только под self._lock
+    def _tick(self) -> int:
         self._step += 1
         return self._step
 
     def add_invoices(self, invoices: list[Invoice]) -> None:
-        """Мир кладёт счета до начала эпизода. Часы не двигает."""
         with self._lock, self._db:
             self._db.executemany(
                 "INSERT INTO invoices VALUES (:invoice_id, :customer_id, :amount, :description)",
@@ -111,8 +97,6 @@ class BillingService:
 
     def __exit__(self, *exc: object) -> None:
         self.close()
-
-    # --- инструменты --------------------------------------------------------------------
 
     def get_invoice(self, invoice_id: str) -> InvoiceView:
         with self._lock:
@@ -130,11 +114,9 @@ class BillingService:
         *,
         actor: str,
     ) -> ChargeView:
-        """Списание. `actor` (кто вызвал) передаёт слой вызова инструментов, не модель."""
         with self._lock:
             step = self._tick()
 
-            # 1. Ключ уже встречался: тот же запрос → прежний результат, другой → ошибка.
             if idempotency_key is not None:
                 stored = self._db.execute(
                     "SELECT * FROM idempotency_keys WHERE key = ?", (idempotency_key,)
@@ -152,7 +134,6 @@ class BillingService:
                         )
                     return self._charge_view(stored["charge_id"])
 
-            # 2. Обычные проверки.
             inv = self._require_invoice(invoice_id)
             if customer_id != inv.customer_id:
                 raise CustomerMismatch(
@@ -161,12 +142,11 @@ class BillingService:
             if amount <= 0:
                 raise InvalidAmount("Amount must be a positive integer (in cents).")
 
-            # 3. Таймаут: в мире commits=False списания нет, ключ не сохраняется.
+            # «Не прошло»: ключ не сохранён, повтор с ним спишет заново.
             timed_out = self._take_timeout(invoice_id)
             if timed_out and not self._timeout_commits():
                 raise BankTimeout()
 
-            # 4. Списание (в мире commits=True — тоже, но вызывающий получит таймаут).
             charge_id = self._new_charge_id()
             visible_from = step + self.config.visibility_delay + 1
             with self._db:
@@ -206,7 +186,6 @@ class BillingService:
             return self._charge_view(charge_id)
 
     def list_charges(self, invoice_id: str) -> list[ChargeView]:
-        """«Выписка»: списания по счёту, которые уже видны на текущем шаге."""
         with self._lock:
             step = self._tick()
             self._require_invoice(invoice_id)
@@ -216,8 +195,6 @@ class BillingService:
                 (invoice_id, step),
             ).fetchall()
             return [self._charge_view(r["charge_id"]) for r in rows]
-
-    # --- внутреннее ---------------------------------------------------------------------
 
     def _require_invoice(self, invoice_id: str) -> Invoice:
         row = self._db.execute(

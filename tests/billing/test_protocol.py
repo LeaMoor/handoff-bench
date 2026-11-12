@@ -1,5 +1,3 @@
-"""Контракт банка: формат ошибки задаётся и разбирается в одном модуле."""
-
 import pytest
 
 from handoff_bench.billing.protocol import format_error, parse_error

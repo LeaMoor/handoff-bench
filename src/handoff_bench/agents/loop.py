@@ -1,12 +1,3 @@
-"""Агентный цикл — один на обе роли (оркестратор и субагент).
-
-    system + goal → модель → вызовы инструментов через шлюз → результаты → модель → …
-    до finish-инструмента или лимита шагов (шаг = один вызов модели).
-
-Каждый вызов модели пишется в журнал model_calls: новые сообщения запроса, ответ целиком,
-токены, цена, повторы. Полный запрос восстанавливается функцией rebuild_requests().
-"""
-
 import copy
 import json
 from typing import Any, Literal
@@ -24,21 +15,19 @@ StopReason = Literal["finish", "max_steps", "dropped", "text_only", "api_error",
 class AgentSpec(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    actor: str  # "orchestrator" | "subagent" | …
+    actor: str
     system_prompt: str
     max_steps: int
-    tools: list[dict[str, Any]]  # схемы инструментов в формате OpenAI (gateway.openai_tools)
-    finish_tools: frozenset[str]  # успешный вызов одного из них завершает агента
+    tools: list[dict[str, Any]]
+    finish_tools: frozenset[str]
 
 
 class ModelCallLog(BaseModel):
     episode_id: str
     actor: str
     step: int
-    # Сообщения, добавленные в историю после предыдущего вызова модели этого агента.
-    # Полный запрос шага = все new_messages шагов 1..step (см. rebuild_requests).
     new_messages: list[dict[str, Any]]
-    history_len: int  # длина полного запроса — для проверки восстановления
+    history_len: int
     tools: list[str]
     response: dict[str, Any] | None
     usage: Usage
@@ -48,7 +37,6 @@ class ModelCallLog(BaseModel):
 
 
 def rebuild_requests(rows: list[ModelCallLog]) -> dict[tuple[str, int], list[dict[str, Any]]]:
-    """Полные запросы к модели из журнала: {(actor, step): messages}."""
     history: dict[str, list[dict[str, Any]]] = {}
     out: dict[tuple[str, int], list[dict[str, Any]]] = {}
     for row in sorted(rows, key=lambda r: (r.actor, r.step)):
@@ -69,11 +57,11 @@ class AgentTrace(BaseModel):
     messages: list[dict[str, Any]]
     usage: Usage
     retries: int
-    error: str | None = None  # api_error / infra_error: что случилось
+    error: str | None = None
 
 
 def render_tool_result(result: ToolResult) -> str:
-    """Как результат вызова выглядит для модели. Детерминированно — для эквивалентности."""
+    """Детерминированно: от этого зависит эквивалентность pre / post."""
     if result.outcome == "ok":
         return json.dumps(result.data, sort_keys=True, ensure_ascii=False)
     return f"Error ({result.error_code}): {result.error_message}"
@@ -159,11 +147,10 @@ async def run_agent(
                 try:
                     result = await gateway.call(spec.actor, tc.name, args)
                 except InfraError as e:
-                    # Наш сбой, не поведение модели: агенту не показываем, эпизод недействителен.
+                    # Сбой стенда, не поведение модели: агенту не показываем.
                     return trace("infra_error", error=str(e))
 
             if result.outcome == "dropped":
-                # Инжектор pre: вызов не исполнен, агент останавливается без ответа.
                 return trace("dropped")
             messages.append(
                 {"role": "tool", "tool_call_id": tc.id, "content": render_tool_result(result)}

@@ -1,5 +1,3 @@
-"""Фальшивая модель для тестов: отвечает по сценарию, без сети и без денег."""
-
 import json
 from itertools import count
 from typing import Any
@@ -7,7 +5,6 @@ from typing import Any
 from handoff_bench.agents.model_client import ModelResponse, ToolCall, Usage
 
 Step = list[tuple[str, dict[str, Any] | str]] | str
-"""Шаг сценария: список вызовов (имя, аргументы; строка — сырой JSON) или просто текст ответа."""
 
 
 class FakeModel:

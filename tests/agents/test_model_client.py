@@ -1,5 +1,3 @@
-"""Клиент модели без сети: параметры запроса, разбор ответа OpenRouter, повторы."""
-
 import pytest
 
 from handoff_bench.agents.model_client import (
@@ -47,7 +45,7 @@ def test_parse_completion() -> None:
 
     assert [(c.id, c.name) for c in resp.tool_calls] == [("call_a", "get_invoice")]
     assert resp.message["reasoning_details"] == RAW["choices"][0]["message"]["reasoning_details"]
-    assert "content" not in resp.message  # None не возвращаем в историю
+    assert "content" not in resp.message
     assert (resp.usage.reasoning_tokens, resp.usage.cached_tokens) == (40, 512)
     assert resp.usage.cost == pytest.approx(0.0000348)
     assert (resp.provider, resp.retries) == ("Alibaba", 1)

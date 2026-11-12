@@ -1,5 +1,3 @@
-"""Задача 15 (заготовка в банке): таймаут в двух мирах и задержка видимости списания."""
-
 from collections.abc import Callable
 
 import pytest
@@ -28,7 +26,6 @@ def test_both_worlds_give_caller_identical_response(make_bank: MakeBank) -> None
     # Сразу проверить нельзя: следующие 2 вызова в обоих мирах видят одно и то же.
     for _ in range(2):
         assert committed.list_charges("INV-12") == not_committed.list_charges("INV-12") == []
-    # А в журнале эффектов разница есть.
     assert [r.reported_as for r in committed.journal.rows] == ["timeout"]
     assert not_committed.journal.rows == []
 
@@ -40,16 +37,16 @@ def test_charge_becomes_visible_after_delay(make_bank: MakeBank, commits: bool, 
     bank.list_charges("INV-12")
     bank.get_invoice("INV-12")
 
-    assert len(bank.list_charges("INV-12")) == seen  # третий вызов после списания
+    assert len(bank.list_charges("INV-12")) == seen
 
 
 @pytest.mark.parametrize(("commits", "total"), [(True, 2), (False, 1)])
 def test_retry_without_key_can_duplicate(make_bank: MakeBank, commits: bool, total: int) -> None:
     bank = timeout_bank(make_bank, commits)
     first_response(bank)
-    bank.create_charge("INV-12", "cus_ann", 12000, actor="sub")  # повтор без ключа
+    bank.create_charge("INV-12", "cus_ann", 12000, actor="sub")
 
-    assert len(bank.journal.rows) == total  # в мире «прошло» — дубль
+    assert len(bank.journal.rows) == total
 
 
 @pytest.mark.parametrize("commits", [True, False])
@@ -65,8 +62,8 @@ def test_retry_with_same_key_gives_exactly_once(make_bank: MakeBank, commits: bo
 def test_only_configured_number_of_calls_time_out(make_bank: MakeBank) -> None:
     bank = timeout_bank(make_bank, commits=False)
     first_response(bank)
-    bank.create_charge("INV-13", "cus_bob", 4500, actor="sub")  # другой счёт — без таймаута
-    bank.create_charge("INV-12", "cus_ann", 12000, actor="sub")  # второй вызов — уже успех
+    bank.create_charge("INV-13", "cus_bob", 4500, actor="sub")
+    bank.create_charge("INV-12", "cus_ann", 12000, actor="sub")
 
     assert len(bank.journal.rows) == 2
 
@@ -76,4 +73,4 @@ def test_get_invoice_status_respects_delay(make_bank: MakeBank) -> None:
     bank.create_charge("INV-12", "cus_ann", 12000, actor="sub")
 
     statuses = [bank.get_invoice("INV-12").status for _ in range(3)]
-    assert statuses == ["open", "open", "paid"]  # иначе get_invoice выдал бы правду раньше выписки
+    assert statuses == ["open", "open", "paid"]

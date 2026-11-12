@@ -1,5 +1,3 @@
-"""Базовое поведение: проверки, статус счёта, часы, журнал, воспроизводимость."""
-
 from collections.abc import Callable
 
 import pytest
@@ -72,7 +70,7 @@ def test_journal_file_roundtrip_and_stable_format(tmp_path) -> None:
     assert rows == bank.journal.rows
     line = path.read_text(encoding="utf-8").strip()
     assert line == dump_row(rows[0])
-    assert line.startswith('{"actor":"sub","amount":12000,')  # ключи отсортированы, без пробелов
+    assert line.startswith('{"actor":"sub","amount":12000,')
 
 
 def test_charge_ids_reproducible_by_seed(make_bank: MakeBank) -> None:

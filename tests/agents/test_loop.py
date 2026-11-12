@@ -1,5 +1,3 @@
-"""Задача 6: агентный цикл — finish, лимит шагов, ошибки, pre-обрыв, логи и цена."""
-
 import pytest
 from helpers.fake_model import FakeModel
 
@@ -47,13 +45,11 @@ async def test_runs_until_finish_and_logs_everything() -> None:
     assert trace.usage.cost == pytest.approx(0.002)
     assert [r.step for r in log.rows] == [1, 2]
     assert [r.tool for r in gw.journal.rows] == ["echo", "finish"]
-    # Второй запрос к модели содержит результат первого вызова инструмента...
     assert model.requests[1][-1] == {
         "role": "tool",
         "tool_call_id": "call_1",
         "content": '{"echo": {"x": 1}}',
     }
-    # ...и сообщение ассистента целиком, вместе с reasoning_details.
     assert model.requests[1][-2]["reasoning_details"] == [
         {"type": "reasoning.encrypted", "data": "opaque"}
     ]
@@ -100,7 +96,7 @@ async def test_dropped_call_stops_agent_immediately() -> None:
     trace = await run_agent(spec(), "goal", model=model, gateway=gw)
 
     assert trace.stop_reason == "dropped"
-    assert [r.tool for r in gw.journal.rows] == ["echo"]  # finish уже не вызывался
+    assert [r.tool for r in gw.journal.rows] == ["echo"]
 
 
 async def test_api_failure_after_retries_is_marked() -> None:
@@ -135,7 +131,7 @@ async def test_infra_error_stops_agent_and_is_not_shown_to_model() -> None:
     trace = await run_agent(spec(), "goal", model=model, gateway=gw)
 
     assert (trace.stop_reason, trace.steps) == ("infra_error", 1)
-    assert len(model.requests) == 1  # второй раз к модели не ходили
+    assert len(model.requests) == 1
     assert gw.journal.rows[0].outcome == "infra_error"
 
 
@@ -144,7 +140,7 @@ async def test_log_stores_only_new_messages_and_rebuilds_requests() -> None:
     log = JsonlWriter[ModelCallLog]()
     await run_agent(spec(), "goal", model=model, gateway=gateway(), log=log)
 
-    assert [len(r.new_messages) for r in log.rows] == [2, 2, 2]  # sys+goal, затем ответ+tool
+    assert [len(r.new_messages) for r in log.rows] == [2, 2, 2]
     rebuilt = rebuild_requests(log.rows)
     assert [rebuilt[("agent", s)] for s in (1, 2, 3)] == model.requests
 
@@ -152,7 +148,7 @@ async def test_log_stores_only_new_messages_and_rebuilds_requests() -> None:
 async def test_trace_is_a_snapshot_not_the_live_history() -> None:
     class Capturing(FakeModel):
         async def complete(self, messages, tools):
-            self.live = messages  # ссылка на живую историю цикла
+            self.live = messages
             return await super().complete(messages, tools)
 
     model = Capturing([[("finish", {})]])

@@ -1,5 +1,3 @@
-"""Задача 4: каждый вызов любого агента записан в журнал вызовов — с тем, что вернулось агенту."""
-
 from collections.abc import AsyncIterator, Callable
 
 import pytest
@@ -55,8 +53,7 @@ async def test_every_bank_call_is_journaled(gateway: ToolGateway, bank: BillingS
         (3, "subagent", "list_charges", "ok"),
     ]
     assert rows[0].result == charge.data
-    assert listed.data == [charge.data]  # список развёрнут из {"result": [...]}
-    # actor дошёл до банка через заголовок X-Actor
+    assert listed.data == [charge.data]
     assert bank.journal.rows[0].actor == "subagent"
 
 
@@ -79,15 +76,14 @@ async def test_timeout_call_journals_identical_in_both_worlds(serve_bank: ServeB
         lines.append([dumps(r) for r in gw.journal.rows])
         effects.append(len(bank.journal.rows))
 
-    assert lines[0] == lines[1]  # журнал вызовов не выдаёт, прошло ли списание
-    assert effects == [1, 0]  # а журнал эффектов — выдаёт
+    assert lines[0] == lines[1]  # журнал вызовов не выдаёт мир
+    assert effects == [1, 0]
 
 
 async def test_bank_goes_down_mid_episode_is_infra_error() -> None:
     with running_server(make_bank()) as url:
         backend = McpBackend(url)
-        await backend.__aenter__()  # подключились, инструменты получены
-    # Сервер выключен посреди эпизода; оркестратор впервые идёт в банк.
+        await backend.__aenter__()
     gw = ToolGateway(episode_id="ep", journal=CallJournal(), backends=[backend])
     try:
         with pytest.raises(InfraError) as exc:
@@ -96,7 +92,7 @@ async def test_bank_goes_down_mid_episode_is_infra_error() -> None:
         await backend.__aexit__(None, None, None)
 
     assert exc.value.code == "transport_error"
-    (row,) = gw.journal.rows  # сбой записан, а не потерян
+    (row,) = gw.journal.rows
     assert (row.actor, row.outcome, row.error_code) == (
         "orchestrator",
         "infra_error",
@@ -106,7 +102,7 @@ async def test_bank_goes_down_mid_episode_is_infra_error() -> None:
 
 async def test_unreachable_bank_at_connect_is_infra_error() -> None:
     with running_server(make_bank()) as url:
-        pass  # порт уже закрыт
+        pass
     with pytest.raises(InfraError):
         async with McpBackend(url):
             pass
@@ -145,8 +141,6 @@ async def test_tool_name_clash_is_rejected(gateway: ToolGateway) -> None:
 
 
 class DropFocalCharge(CallHook):
-    """Как будет делать инжектор pre: вызов не исполняется."""
-
     async def before_call(self, call: PendingCall) -> ToolResult | None:
         if call.tool == "create_charge" and call.args.get("invoice_id") == "INV-12":
             return ToolResult(outcome="dropped")
@@ -158,14 +152,12 @@ async def test_before_hook_drops_call(gateway: ToolGateway, bank: BillingService
     result = await gateway.call("subagent", "create_charge", CHARGE)
 
     assert result.outcome == "dropped"
-    assert bank.journal.rows == []  # до банка вызов не дошёл
+    assert bank.journal.rows == []
     (row,) = gateway.journal.rows
     assert (row.tool, row.outcome) == ("create_charge", "dropped")
 
 
 class DiscardReport(CallHook):
-    """Как будет делать инжектор post: отчёт субагента выбрасывается."""
-
     async def after_call(self, call: PendingCall, result: ToolResult) -> ToolResult:
         if call.tool == "delegate":
             return ToolResult(outcome="ok", data={"status": "completed", "result": ""})
@@ -174,7 +166,6 @@ class DiscardReport(CallHook):
 
 async def test_nested_delegate_and_after_hook(gateway: ToolGateway, bank: BillingService) -> None:
     async def delegate(actor: str, args: dict) -> dict:
-        # Заглушка субагента: платит через тот же шлюз.
         await gateway.call("subagent", "create_charge", CHARGE)
         return {"status": "completed", "result": "Paid INV-12."}
 
@@ -183,18 +174,17 @@ async def test_nested_delegate_and_after_hook(gateway: ToolGateway, bank: Billin
     result = await gateway.call("orchestrator", "delegate", {"goal": "Pay INV-12"})
 
     assert result.data == {"status": "completed", "result": ""}
-    assert len(bank.journal.rows) == 1  # списание было
-    # В файле строки идут по завершению, seq — по началу вызова.
+    assert len(bank.journal.rows) == 1
     assert [(r.seq, r.actor, r.tool) for r in gateway.journal.rows] == [
         (2, "subagent", "create_charge"),
         (1, "orchestrator", "delegate"),
     ]
-    assert gateway.journal.rows[1].result == result.data  # записано то, что получил оркестратор
+    assert gateway.journal.rows[1].result == result.data
 
 
 class MutatingHook(CallHook):
     async def before_call(self, call: PendingCall) -> ToolResult | None:
-        call.args["amount"] = 1  # хук что-то поменял в аргументах
+        call.args["amount"] = 1
         return None
 
 
@@ -206,12 +196,12 @@ async def test_journal_keeps_args_as_sent(tmp_path, bank, serve_bank) -> None:
             episode_id="ep", journal=CallJournal(path), backends=[backend], hooks=[MutatingHook()]
         )
         await gw.call("subagent", "create_charge", args)
-    args["amount"] = 2  # и агентный цикл потом поменял свой словарь
+    args["amount"] = 2
 
     (row,) = CallJournal.read(path)
     assert row == gw.journal.rows[0]
-    assert row.args["amount"] == 12000  # в журнале — то, что прислал агент
-    assert bank.journal.rows[0].amount == 1  # а исполнилось то, что оставил хук
+    assert row.args["amount"] == 12000
+    assert bank.journal.rows[0].amount == 1
 
 
 def test_parse_result_unexpected_error_text() -> None:

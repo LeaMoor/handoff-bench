@@ -1,15 +1,4 @@
-"""Скелет (задача 1): один агент платит один счёт; банк по HTTP, оба журнала, лог модели.
-
-Временно: пока нет мира, delegate и грейдера. Потом его заменит полноценный `stand run`.
-
-Что пишется в runs/<run_id>/<episode_id>/:
-    effects.jsonl      журнал эффектов (банк)
-    calls.jsonl        журнал вызовов (шлюз)
-    model_calls.jsonl  каждый вызов модели целиком
-    trace.json         итог агента: все сообщения, причина остановки, токены, цена
-    summary.json       короткая сводка эпизода
-    bank.sqlite        состояние банка
-"""
+"""Временный: заменит `stand run`."""
 
 import json
 from pathlib import Path
@@ -55,13 +44,13 @@ class SkeletonResult(BaseModel):
     episode_dir: Path
     stop_reason: StopReason
     steps: int
-    focal_charges: int  # списаний по фокальному счёту в журнале эффектов
+    focal_charges: int
     finish_args: dict[str, Any] | None
     cost: float
     prompt_tokens: int
     completion_tokens: int
-    retries: int  # повторы вызовов API; > 0 — эпизод помечен
-    error: str | None  # api_error / infra_error — эпизод недействителен
+    retries: int
+    error: str | None
 
 
 async def _finish(actor: str, args: dict[str, Any]) -> dict[str, Any]:

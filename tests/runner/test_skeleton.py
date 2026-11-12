@@ -1,8 +1,3 @@
-"""Задача 1, критерий: одна команда → агент заплатил → в журнале одно списание.
-
-Здесь — на фальшивой модели, но с настоящим банком по HTTP и настоящими журналами на диске.
-"""
-
 import json
 
 import pytest
@@ -44,7 +39,6 @@ async def test_agent_pays_invoice_one_charge(tmp_path) -> None:
 async def test_agent_sees_bank_tools_and_finish(tmp_path) -> None:
     model = FakeModel([[("finish", {"status": "unknown", "message": "?"})]])
     await run_skeleton(model, episode_dir=tmp_path / "ep", episode_id="ep")
-    # Какие инструменты получила модель — видно в логе вызовов модели.
     log = [
         json.loads(line)
         for line in (tmp_path / "ep" / "model_calls.jsonl").read_text().splitlines()

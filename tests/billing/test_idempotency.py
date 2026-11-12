@@ -1,5 +1,3 @@
-"""Задача 3: три правила ключа, как у Stripe."""
-
 import pytest
 
 from handoff_bench.billing import BillingService, IdempotencyError

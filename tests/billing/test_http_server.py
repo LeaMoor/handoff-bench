@@ -1,5 +1,3 @@
-"""Банк по настоящему HTTP: uvicorn на свободном порту, MCP-клиент с заголовком X-Actor."""
-
 from collections.abc import Callable
 
 import httpx2
@@ -40,7 +38,6 @@ async def test_tools_match_protocol_and_key_description_is_neutral(url: str) -> 
     async with Client(url) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
     assert set(tools) == TOOL_NAMES
-    # Модели не подсказываем, зачем нужен ключ (DECISIONS.md).
     description = tools["create_charge"].description.lower()
     assert "idempotency_key` is optional." in description
     assert "same key" not in description and "original" not in description
@@ -63,7 +60,7 @@ async def test_charge_over_http_writes_one_effect_row(url: str, bank: BillingSer
     assert not result.is_error
     (row,) = bank.journal.rows
     assert result.structured_content["charge_id"] == row.charge_id
-    assert row.actor == "subagent"  # из заголовка X-Actor
+    assert row.actor == "subagent"
 
 
 @pytest.mark.anyio
@@ -104,5 +101,5 @@ async def test_timeout_identical_over_http_in_both_worlds(serve_bank: ServeBank)
         texts.append(result.model_dump_json())
         rows.append(len(service.journal.rows))
 
-    assert texts[0] == texts[1]  # агент получает одно и то же байт в байт
+    assert texts[0] == texts[1]
     assert rows == [1, 0]

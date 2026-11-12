@@ -1,5 +1,3 @@
-"""Сервис billing: симулятор банка со счетами и списаниями."""
-
 from handoff_bench.billing.errors import (
     BankTimeout,
     BillingError,

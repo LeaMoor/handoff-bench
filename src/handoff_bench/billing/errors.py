@@ -1,6 +1,3 @@
-"""Ошибки банка. У каждой есть `code` — машинный код, который увидит агент."""
-
-
 class BillingError(Exception):
     code: str = "billing_error"
 
@@ -9,7 +6,6 @@ class BillingError(Exception):
         self.message = message
 
     def __eq__(self, other: object) -> bool:
-        # Нужно для тестов эквивалентности: два ответа банка совпадают, если совпали код и текст.
         if not isinstance(other, BillingError):
             return NotImplemented
         return (self.code, self.message) == (other.code, other.message)
@@ -31,14 +27,10 @@ class InvalidAmount(BillingError):
 
 
 class IdempotencyError(BillingError):
-    """Тот же ключ идемпотентности, но другие параметры запроса."""
-
     code = "idempotency_error"
 
 
 class BankTimeout(BillingError):
-    """Банк не ответил. Списание при этом могло пройти, а могло и нет."""
-
     code = "timeout"
 
     def __init__(self) -> None:
