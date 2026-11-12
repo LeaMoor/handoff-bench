@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Стенд: сырые логи прогонов (в git только results.csv)
+runs/
