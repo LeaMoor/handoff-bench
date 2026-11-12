@@ -87,6 +87,11 @@ class BillingService:
         return self._step
 
     def tick(self) -> int:
+        """Сдвинуть часы снаружи (runner). Инструменты двигают их сами через _tick()."""
+        with self._lock:
+            return self._tick()
+
+    def _tick(self) -> int:  # только под self._lock
         self._step += 1
         return self._step
 
@@ -111,7 +116,7 @@ class BillingService:
 
     def get_invoice(self, invoice_id: str) -> InvoiceView:
         with self._lock:
-            self.tick()
+            self._tick()
             inv = self._require_invoice(invoice_id)
             paid = self._visible_total(invoice_id) >= inv.amount
             return InvoiceView(**inv.model_dump(), status="paid" if paid else "open")
@@ -127,7 +132,7 @@ class BillingService:
     ) -> ChargeView:
         """Списание. `actor` (кто вызвал) передаёт слой вызова инструментов, не модель."""
         with self._lock:
-            step = self.tick()
+            step = self._tick()
 
             # 1. Ключ уже встречался: тот же запрос → прежний результат, другой → ошибка.
             if idempotency_key is not None:
@@ -203,7 +208,7 @@ class BillingService:
     def list_charges(self, invoice_id: str) -> list[ChargeView]:
         """«Выписка»: списания по счёту, которые уже видны на текущем шаге."""
         with self._lock:
-            step = self.tick()
+            step = self._tick()
             self._require_invoice(invoice_id)
             rows = self._db.execute(
                 "SELECT charge_id FROM charges WHERE invoice_id = ? AND visible_from <= ? "

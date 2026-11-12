@@ -1,49 +1,19 @@
 """Банк по настоящему HTTP: uvicorn на свободном порту, MCP-клиент с заголовком X-Actor."""
 
-import socket
-import threading
-import time
-from collections.abc import Iterator
+from collections.abc import Callable
 
 import httpx2
 import pytest
-import uvicorn
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
 from handoff_bench.billing import BankConfig, BillingService, Invoice, TimeoutRule
-from handoff_bench.billing.server import MCP_PATH, make_server
+from handoff_bench.billing.protocol import TOOL_NAMES
+from handoff_bench.billing.server import running_server
 
+ServeBank = Callable[[BillingService], str]
 INVOICES = [Invoice(invoice_id="INV-12", customer_id="cus_ann", amount=12000)]
-
-
-def _free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-def _start(service: BillingService) -> Iterator[str]:
-    port = _free_port()
-    app = make_server(service).streamable_http_app(streamable_http_path=MCP_PATH)
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 10
-    while not server.started:
-        if time.monotonic() > deadline:
-            raise RuntimeError("bank server did not start")
-        time.sleep(0.02)
-    try:
-        yield f"http://127.0.0.1:{port}{MCP_PATH}"
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10)
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
+CHARGE = {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": 12000}
 
 
 @pytest.fixture
@@ -54,8 +24,8 @@ def bank() -> BillingService:
 
 
 @pytest.fixture
-def url(bank: BillingService) -> Iterator[str]:
-    yield from _start(bank)
+def url(bank: BillingService, serve_bank: ServeBank) -> str:
+    return serve_bank(bank)
 
 
 async def call(url: str, tool: str, args: dict, actor: str | None = "subagent"):
@@ -65,14 +35,25 @@ async def call(url: str, tool: str, args: dict, actor: str | None = "subagent"):
             return await client.call_tool(tool, args)
 
 
-CHARGE = {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": 12000}
-
-
 @pytest.mark.anyio
-async def test_lists_three_tools(url: str) -> None:
+async def test_tools_match_protocol_and_key_description_is_neutral(url: str) -> None:
     async with Client(url) as client:
-        names = {t.name for t in (await client.list_tools()).tools}
-    assert names == {"get_invoice", "create_charge", "list_charges"}
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+    assert set(tools) == TOOL_NAMES
+    # Модели не подсказываем, зачем нужен ключ (DECISIONS.md).
+    description = tools["create_charge"].description.lower()
+    assert "idempotency_key` is optional." in description
+    assert "same key" not in description and "original" not in description
+
+
+def test_parallel_episodes_get_distinct_ports() -> None:
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        urls = [
+            stack.enter_context(running_server(BillingService(episode_id=str(i)))) for i in range(8)
+        ]
+    assert len(set(urls)) == 8
 
 
 @pytest.mark.anyio
@@ -112,16 +93,15 @@ async def test_billing_error_reaches_agent_with_code(url: str) -> None:
 
 
 @pytest.mark.anyio
-async def test_timeout_identical_over_http_in_both_worlds() -> None:
+async def test_timeout_identical_over_http_in_both_worlds(serve_bank: ServeBank) -> None:
     texts, rows = [], []
     for commits in (True, False):
         rule = TimeoutRule(invoice_id="INV-12", commits=commits)
         service = BillingService(episode_id="ep", config=BankConfig(timeout=rule))
         service.add_invoices(INVOICES)
-        for url in _start(service):
-            result = await call(url, "create_charge", CHARGE)
-            assert result.is_error
-            texts.append(result.model_dump_json())
+        result = await call(serve_bank(service), "create_charge", CHARGE)
+        assert result.is_error
+        texts.append(result.model_dump_json())
         rows.append(len(service.journal.rows))
 
     assert texts[0] == texts[1]  # агент получает одно и то же байт в байт
