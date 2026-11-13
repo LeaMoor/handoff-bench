@@ -8,8 +8,24 @@ from helpers.fake_model import FakeModel, Step
 
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.billing import EffectJournal
+from handoff_bench.billing.demo import DEMO_INVOICES
 from handoff_bench.billing.models import EffectRow
 from handoff_bench.runner.episode import EpisodeResult, run_episode
+from handoff_bench.worlds import World
+
+# A fixed world the scripted steps below are written for (focal INV-12, cus_ann, 12000).
+DEMO_WORLD = World(
+    world=1,
+    template=1,
+    seed=0,
+    phrasing=0,
+    customer_id="cus_ann",
+    customer_name="Ann Lee",
+    invoices=DEMO_INVOICES,
+    targets=["INV-12"],
+    focal_invoice="INV-12",
+    task="Pay invoice INV-12 of customer Ann Lee (cus_ann) and report the result to me.",
+)
 
 GOAL = "Pay invoice INV-12 of customer cus_ann (12000 cents)."
 DELEGATE: Step = [("delegate", {"goal": GOAL})]
@@ -39,8 +55,9 @@ async def run(
     model: FakeModel | None = None,
     **kwargs: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
-    """Run an episode into tmp_path/ep."""
+    """Run an episode into tmp_path/ep (DEMO_WORLD unless `world` is given)."""
     model = model or FakeModel(script or [])
+    kwargs.setdefault("world", DEMO_WORLD)
     result = await run_episode(model, episode_dir=tmp_path / "ep", episode_id="ep", **kwargs)
     return model, result
 

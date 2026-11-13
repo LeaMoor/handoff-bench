@@ -1,6 +1,4 @@
-"""One episode: the orchestrator delegates paying the invoice to a subagent.
-
-Until the world generator (task 5) lands, the bank holds the demo invoices."""
+"""One episode: the orchestrator delegates the task of a generated world to a subagent."""
 
 import json
 from pathlib import Path
@@ -21,14 +19,12 @@ from handoff_bench.agents.loop import AgentSpec, ModelCallLog, StopReason, run_a
 from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, Usage
 from handoff_bench.billing import BillingService, EffectJournal
-from handoff_bench.billing.demo import DEMO_INVOICES
 from handoff_bench.billing.server import running_server
 from handoff_bench.faults.injector import FaultMode, Injector
 from handoff_bench.jsonl import JsonlWriter
+from handoff_bench.worlds import World
 
 ORCHESTRATOR = "orchestrator"
-FOCAL_INVOICE = "INV-12"
-TASK = f"Pay invoice {FOCAL_INVOICE} of customer Ann (cus_ann) and report the result to me."
 INVALID_STOPS = ("api_error", "infra_error")
 
 
@@ -50,9 +46,9 @@ class EpisodeResult(BaseModel):
 async def run_episode(
     model: ModelClient,
     *,
+    world: World,
     episode_dir: Path,
     episode_id: str,
-    seed: int = 0,
     fault: FaultMode = "none",
     orchestrator_tools: tuple[str, ...] = ORCH_TOOLS_CALIBRATION,
 ) -> EpisodeResult:
@@ -61,10 +57,11 @@ async def run_episode(
         episode_id=episode_id,
         journal=EffectJournal(episode_dir / "effects.jsonl"),
         db_path=episode_dir / "bank.sqlite",
-        id_seed=seed,
+        id_seed=world.seed,
     )
-    service.add_invoices(DEMO_INVOICES)
-    injector = Injector(fault, FOCAL_INVOICE)
+    service.add_invoices(world.invoices)
+    focal = next(inv for inv in world.invoices if inv.invoice_id == world.focal_invoice)
+    injector = Injector(fault, focal)
 
     with service, running_server(service) as url:
         async with McpBackend(url) as bank:
@@ -84,7 +81,7 @@ async def run_episode(
                 tools=gateway.openai_tools(list(orchestrator_tools)),
                 finish_tools=frozenset({"finish"}),
             )
-            trace = await run_agent(spec, TASK, model=model, gateway=gateway, log=log)
+            trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
 
     subagents = delegation.subagents
     (episode_dir / "trace.json").write_text(

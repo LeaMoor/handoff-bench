@@ -18,6 +18,7 @@ from helpers.episode import (
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.loop import ModelCallLog, rebuild_requests
 from handoff_bench.jsonl import read_rows
+from handoff_bench.worlds import TEMPLATES, generate
 
 pytestmark = pytest.mark.anyio
 
@@ -55,6 +56,27 @@ async def test_pre_and_post_give_the_orchestrator_byte_identical_input(tmp_path)
         for p in (tmp_path / "pre", tmp_path / "post")
     ]
     assert seen[0] == seen[1] == {"result": "", "status": "completed"}
+
+
+@pytest.mark.parametrize("template", TEMPLATES)
+async def test_equivalence_holds_on_generated_worlds(tmp_path, template) -> None:
+    world = generate(1, 1, template)
+    invoices = {inv.invoice_id: inv for inv in world.invoices}
+    pay = [
+        [("create_charge", invoices[t].model_dump(include={"invoice_id", "customer_id", "amount"}))]
+        for t in world.targets
+    ]
+    delegate = [("delegate", {"goal": world.task})]
+    _, pre = await run(
+        tmp_path / "pre", [delegate, *pay, finish("unknown")], world=world, fault="pre"
+    )
+    _, post = await run(
+        tmp_path / "post", [delegate, *pay, report(), finish("unknown")], world=world, fault="post"
+    )
+
+    assert orchestrator_requests(tmp_path / "pre") == orchestrator_requests(tmp_path / "post")
+    assert [e.invoice_id for e in effects(tmp_path / "pre")] == world.targets[:-1]
+    assert [e.invoice_id for e in effects(tmp_path / "post")] == world.targets
 
 
 async def test_none_passes_the_report_through(tmp_path) -> None:
@@ -106,13 +128,13 @@ async def test_fault_ignores_other_invoices(tmp_path) -> None:
     assert calls(tmp_path)[1:3] == [("sub-1", "create_charge"), ("sub-1", "create_charge")]
 
 
-async def test_post_waits_for_a_successful_charge(tmp_path) -> None:
+@pytest.mark.parametrize("fault", ["pre", "post"])
+async def test_wrong_charge_is_not_a_fault_trigger(tmp_path, fault) -> None:
+    # Same trigger in both modes: a wrong call fails in the bank and nothing is broken.
     wrong = [("create_charge", {"invoice_id": "INV-12", "customer_id": "cus_bob", "amount": 12000})]
-    model, result = await run(
-        tmp_path,
-        [DELEGATE, wrong, report("failed", "Wrong customer."), finish("failed")],
-        fault="post",
-    )
+    script = [DELEGATE, wrong, report("failed", "Wrong customer."), finish("failed")]
+    model, result = await run(tmp_path, script, fault=fault)
 
     assert result.fault_fired is False
+    assert "customer_mismatch" in model.requests[2][-1]["content"]
     assert model.requests[-1][-1]["content"] == delegate_result("Wrong customer.")

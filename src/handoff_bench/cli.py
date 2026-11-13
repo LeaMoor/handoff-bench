@@ -9,17 +9,60 @@ bank_app = typer.Typer(help="Банк (MCP-сервер billing).", no_args_is_h
 app.add_typer(bank_app, name="bank")
 
 
+FAULTS = ("none", "pre", "post")
+CHANNELS = ("text",)  # struct, code — задачи 9 и 16
+
+
 @app.command()
 def run(
     world: Annotated[int, typer.Option(help="Номер мира")] = 1,
-    fault: Annotated[str, typer.Option(help="none | pre | post | timeout")] = "none",
-    channel: Annotated[str, typer.Option(help="text | struct | code")] = "text",
+    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
+    fault: Annotated[str, typer.Option(help="none | pre | post")] = "none",
+    channel: Annotated[str, typer.Option(help="text (struct, code — позже)")] = "text",
     seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 0,
+    model: Annotated[str, typer.Option(help="ID модели в OpenRouter")] = "qwen/qwen3.7-flash",
+    provider: Annotated[str, typer.Option(help="Провайдер в OpenRouter (закреплён)")] = "alibaba",
+    model_seed: Annotated[
+        int | None, typer.Option(help="Сид модели; не задан — не передаём")
+    ] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
 ) -> None:
-    """Один эпизод: журналы и оценка в runs/<run_id>/."""
-    typer.echo(f"run: world={world} fault={fault} channel={channel} seed={seed}")
-    typer.echo("ещё не реализовано")
-    raise typer.Exit(code=1)
+    """Один эпизод «оркестратор → субагент»: журналы в runs/single/<episode_id>/.
+
+    Заготовка до runner (задача 12); грейдера ещё нет — печатает итог эпизода.
+    """
+    import anyio
+    from dotenv import load_dotenv
+
+    from handoff_bench.agents.model_client import ModelSettings, OpenRouterClient
+    from handoff_bench.runner.episode import run_episode
+    from handoff_bench.worlds import generate
+
+    if fault not in FAULTS:
+        raise typer.BadParameter(f"fault must be one of {', '.join(FAULTS)}")
+    if channel not in CHANNELS:
+        raise typer.BadParameter(f"channel must be one of {', '.join(CHANNELS)}")
+    try:
+        w = generate(world, seed, template)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+
+    load_dotenv()
+    client = OpenRouterClient(ModelSettings(model=model, provider=provider, seed=model_seed))
+    episode_id = (
+        f"{datetime.now():%Y%m%d-%H%M%S}-w{world}t{template}s{seed}-{fault}-{channel}"
+        f"-{model.replace('/', '_')}"
+    )
+    result = anyio.run(
+        lambda: run_episode(
+            client,
+            world=w,
+            episode_dir=runs_dir / "single" / episode_id,
+            episode_id=episode_id,
+            fault=fault,  # type: ignore[arg-type]
+        )
+    )
+    typer.echo(result.model_dump_json(indent=2))
 
 
 @app.command()
