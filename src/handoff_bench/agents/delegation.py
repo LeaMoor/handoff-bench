@@ -1,6 +1,7 @@
 """Orchestrator → subagent handoff: `delegate(goal)`, the subagent's `finish_report`
 and the orchestrator's `finish`."""
 
+from collections.abc import Callable
 from typing import Any
 
 from handoff_bench.agents.gateway import ToolGateway
@@ -113,10 +114,12 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
+        report_lost: Callable[[str], bool] | None = None,
     ) -> None:
         self.gateway = gateway
         self.model = model
         self.log = log
+        self.report_lost = report_lost
         self.subagents: list[AgentTrace] = []
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
@@ -148,4 +151,6 @@ class Delegation:
         if child.stop_reason in ("api_error", "infra_error"):
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
-        return {"status": "completed", "result": subagent_words(child)}
+        # A lost report (post fault) drops only the subagent's words; the trace keeps them.
+        lost = self.report_lost is not None and self.report_lost(spec.actor)
+        return {"status": "completed", "result": "" if lost else subagent_words(child)}

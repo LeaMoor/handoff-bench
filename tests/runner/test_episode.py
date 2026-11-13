@@ -1,9 +1,19 @@
 import json
-from pathlib import Path
-from typing import Any
 
 import pytest
-from helpers.fake_model import FakeModel, Step
+from helpers.episode import (
+    CHARGE,
+    DELEGATE,
+    GOAL,
+    LIST,
+    calls,
+    delegate_result,
+    effects,
+    finish,
+    report,
+    run,
+)
+from helpers.fake_model import FakeModel
 
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.delegation import (
@@ -14,46 +24,9 @@ from handoff_bench.agents.delegation import (
 )
 from handoff_bench.agents.loop import ModelCallLog, rebuild_requests
 from handoff_bench.agents.model_client import ModelCallFailed
-from handoff_bench.billing import EffectJournal
 from handoff_bench.jsonl import read_rows
-from handoff_bench.runner.episode import EpisodeResult, run_episode
 
 pytestmark = pytest.mark.anyio
-
-GOAL = "Pay invoice INV-12 of customer cus_ann (12000 cents)."
-DELEGATE = [("delegate", {"goal": GOAL})]
-CHARGE = [("create_charge", {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": 12000})]
-LIST = [("list_charges", {"invoice_id": "INV-12"})]
-
-
-def report(status: str = "done", text: str = "Paid INV-12.", **fields: object) -> Step:
-    args = {"status": status, "done": [], "uncertain": [], "text": text, **fields}
-    return [("finish_report", args)]
-
-
-def finish(status: str = "done") -> Step:
-    args = {"status": status, "done": [], "uncertain": [], "message": "Result."}
-    return [("finish", args)]
-
-
-def delegate_result(text: str) -> str:
-    return json.dumps({"result": text, "status": "completed"})
-
-
-async def run(
-    tmp_path: Path,
-    script: list[Step] | None,
-    model: FakeModel | None = None,
-    **kwargs: Any,
-) -> tuple[FakeModel, EpisodeResult]:
-    model = model or FakeModel(script or [])
-    result = await run_episode(model, episode_dir=tmp_path / "ep", episode_id="ep", **kwargs)
-    return model, result
-
-
-def calls(tmp_path) -> list[tuple[str, str]]:
-    rows = sorted(CallJournal.read(tmp_path / "ep" / "calls.jsonl"), key=lambda r: r.seq)
-    return [(r.actor, r.tool) for r in rows]
 
 
 def tools_by_actor(tmp_path) -> dict[str, set[str]]:
@@ -67,7 +40,7 @@ async def test_orchestrator_delegates_subagent_pays_report_comes_back(tmp_path) 
     assert (result.stop_reason, result.delegations) == ("finish", 1)
     assert result.finish_args["status"] == "done"
     assert result.cost == pytest.approx(0.004)
-    (effect,) = EffectJournal.read(tmp_path / "ep" / "effects.jsonl")
+    (effect,) = effects(tmp_path)
     assert effect.actor == "sub-1"
     assert model.requests[3][-1] == {
         "role": "tool",
@@ -128,7 +101,7 @@ async def test_redelegation_starts_a_new_subagent(tmp_path) -> None:
     model, result = await run(tmp_path, script)
 
     assert result.delegations == 2
-    (effect,) = EffectJournal.read(tmp_path / "ep" / "effects.jsonl")
+    (effect,) = effects(tmp_path)
     assert effect.actor == "sub-2"
     rebuilt = rebuild_requests(read_rows(tmp_path / "ep" / "model_calls.jsonl", ModelCallLog))
     assert rebuilt[("sub-2", 1)] == model.requests[3]
