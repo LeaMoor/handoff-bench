@@ -47,13 +47,19 @@ class EpisodeConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _agents_for_block(cls, data: dict[str, Any]) -> dict[str, Any]:
+    def _from_cell(cls, data: dict[str, Any]) -> dict[str, Any]:
         if data.get("cell") not in CELLS:
             raise ValueError(f"unknown cell {data.get('cell')}")
+        cell = CELLS[data["cell"]]
+        # A config.json read back carries the derived fields: they must agree with the cell.
+        data = dict(data)
+        for name in ("block", "fault", "channel"):
+            if name in data and data.pop(name) != getattr(cell, name):
+                raise ValueError(f"{name} does not match cell {cell.number}")
+        data.pop("episode_id", None)
         if "agents" not in data:
-            main = CELLS[data["cell"]].block == "main"
-            tools = ORCH_TOOLS_MAIN if main else ORCH_TOOLS_CALIBRATION
-            data = {**data, "agents": AgentsConfig(orchestrator_tools=tools)}
+            tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
+            data["agents"] = AgentsConfig(orchestrator_tools=tools)
         return data
 
     @computed_field

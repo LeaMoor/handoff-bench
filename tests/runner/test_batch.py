@@ -198,6 +198,7 @@ async def test_cell_5_post_statement_shows_the_charge(tmp_path) -> None:
     result = json.loads(model.requests[-1][-1]["content"])["result"]
     assert result.startswith(f"{HEADER}\n- step 1: create_charge {W.focal_invoice}: success")
     config = json.loads((tmp_path / spec.episode_id / "config.json").read_text())
+    assert EpisodeConfig.model_validate(config["episode"]) == spec
     assert (config["episode"]["cell"], config["episode"]["commit"]) == (5, "abc")
     assert config["episode"]["agents"]["orchestrator_tools"] == ["delegate", "finish"]
 
