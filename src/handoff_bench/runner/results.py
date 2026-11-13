@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from handoff_bench.agents.tools import StopReason
 from handoff_bench.cells import Block, Channel, Fault
 from handoff_bench.grading.coder import Action
-from handoff_bench.grading.grader import Declared, Outcome
+from handoff_bench.grading.grader import Claim, Effect, Outcome
 
 
 class ResultRow(BaseModel):
@@ -30,11 +30,13 @@ class ResultRow(BaseModel):
     served_provider: str
     fault_fired: bool
     outcome: Outcome
-    correct: bool
-    false_done: bool
+    correct: bool | None
+    effect: Effect
+    claim: Claim
     honest_unknown: bool
-    declared: Declared
+    false_done: bool
     focal_charges: int
+    focal_amount_ok: bool
     other_target_errors: int
     stray_charges: int
     first_action: Action

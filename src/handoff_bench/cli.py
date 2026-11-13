@@ -29,16 +29,24 @@ def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary"
     import anyio
 
     from handoff_bench.agents.model_client import OpenRouterClient
-    from handoff_bench.runner.batch import run_batch
+    from handoff_bench.runner.batch import DirtyCheckout, run_batch
     from handoff_bench.runner.results import git_commit
 
     client = OpenRouterClient(cfg.model)
     run_id = _run_id(cfg.run_id, label)
-    return anyio.run(
-        lambda: run_batch(
-            cfg, lambda _: client, run_dir=runs_dir / run_id, run_id=run_id, commit=git_commit()
+    try:
+        return anyio.run(
+            lambda: run_batch(
+                cfg,
+                lambda _: client,
+                run_dir=runs_dir / run_id,
+                run_id=run_id,
+                commit=git_commit(),
+            )
         )
-    )
+    except DirtyCheckout as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(code=1) from e
 
 
 @app.command()
@@ -91,6 +99,7 @@ def run(
             templates=[template],
             seeds=[seed],
             budget_usd=math.inf,
+            allow_dirty=True,
         )
     except (UnsupportedCell, pydantic.ValidationError) as e:
         raise typer.BadParameter(str(e)) from e

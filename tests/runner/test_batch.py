@@ -7,7 +7,7 @@ from helpers.fake_model import FakeModel, Step
 
 from handoff_bench.agents.model_client import ModelSettings
 from handoff_bench.channels.render import HEADER
-from handoff_bench.runner.batch import BatchConfig, run_batch
+from handoff_bench.runner.batch import BatchConfig, DirtyCheckout, run_batch
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultRow
 from handoff_bench.runner.run import run_one
@@ -78,12 +78,18 @@ W = generate(1, 1, 1)
         ),
         (
             [DELEGATE, report("unknown"), finish("unknown")],
-            "unknown",
+            "honest_unknown",
             False,
             "finish_unknown",
             "finish_unknown",
         ),
-        ([DELEGATE, report("done"), finish("done")], "missing", True, "finish_done", "finish_done"),
+        (
+            [DELEGATE, report("done"), finish("done")],
+            "false_done",
+            True,
+            "finish_done",
+            "finish_done",
+        ),
         (
             [DELEGATE, charges(W), report("done"), "Should I pay it again?"],
             "no_finish",
@@ -100,13 +106,13 @@ W = generate(1, 1, 1)
         ),
         (
             [DELEGATE + finish("done"), charges(W), report("done"), finish("unknown")],
-            "unknown",
+            "honest_unknown",
             False,
             "finish_unknown",
             "finish_unknown",
         ),
     ],
-    ids=["eos", "duplicate", "unknown", "missing", "ask_user", "false_failed", "batched_finish"],
+    ids=["eos", "duplicate", "unknown", "false_done", "ask_user", "false_failed", "batched_finish"],
 )
 async def test_episode_is_graded_and_coded(
     tmp_path, script, outcome, false_done, first_action, decision
@@ -194,3 +200,16 @@ async def test_cell_5_post_statement_shows_the_charge(tmp_path) -> None:
     config = json.loads((tmp_path / spec.episode_id / "config.json").read_text())
     assert (config["episode"]["cell"], config["episode"]["commit"]) == (5, "abc")
     assert config["episode"]["agents"]["orchestrator_tools"] == ["delegate", "finish"]
+
+
+async def test_batch_goes_seed_by_seed_and_refuses_a_dirty_checkout(tmp_path) -> None:
+    config = BatchConfig(model=SETTINGS, cells=[1, 2], templates=[1], seeds=[1, 2], budget_usd=1)
+
+    assert [e.episode_id for e in config.episodes("abc")] == [
+        "c01-w1-t1-s1-r0",
+        "c02-w1-t1-s1-r0",
+        "c01-w1-t1-s2-r0",
+        "c02-w1-t1-s2-r0",
+    ]
+    with pytest.raises(DirtyCheckout):
+        await run_batch(config, happy_model, run_dir=tmp_path, run_id="d", commit="abc-dirty")

@@ -82,6 +82,7 @@ class EpisodeResult(BaseModel):
     stop_reason: StopReason
     steps: int
     delegations: int
+    orchestrator_responses: list[int]
     fault_fired: bool
     finish_args: dict[str, Any] | None
     final_text: str | None
@@ -162,6 +163,9 @@ async def run_episode(
         stop_reason=broken.stop_reason if broken else trace.stop_reason,
         steps=trace.steps,
         delegations=len(subagents),
+        orchestrator_responses=[
+            len(m["tool_calls"]) for m in trace.messages if m.get("tool_calls")
+        ],
         fault_fired=fault.injector.fired,
         finish_args=trace.finish_args,
         final_text=trace.messages[-1].get("content") if trace.stop_reason == "text_only" else None,

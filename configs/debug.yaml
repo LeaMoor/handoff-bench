@@ -6,3 +6,4 @@ templates: [1, 2]
 seeds: [1, 2, 3, 4, 5]
 parallel: 4
 budget_usd: 0.5
+allow_dirty: true  # debug runs; main runs go from a tag (plan)

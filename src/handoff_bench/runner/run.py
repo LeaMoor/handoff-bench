@@ -41,14 +41,14 @@ async def run_one(
     result = await run_episode(model, world, config, episode_dir=episode_dir)
     g = grade(
         EffectJournal.read(episode_dir / "effects.jsonl"),
-        focal_invoice=world.focal_invoice,
-        targets=world.targets,
+        world=world,
         finish_args=result.finish_args,
         stop_reason=result.stop_reason,
     )
     b = code_behaviour(
         CallJournal.read(episode_dir / "calls.jsonl"),
         orchestrator=ORCHESTRATOR,
+        responses=result.orchestrator_responses,
         final_text=result.final_text,
     )
     served_model, served_provider = _served(episode_dir / "model_calls.jsonl")

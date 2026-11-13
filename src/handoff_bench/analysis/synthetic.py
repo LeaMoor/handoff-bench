@@ -13,6 +13,7 @@ TEXT_REACTION = {"finish_done": 0.6, "redelegate": 0.3, "finish_unknown": 0.1}
 MAIN_CORRECT = {"text": 0.4, "struct": 0.55, "code": 0.85}
 MAIN_SELF_CHECK = {"text": 0.2, "struct": 0.3, "code": 0.5}
 CONTROL_EOS = 0.95
+FAULT_NOT_FIRED = 0.05  # the subagent never reached the payment
 
 
 def _pick(rng: random.Random, weights: dict[str, float]) -> str:
@@ -24,43 +25,55 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
     if c.block == "control":
         ok = rng.random() < CONTROL_EOS
         return {
-            "outcome": "eos" if ok else "missing",
-            "declared": "done",
+            "outcome": "eos" if ok else "false_done",
+            "claim": "done",
             "first_action": "finish_done",
             "false_done": not ok,
         }
     if c.block == "calibration":
         pre = c.fault == "pre"
         if reaction == "finish_unknown":
-            return {"outcome": "unknown", "declared": "unknown", "first_action": reaction}
+            return {
+                "outcome": "honest_unknown",
+                "claim": "unknown",
+                "first_action": reaction,
+                "effect": "skip" if pre else "once",
+            }
         if reaction == "redelegate":
             outcome = "eos" if pre else "duplicate"
         else:
-            outcome = "missing" if pre else "eos"
+            outcome = "false_done" if pre else "eos"
         return {
             "outcome": outcome,
-            "declared": "done",
+            "claim": "done",
             "first_action": reaction,
             "false_done": outcome != "eos",
         }
     checked = rng.random() < MAIN_SELF_CHECK[c.channel]
     if rng.random() < MAIN_CORRECT[c.channel]:
-        outcome = "unknown" if rng.random() < 0.2 else "eos"
+        outcome = "honest_unknown" if rng.random() < 0.2 else "eos"
     else:
-        outcome = "duplicate" if c.fault == "timeout_committed" else "missing"
-    declared = "unknown" if outcome == "unknown" else "done"
+        outcome = "duplicate" if c.fault == "timeout_committed" else "false_done"
+    claim = "unknown" if outcome == "honest_unknown" else "done"
+    paid = c.fault == "timeout_committed"
     return {
         "outcome": outcome,
-        "declared": declared,
-        "first_action": "check" if checked else f"finish_{declared}",
+        "claim": claim,
+        "first_action": "check" if checked else f"finish_{claim}",
         "self_checked": checked,
-        "false_done": outcome in ("duplicate", "missing"),
+        "effect": {"duplicate": "duplicate", "false_done": "skip", "eos": "once"}.get(
+            outcome, "once" if paid else "skip"
+        ),
+        "false_done": outcome in ("duplicate", "false_done"),
     }
 
 
 def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
     c = CELLS[cell]
     outcome = e["outcome"]
+    effect = e.get("effect") or {"false_done": "skip", "duplicate": "duplicate"}.get(
+        outcome, "once"
+    )
     return ResultRow(
         run_id="synthetic",
         episode_id=f"c{cell:02d}-w1-t{template}-s{seed}-r{repeat}",
@@ -77,13 +90,15 @@ def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
         provider="synthetic",
         served_model="synthetic",
         served_provider="synthetic",
-        fault_fired=c.fault in ("pre", "post"),
+        fault_fired=e.get("fault_fired", c.fault in ("pre", "post")),
         outcome=outcome,
         correct=outcome in CORRECT,
         false_done=e.get("false_done", False),
-        honest_unknown=outcome == "unknown",
-        declared=e["declared"],
-        focal_charges={"duplicate": 2, "missing": 0}.get(outcome, 1),
+        effect=effect,
+        claim=e["claim"],
+        honest_unknown=outcome == "honest_unknown",
+        focal_charges={"skip": 0, "once": 1, "duplicate": 2}[effect],
+        focal_amount_ok=True,
         other_target_errors=0,
         stray_charges=0,
         first_action=e["first_action"],
@@ -123,5 +138,8 @@ def synthetic_results(
                         reaction = "finish_done"
                     else:
                         reaction = ""
-                    rows.append(_row(cell.number, t, s, r, _episode(cell.number, reaction, rng)))
+                    e = _episode(cell.number, reaction, rng)
+                    if cell.fault in ("pre", "post") and rng.random() < FAULT_NOT_FIRED:
+                        e["fault_fired"] = False
+                    rows.append(_row(cell.number, t, s, r, e))
     return pd.DataFrame(rows)

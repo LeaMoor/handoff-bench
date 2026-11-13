@@ -19,7 +19,10 @@ def ep(cell: int, outcome: str, seed: int = 1, repeat: int = 0, **extra) -> dict
         "cell": cell,
         "channel": CELLS[cell].channel,
         "outcome": outcome,
-        "correct": outcome in ("eos", "unknown"),
+        "correct": outcome in ("eos", "honest_unknown"),
+        "effect": {"skip": "skip", "false_done": "skip", "duplicate": "duplicate"}.get(
+            outcome, "once"
+        ),
         "false_done": False,
         "self_checked": False,
         "first_action": "finish_done",
@@ -31,6 +34,8 @@ def ep(cell: int, outcome: str, seed: int = 1, repeat: int = 0, **extra) -> dict
         "template": 1,
         "seed": seed,
         "repeat": repeat,
+        "fault": CELLS[cell].fault,
+        "fault_fired": CELLS[cell].fault in ("pre", "post"),
         **extra,
     }
 
@@ -41,14 +46,16 @@ def frame(*rows: dict) -> pd.DataFrame:
 
 def test_calibration_pair_error_and_unknown_pairs() -> None:
     df = frame(
-        ep(2, "missing", seed=1),
+        ep(2, "skip", seed=1),
         ep(3, "duplicate", seed=1),
         ep(2, "eos", seed=2),
         ep(3, "eos", seed=2),
-        ep(2, "unknown", seed=3),
+        ep(2, "honest_unknown", seed=3),
         ep(3, "duplicate", seed=3),
-        ep(2, "missing", seed=4),
+        ep(2, "false_done", seed=4),
         ep(3, "invalid", seed=4),
+        ep(2, "eos", seed=5, fault_fired=False),
+        ep(3, "duplicate", seed=5),
     )
     pairs = report.calibration_pairs(df)
     summary = report.calibration_summary(df).loc["text"]
@@ -61,6 +68,8 @@ def test_calibration_pair_error_and_unknown_pairs() -> None:
 
 def test_synthetic_data_recovers_the_effects_put_in() -> None:
     df = synthetic_results(repeats=2)
+    not_fired = report.cell_table(df)["fault_not_fired"]
+    assert not_fired.loc[[2, 3, 4, 5]].sum() > 0 and not_fired.loc[[1, 6]].sum() == 0
     checks = report.predictions(df)["passed"].drop("main: struct no worse than code")
 
     assert checks.all()

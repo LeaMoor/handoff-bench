@@ -6,8 +6,10 @@ import anyio
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from handoff_bench.agents.loop import ModelCallLog
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
+from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
 from handoff_bench.runner.run import check_supported, run_one
@@ -26,6 +28,7 @@ class BatchConfig(BaseModel):
     repeats: int = Field(default=1, ge=1)
     parallel: int = Field(default=4, ge=1, le=8)
     budget_usd: float = Field(gt=0)
+    allow_dirty: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> "BatchConfig":
@@ -58,11 +61,20 @@ class BatchConfig(BaseModel):
                 model=self.model,
                 commit=commit,
             )
-            for c in self.cells
             for t in self.templates
             for s in self.seeds
             for r in range(self.repeats)
+            for c in self.cells
         ]
+
+
+class DirtyCheckout(RuntimeError):
+    pass
+
+
+def _spent_before_crash(episode_dir: Path) -> float:
+    log = episode_dir / "model_calls.jsonl"
+    return sum(r.usage.cost for r in read_rows(log, ModelCallLog)) if log.exists() else 0.0
 
 
 class BatchSummary(BaseModel):
@@ -84,6 +96,8 @@ async def run_batch(
 ) -> BatchSummary:
     """Running episodes finish after the budget is spent: overshoot is up to `parallel` episodes.
     Tokens without a reported cost also stop the batch, or the budget would not hold."""
+    if commit.endswith("-dirty") and not config.allow_dirty:
+        raise DirtyCheckout("uncommitted changes: commit them or set allow_dirty for a debug run")
     results = ResultsCsv(run_dir / "results.csv")
     limiter = anyio.CapacityLimiter(config.parallel)
     finished, crashed, skipped, spent, cost_missing = 0, 0, 0, 0.0, False
@@ -101,6 +115,7 @@ async def run_batch(
                 episode_dir = run_dir / episode.episode_id
                 episode_dir.mkdir(parents=True, exist_ok=True)
                 (episode_dir / "crash.txt").write_text(traceback.format_exc(), encoding="utf-8")
+                spent += _spent_before_crash(episode_dir)
                 return
             spent += row.cost
             cost_missing = cost_missing or (row.cost == 0 and row.prompt_tokens > 0)

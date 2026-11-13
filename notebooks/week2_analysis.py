@@ -51,7 +51,7 @@ report.main_by_channel(df)
 
 # %% [markdown]
 # ## Main number 2: calibration (cells 2-5)
-# Per variant: error in pre (missing) + error in post (duplicate) = 0, 1 or 2.
+# Per variant: error in pre (skip) + error in post (duplicate) = 0, 1 or 2.
 # The mean is over pairs where neither half said "unknown"; the unknown share is apart.
 
 # %%
