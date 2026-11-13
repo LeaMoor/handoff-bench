@@ -12,6 +12,9 @@
       `cache_control`; китайские модели кэшируют сами. Проверять по `cached_tokens` в логе.
 
 ## Для задач других частей
+- [ ] **Эпизод (7, 8)**: вместо демо-счетов — `worlds.generate(world, seed, template)`: `world.invoices`
+      в банк, `world.task` оркестратору, `world.focal_invoice` инжектору и грейдеру.
+      После этого `billing/demo.py` можно убрать (им пользуются ещё `stand bank serve` и скелет).
 - [ ] **11, 12**: эпизод — `run_episode` в `runner/episode.py`. В `calls.jsonl` строка `delegate`
       пишется после вызовов субагента (она завершается последней) — порядок брать по `seq`.
 - [ ] **Скелет** (`runner/skeleton.py`, `stand skeleton`): убрать, когда `stand run` заработает.

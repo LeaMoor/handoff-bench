@@ -23,6 +23,22 @@ def run(
 
 
 @app.command()
+def world(
+    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")],
+    seed: Annotated[int, typer.Option(help="Сид варианта мира")],
+    world: Annotated[int, typer.Option(help="Номер мира")] = 1,
+) -> None:
+    """Показать мир: счета в банке, что оплатить, где ломаем и текст задачи."""
+    from handoff_bench.worlds import generate
+
+    try:
+        w = generate(world, seed, template)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    typer.echo(w.model_dump_json(indent=2))
+
+
+@app.command()
 def version() -> None:
     """Версия стенда."""
     from handoff_bench import __version__
