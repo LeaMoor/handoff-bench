@@ -23,4 +23,5 @@ uv run stand bank serve       # банк по HTTP: http://127.0.0.1:8765/mcp
 | `src/handoff_bench/agents/` | шлюз вызовов и журнал вызовов, бэкенды инструментов, клиент модели, агентный цикл, `delegate` и субагент (`delegation.py`) |
 | `src/handoff_bench/runner/` | эпизод «оркестратор → субагент» (`episode.py`); `skeleton.py` — временный, один агент |
 | `src/handoff_bench/worlds/` | мир 1: генератор вариантов по сиду и шаблону задачи; `stand world` — посмотреть мир |
-| `faults/`, `channels/`, `grading/` | под задачи 8, 9, 10 |
+| `src/handoff_bench/grading/` | грейдер: исход эпизода только из журнала эффектов и `finish` оркестратора |
+| `faults/`, `channels/` | под задачи 8, 9 |
