@@ -4,11 +4,13 @@ and the orchestrator's `finish`."""
 from collections.abc import Callable
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
+from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, run_agent
 from handoff_bench.agents.model_client import ModelClient
-from handoff_bench.agents.tools import InfraError, ToolCallError
-from handoff_bench.channels.render import Channel, render
+from handoff_bench.agents.tools import INVALID_STOPS, InfraError, ToolCallError
 from handoff_bench.jsonl import JsonlWriter
 
 STATUSES = ("done", "failed", "unknown")
@@ -97,6 +99,23 @@ def register_finish(gateway: ToolGateway) -> None:
     )
 
 
+class AgentsConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    orchestrator_tools: tuple[str, ...] = ORCH_TOOLS_CALIBRATION
+    orchestrator_prompt: str = ORCHESTRATOR_SYSTEM_PROMPT
+    orchestrator_max_steps: int = ORCH_MAX_STEPS
+    subagent_tools: tuple[str, ...] = SUBAGENT_TOOLS
+    subagent_prompt: str = SUBAGENT_SYSTEM_PROMPT
+    subagent_rules: str = SUBAGENT_RULES
+    subagent_max_steps: int = SUB_MAX_STEPS
+
+
+# What `delegate` hands the orchestrator as `result`: the channel (tasks 9, 16).
+# `report_lost` (post fault) drops only the subagent's words; the trace and the journal keep them.
+Renderer = Callable[[AgentTrace, list[CallRow], bool], Any]
+
+
 class Delegation:
     """Registers `delegate` and `finish_report`; keeps the trace of every subagent run."""
 
@@ -106,14 +125,16 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
-        channel: Channel = "text",
+        render: Renderer,
         report_lost: Callable[[str], bool] | None = None,
+        config: AgentsConfig | None = None,
     ) -> None:
         self.gateway = gateway
-        self.channel = channel
         self.model = model
         self.log = log
         self.report_lost = report_lost
+        self.config = config or AgentsConfig()
+        self.render = render
         self.subagents: list[AgentTrace] = []
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
@@ -129,24 +150,22 @@ class Delegation:
         # A fresh actor per delegation: logs and the call journal stay separable per run.
         spec = AgentSpec(
             actor=f"sub-{len(self.subagents) + 1}",
-            system_prompt=SUBAGENT_SYSTEM_PROMPT,
-            max_steps=SUB_MAX_STEPS,
-            tools=self.gateway.openai_tools(list(SUBAGENT_TOOLS)),
+            system_prompt=self.config.subagent_prompt,
+            max_steps=self.config.subagent_max_steps,
+            tools=self.gateway.openai_tools(list(self.config.subagent_tools)),
             finish_tools=frozenset({"finish_report"}),
         )
         child = await run_agent(
             spec,
-            f"{goal}\n\n{SUBAGENT_RULES}",
+            f"{goal}\n\n{self.config.subagent_rules}",
             model=self.model,
             gateway=self.gateway,
             log=self.log,
         )
         self.subagents.append(child)
-        if child.stop_reason in ("api_error", "infra_error"):
+        if child.stop_reason in INVALID_STOPS:
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
-        # A lost report (post fault) drops only the subagent's words; the trace keeps them.
         lost = self.report_lost is not None and self.report_lost(spec.actor)
-        calls = self.gateway.journal.by_actor(spec.actor)
-        result = render(self.channel, child, calls, report_lost=lost)
-        return {"status": "completed", "result": result}
+        calls = self.gateway.journal.by_actor(child.actor)
+        return {"status": "completed", "result": self.render(child, calls, lost)}

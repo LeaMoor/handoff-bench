@@ -7,12 +7,18 @@ from typing import Any
 from helpers.fake_model import FakeModel, Step
 
 from handoff_bench.agents.call_journal import CallJournal
+from handoff_bench.agents.delegation import AgentsConfig
 from handoff_bench.billing import EffectJournal
-from handoff_bench.billing.demo import DEMO_INVOICES
-from handoff_bench.billing.models import EffectRow
-from handoff_bench.runner.episode import EpisodeResult, run_episode
+from handoff_bench.billing.models import EffectRow, Invoice
+from handoff_bench.cells import find_cell
+from handoff_bench.runner.episode import EpisodeConfig, EpisodeResult, run_episode
 from handoff_bench.worlds import World
 
+DEMO_INVOICES = [
+    Invoice(invoice_id="INV-12", customer_id="cus_ann", amount=12000, description="Hosting, March"),
+    Invoice(invoice_id="INV-13", customer_id="cus_bob", amount=4500, description="Domain renewal"),
+    Invoice(invoice_id="INV-14", customer_id="cus_ann", amount=12500, description="Hosting, April"),
+]
 # A fixed world the scripted steps below are written for (focal INV-12, cus_ann, 12000).
 DEMO_WORLD = World(
     world=1,
@@ -53,12 +59,22 @@ async def run(
     tmp_path: Path,
     script: list[Step] | None,
     model: FakeModel | None = None,
-    **kwargs: Any,
+    *,
+    world: World = DEMO_WORLD,
+    fault: str = "none",
+    channel: str = "text",
+    **agents: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
-    """Run an episode into tmp_path/ep (DEMO_WORLD unless `world` is given)."""
+    """Run an episode into tmp_path/ep; `agents` overrides fields of AgentsConfig."""
     model = model or FakeModel(script or [])
-    kwargs.setdefault("world", DEMO_WORLD)
-    result = await run_episode(model, episode_dir=tmp_path / "ep", episode_id="ep", **kwargs)
+    config = EpisodeConfig(
+        cell=find_cell(fault, channel).number,
+        world=world.world,
+        template=world.template,
+        seed=world.seed,
+        agents=AgentsConfig(**agents),
+    )
+    result = await run_episode(model, world, config, episode_dir=tmp_path / "ep")
     return model, result
 
 

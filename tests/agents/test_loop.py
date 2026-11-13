@@ -116,7 +116,7 @@ async def test_invalid_json_arguments_are_journaled_not_executed() -> None:
     await run_agent(spec(), "goal", model=model, gateway=gw)
 
     row = gw.journal.rows[0]
-    assert (row.tool, row.outcome, row.error_code) == ("echo", "error", "invalid_arguments")
+    assert (row.tool, row.outcome, row.error_code) == ("echo", "rejected", "invalid_arguments")
     assert row.args == {"_raw": "{not json"}
 
 

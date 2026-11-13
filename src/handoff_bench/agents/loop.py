@@ -1,15 +1,13 @@
 import copy
 import json
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.model_client import ModelCallFailed, ModelClient, ModelResponse, Usage
-from handoff_bench.agents.tools import InfraError, ToolResult
+from handoff_bench.agents.tools import InfraError, StopReason, ToolResult
 from handoff_bench.jsonl import JsonlWriter
-
-StopReason = Literal["finish", "max_steps", "dropped", "text_only", "api_error", "infra_error"]
 
 
 class AgentSpec(BaseModel):

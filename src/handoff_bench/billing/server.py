@@ -3,6 +3,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from typing import Literal
 
 import uvicorn
 from mcp.server.mcpserver import Context, MCPServer
@@ -17,6 +18,8 @@ from handoff_bench.billing.protocol import (
     format_error,
 )
 from handoff_bench.billing.service import BillingService
+
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 _INSTRUCTIONS = "Billing system: look up invoices, charge customers, list charges for an invoice."
 
@@ -33,8 +36,9 @@ def _actor(ctx: Context) -> str:
     return headers.get(ACTOR_HEADER) or UNKNOWN_ACTOR
 
 
-def make_server(service: BillingService) -> MCPServer:
-    server = MCPServer(name="billing", instructions=_INSTRUCTIONS)
+def make_server(service: BillingService, *, log_level: LogLevel = "WARNING") -> MCPServer:
+    # The SDK sets up root logging on the first server; at INFO a batch would print every request.
+    server = MCPServer(name="billing", instructions=_INSTRUCTIONS, log_level=log_level)
 
     @server.tool(description="Get an invoice: amount (in cents), customer and status (open/paid).")
     def get_invoice(invoice_id: str) -> InvoiceView:
@@ -71,7 +75,8 @@ def make_server(service: BillingService) -> MCPServer:
 
 
 def serve(service: BillingService, *, host: str = "127.0.0.1", port: int = 8765) -> None:
-    make_server(service).run("streamable-http", host=host, port=port, streamable_http_path=MCP_PATH)
+    server = make_server(service, log_level="INFO")
+    server.run("streamable-http", host=host, port=port, streamable_http_path=MCP_PATH)
 
 
 @contextmanager

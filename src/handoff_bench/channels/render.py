@@ -3,18 +3,20 @@
 text: the subagent's own words (C-text).
 code: a statement the code builds from the subagent's call journal (C-code) — never from the
       effect journal, which only the grader reads.
+struct: task 16.
+
+To add a channel, add an entry to RENDERERS; `cells.py` already names all of them.
 """
 
 import re
-from typing import Literal
 
 from handoff_bench.agents.call_journal import CallRow
+from handoff_bench.agents.delegation import Renderer
 from handoff_bench.agents.loop import AgentTrace
-
-Channel = Literal["text", "code"]
+from handoff_bench.billing.protocol import READ_TOOLS
+from handoff_bench.cells import Channel
 
 HEADER = "Subagent's bank calls, from the call log:"
-CHECKS = ("get_invoice", "list_charges")
 _INVOICE_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 
 
@@ -22,9 +24,7 @@ def render(
     channel: Channel, child: AgentTrace, calls: list[CallRow], *, report_lost: bool = False
 ) -> str:
     """The `result` string for one subagent run; `calls` are that subagent's journal rows."""
-    if channel == "text":
-        return "" if report_lost else subagent_words(child)
-    return statement(calls)
+    return RENDERERS[channel](child, calls, report_lost)
 
 
 def subagent_words(child: AgentTrace) -> str:
@@ -46,7 +46,7 @@ def statement(calls: list[CallRow]) -> str:
     # Numbering counts only shown calls: a dropped call is always the subagent's last one,
     # so no gap gives it away (the journal `seq` would, and would count the orchestrator's calls).
     for step, r in enumerate(shown, start=1):
-        if r.tool not in ("create_charge", *CHECKS):
+        if r.tool not in ("create_charge", *READ_TOOLS):
             continue
         charges += r.tool == "create_charge"
         lines.append(f"- step {step}: {r.tool} {_invoice(r)}: {_outcome(r)}")
@@ -56,7 +56,7 @@ def statement(calls: list[CallRow]) -> str:
 
 
 def _reached_bank(r: CallRow) -> bool:
-    return r.outcome != "dropped" and "_raw" not in r.args  # `_raw`: rejected by the gateway
+    return r.outcome not in ("dropped", "rejected")
 
 
 def _invoice(r: CallRow) -> str:
@@ -78,3 +78,9 @@ def _outcome(r: CallRow) -> str:
     if not ids:
         return "no charges"
     return f"{len(ids)} charge{'s' if len(ids) > 1 else ''} ({', '.join(ids)})"
+
+
+RENDERERS: dict[Channel, Renderer] = {
+    "text": lambda child, calls, report_lost: "" if report_lost else subagent_words(child),
+    "code": lambda child, calls, report_lost: statement(calls),
+}

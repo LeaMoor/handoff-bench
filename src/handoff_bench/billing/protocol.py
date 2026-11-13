@@ -3,6 +3,7 @@ UNKNOWN_ACTOR = "unknown"
 MCP_PATH = "/mcp"
 
 TOOL_NAMES = frozenset({"get_invoice", "create_charge", "list_charges"})
+READ_TOOLS = ("get_invoice", "list_charges")
 
 
 def format_error(code: str, message: str) -> str:

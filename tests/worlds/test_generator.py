@@ -162,3 +162,16 @@ def test_cli_world_rejects_unknown_template() -> None:
     result = CliRunner().invoke(app, ["world", "--template", "9", "--seed", "1"])
 
     assert result.exit_code != 0
+
+
+@pytest.mark.parametrize(
+    ("update", "message"),
+    [
+        ({"focal_invoice": "INV-1"}, "not among the targets"),
+        ({"targets": ["INV-1"], "focal_invoice": "INV-1"}, "not among the world's invoices"),
+    ],
+)
+def test_world_rejects_targets_outside_the_bank(update: dict, message: str) -> None:
+    data = generate(1, 1, 1).model_dump() | update
+    with pytest.raises(ValueError, match=message):
+        World(**data)

@@ -104,7 +104,7 @@ class ToolGateway:
 
     def reject(self, actor: str, tool: str, raw_args: str, code: str, message: str) -> ToolResult:
         self._seq += 1
-        result = error_result(code, message)
+        result = ToolResult(outcome="rejected", error_code=code, error_message=message)
         self._write(self._seq, actor, tool, {"_raw": raw_args}, result)
         return result
 
