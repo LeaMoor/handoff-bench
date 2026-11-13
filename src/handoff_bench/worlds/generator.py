@@ -3,7 +3,7 @@ unrelated invoices and the task wording (DECISIONS 2026-11-14)."""
 
 import random
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from handoff_bench.billing.models import Invoice
 
@@ -86,6 +86,15 @@ class World(BaseModel):
     targets: list[str]  # what the task asks to pay, in order
     focal_invoice: str  # where faults hit; must be charged exactly once
     task: str  # the orchestrator's task
+
+    @model_validator(mode="after")
+    def _targets_are_in_the_bank(self) -> "World":
+        ids = {inv.invoice_id for inv in self.invoices}
+        if missing := [t for t in self.targets if t not in ids]:
+            raise ValueError(f"targets {missing} are not among the world's invoices")
+        if self.focal_invoice not in self.targets:
+            raise ValueError(f"focal invoice {self.focal_invoice} is not among the targets")
+        return self
 
     @property
     def focal(self) -> Invoice:
