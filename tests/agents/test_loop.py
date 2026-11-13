@@ -93,6 +93,23 @@ async def test_tool_outside_agent_spec_is_rejected_even_if_gateway_has_it() -> N
     assert (gw.journal.rows[0].tool, gw.journal.rows[0].error_code) == ("secret", "unknown_tool")
 
 
+async def test_finish_together_with_other_calls_is_rejected() -> None:
+    gw = gateway()
+    model = FakeModel([[("echo", {"x": 1}), ("finish", {})], [("finish", {})]])
+    trace = await run_agent(spec(), "goal", model=model, gateway=gw)
+
+    assert (trace.stop_reason, trace.steps) == ("finish", 2)
+    assert model.requests[1][-2]["content"] == '{"echo": {"x": 1}}'
+    assert model.requests[1][-1]["content"] == (
+        "Error (finish_not_alone): finish must be the only tool call in a response."
+    )
+    assert [(r.tool, r.error_code) for r in gw.journal.rows] == [
+        ("echo", None),
+        ("finish", "finish_not_alone"),
+        ("finish", None),
+    ]
+
+
 async def test_invalid_json_arguments_are_journaled_not_executed() -> None:
     gw = gateway()
     model = FakeModel([[("echo", "{not json")], [("finish", {})]])

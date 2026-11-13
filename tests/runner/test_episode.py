@@ -64,7 +64,7 @@ def tools_by_actor(tmp_path) -> dict[str, set[str]]:
 async def test_orchestrator_delegates_subagent_pays_report_comes_back(tmp_path) -> None:
     model, result = await run(tmp_path, [DELEGATE, CHARGE, report(), finish()])
 
-    assert (result.stop_reason, result.delegations, result.focal_charges) == ("finish", 1, 1)
+    assert (result.stop_reason, result.delegations) == ("finish", 1)
     assert result.finish_args["status"] == "done"
     assert result.cost == pytest.approx(0.004)
     (effect,) = EffectJournal.read(tmp_path / "ep" / "effects.jsonl")
@@ -82,6 +82,14 @@ async def test_orchestrator_delegates_subagent_pays_report_comes_back(tmp_path) 
     ]
     trace = json.loads((tmp_path / "ep" / "trace.json").read_text())
     assert [s["actor"] for s in trace["subagents"]] == ["sub-1"]
+
+
+async def test_orchestrator_cannot_finish_before_reading_the_report(tmp_path) -> None:
+    model, result = await run(tmp_path, [DELEGATE + finish(), CHARGE, report(), finish()])
+
+    assert (result.stop_reason, result.steps) == ("finish", 2)
+    assert model.requests[3][-2]["content"] == delegate_result("Paid INV-12.")
+    assert model.requests[3][-1]["content"].startswith("Error (finish_not_alone)")
 
 
 async def test_subagent_sees_only_goal_rules_and_its_tools(tmp_path) -> None:

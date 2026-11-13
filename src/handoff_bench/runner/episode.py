@@ -36,7 +36,6 @@ class EpisodeResult(BaseModel):
     stop_reason: StopReason
     steps: int
     delegations: int
-    focal_charges: int
     finish_args: dict[str, Any] | None
     cost: float
     prompt_tokens: int
@@ -102,7 +101,6 @@ async def run_episode(
         stop_reason=broken.stop_reason if broken else trace.stop_reason,
         steps=trace.steps,
         delegations=len(subagents),
-        focal_charges=sum(r.invoice_id == FOCAL_INVOICE for r in service.journal.rows),
         finish_args=trace.finish_args,
         cost=usage.cost,
         prompt_tokens=usage.prompt_tokens,

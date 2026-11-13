@@ -141,6 +141,16 @@ async def run_agent(
                 result = gateway.reject(
                     spec.actor, tc.name, tc.arguments, "unknown_tool", f"No tool named {tc.name}."
                 )
+            elif tc.name in spec.finish_tools and len(resp.tool_calls) > 1:
+                # Otherwise the agent could finish before reading the results of its other calls
+                # (e.g. [delegate, finish(done)] in one response).
+                result = gateway.reject(
+                    spec.actor,
+                    tc.name,
+                    tc.arguments,
+                    "finish_not_alone",
+                    f"{tc.name} must be the only tool call in a response.",
+                )
             elif not isinstance(args, dict):
                 result = gateway.reject(
                     spec.actor,
