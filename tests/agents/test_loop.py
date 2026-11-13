@@ -75,6 +75,24 @@ async def test_tool_error_goes_back_to_model_and_loop_continues() -> None:
     assert model.requests[1][-1]["content"] == "Error (unknown_tool): No tool named nope."
 
 
+async def test_tool_outside_agent_spec_is_rejected_even_if_gateway_has_it() -> None:
+    gw = gateway()
+    called = []
+
+    async def secret(actor: str, args: dict) -> dict:
+        called.append(args)
+        return {}
+
+    gw.register("secret", secret)
+    model = FakeModel([[("secret", {})], [("finish", {})]])
+    trace = await run_agent(spec(), "goal", model=model, gateway=gw)
+
+    assert trace.stop_reason == "finish"
+    assert called == []
+    assert model.requests[1][-1]["content"] == "Error (unknown_tool): No tool named secret."
+    assert (gw.journal.rows[0].tool, gw.journal.rows[0].error_code) == ("secret", "unknown_tool")
+
+
 async def test_invalid_json_arguments_are_journaled_not_executed() -> None:
     gw = gateway()
     model = FakeModel([[("echo", "{not json")], [("finish", {})]])
@@ -128,7 +146,8 @@ async def test_infra_error_stops_agent_and_is_not_shown_to_model() -> None:
 
     gw.register("pay", bank_down)
     model = FakeModel([[("pay", {})], [("finish", {})]])
-    trace = await run_agent(spec(), "goal", model=model, gateway=gw)
+    pay_spec = spec().model_copy(update={"tools": gw.openai_tools(["pay", "finish"])})
+    trace = await run_agent(pay_spec, "goal", model=model, gateway=gw)
 
     assert (trace.stop_reason, trace.steps) == ("infra_error", 1)
     assert len(model.requests) == 1

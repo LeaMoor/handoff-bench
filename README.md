@@ -20,6 +20,6 @@ uv run stand bank serve       # банк по HTTP: http://127.0.0.1:8765/mcp
 | Путь | Что |
 |---|---|
 | `src/handoff_bench/billing/` | банк: ядро (`service.py`), MCP-сервер (`server.py`), контракт (`protocol.py`), журнал эффектов |
-| `src/handoff_bench/agents/` | шлюз вызовов и журнал вызовов, бэкенды инструментов, клиент модели, агентный цикл |
-| `src/handoff_bench/runner/` | сборка эпизода (пока скелет) |
+| `src/handoff_bench/agents/` | шлюз вызовов и журнал вызовов, бэкенды инструментов, клиент модели, агентный цикл, `delegate` и субагент (`delegation.py`) |
+| `src/handoff_bench/runner/` | эпизод «оркестратор → субагент» (`episode.py`); `skeleton.py` — временный, один агент |
 | `faults/`, `channels/`, `worlds/`, `grading/` | под задачи 8, 9, 5, 10 |

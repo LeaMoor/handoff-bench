@@ -135,7 +135,13 @@ async def run_agent(
                 args = json.loads(tc.arguments or "{}")
             except json.JSONDecodeError:
                 args = None
-            if not isinstance(args, dict):
+            if tc.name not in tool_names:
+                # The gateway is shared: without this check the orchestrator could call
+                # the subagent's tools (e.g. create_charge) directly.
+                result = gateway.reject(
+                    spec.actor, tc.name, tc.arguments, "unknown_tool", f"No tool named {tc.name}."
+                )
+            elif not isinstance(args, dict):
                 result = gateway.reject(
                     spec.actor,
                     tc.name,
