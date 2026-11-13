@@ -8,8 +8,9 @@ from helpers.fake_model import FakeModel, Step
 from handoff_bench.agents.model_client import ModelSettings
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.runner.batch import BatchConfig, run_batch
+from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultRow
-from handoff_bench.runner.run import EpisodeSpec, run_one
+from handoff_bench.runner.run import run_one
 from handoff_bench.worlds import World, generate
 
 pytestmark = pytest.mark.anyio
@@ -48,18 +49,11 @@ def happy_path(world: World) -> list[Step]:
     return [DELEGATE, charges(world), report("done"), finish("done")]
 
 
-async def run(tmp_path: Path, script: list[Step], spec: EpisodeSpec) -> ResultRow:
-    return await run_one(
-        spec,
-        FakeModel(script),
-        settings=SETTINGS,
-        run_dir=tmp_path,
-        run_id="test",
-        commit="abc",
-    )
+async def run(tmp_path: Path, script: list[Step], spec: EpisodeConfig) -> ResultRow:
+    return await run_one(spec, FakeModel(script), run_dir=tmp_path, run_id="test")
 
 
-SPEC = EpisodeSpec(cell=1, template=1, seed=1)
+SPEC = EpisodeConfig(cell=1, template=1, seed=1, model=SETTINGS, commit="abc")
 W = generate(1, 1, 1)
 
 
@@ -123,20 +117,20 @@ async def test_episode_is_graded_and_coded(
     assert (row.first_action, row.decision) == (first_action, decision)
     assert (row.cell, row.block, row.fault, row.channel) == (1, "control", "none", "text")
     assert (row.model, row.commit, row.error) == ("fake/model", "abc", None)
-    saved = json.loads((tmp_path / SPEC.episode_id / "grade.json").read_text())
-    assert saved["grade"]["outcome"] == outcome
+    saved = json.loads((tmp_path / SPEC.episode_id / "result.json").read_text())
+    assert saved["outcome"] == outcome
 
 
 async def test_bank_holds_the_generated_world(tmp_path) -> None:
     world = generate(1, 3, 2)
-    spec = EpisodeSpec(cell=1, template=2, seed=3)
+    spec = EpisodeConfig(cell=1, template=2, seed=3, model=SETTINGS)
     row = await run(tmp_path, happy_path(world), spec)
 
     assert (row.outcome, row.other_target_errors, row.stray_charges) == ("eos", 0, 0)
     assert row.phrasing == world.phrasing
 
 
-def happy_model(spec: EpisodeSpec) -> FakeModel:
+def happy_model(spec: EpisodeConfig) -> FakeModel:
     return FakeModel(happy_path(generate(spec.world, spec.seed, spec.template)))
 
 
@@ -164,7 +158,7 @@ async def test_debug_config_runs_ten_episodes_into_results_csv(tmp_path) -> None
     ids=["budget_spent", "cost_not_reported"],
 )
 async def test_batch_stops_starting_episodes(tmp_path, cost, budget, cost_missing) -> None:
-    def make_model(spec: EpisodeSpec) -> FakeModel:
+    def make_model(spec: EpisodeConfig) -> FakeModel:
         model = happy_model(spec)
         model.cost = cost
         return model
@@ -177,10 +171,10 @@ async def test_batch_stops_starting_episodes(tmp_path, cost, budget, cost_missin
 
 async def test_crashed_episode_does_not_stop_the_batch(tmp_path) -> None:
     config = debug_config()
-    broken = EpisodeSpec(cell=1, template=1, seed=3)
+    broken = EpisodeConfig(cell=1, template=1, seed=3)
 
-    def make_model(spec: EpisodeSpec) -> FakeModel:
-        return FakeModel([]) if spec == broken else happy_model(spec)
+    def make_model(spec: EpisodeConfig) -> FakeModel:
+        return FakeModel([]) if spec.episode_id == broken.episode_id else happy_model(spec)
 
     summary = await run_batch(config, make_model, run_dir=tmp_path, run_id="dbg", commit="abc")
 
@@ -193,10 +187,10 @@ async def test_channel_plugs_in_through_the_registry(tmp_path, monkeypatch) -> N
         return f"{[c.tool for c in calls]} lost={report_lost}"
 
     monkeypatch.setitem(RENDERERS, "code", statement)
-    spec = EpisodeSpec(cell=5, template=1, seed=1)
+    spec = EpisodeConfig(cell=5, template=1, seed=1, model=SETTINGS, commit="abc")
     model = FakeModel([DELEGATE, charges(W), report("done"), finish("unknown")])
 
-    row = await run_one(spec, model, settings=SETTINGS, run_dir=tmp_path, run_id="t", commit="abc")
+    row = await run_one(spec, model, run_dir=tmp_path, run_id="t")
 
     assert (row.fault, row.channel, row.outcome, row.focal_charges) == (
         "post",

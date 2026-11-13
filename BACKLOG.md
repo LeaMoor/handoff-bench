@@ -10,10 +10,8 @@
       `cache_control`; китайские модели кэшируют сами. Проверять по `cached_tokens` в логе.
 
 ## Для задач других частей
-- [ ] **Скелет** (`runner/skeleton.py`, `stand skeleton`) и `billing/demo.py`: убрать —
-      `stand run` работает (демо-счета ещё нужны `stand bank serve` и тестам: `DEMO_WORLD`).
-- [ ] **8, 15 → поломки**: запись в `FAULTS` (`faults/setup.py`) — настройки банка и хуки шлюза
-      (`CallHook`). **9, 16 → каналы**: запись в `RENDERERS` (`channels/render.py`). Больше ничего
+- [ ] **15 → таймаут банка**: записи `timeout_lost` / `timeout_committed` в `FAULTS`
+      (`faults/setup.py`) — настройки банка (`TimeoutRule`, задержка видимости). **9, 16 → каналы**: запись в `RENDERERS` (`channels/render.py`). Больше ничего
       менять не нужно: ячейка заработает в `stand run` и в конфигах сама. Образец —
       `test_fault_and_channel_plug_in_through_their_registries`. Вместе с главным блоком — сценарий,
       где оркестратор проверяет сам (`check`, затем решение).

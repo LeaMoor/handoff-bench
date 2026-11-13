@@ -1,14 +1,11 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
-
 from handoff_bench.agents.call_journal import CallJournal
-from handoff_bench.agents.delegation import ORCH_TOOLS_CALIBRATION, ORCH_TOOLS_MAIN, AgentsConfig
 from handoff_bench.agents.loop import ModelCallLog
-from handoff_bench.agents.model_client import ModelClient, ModelSettings
+from handoff_bench.agents.model_client import ModelClient
 from handoff_bench.billing import EffectJournal
-from handoff_bench.cells import CELLS, Cell, UnsupportedCell
+from handoff_bench.cells import Cell, UnsupportedCell
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
@@ -17,20 +14,6 @@ from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
 from handoff_bench.runner.results import ResultRow
 from handoff_bench.worlds import generate
-
-
-class EpisodeSpec(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    cell: int
-    world: int = 1
-    template: int
-    seed: int
-    repeat: int = 0
-
-    @property
-    def episode_id(self) -> str:
-        return f"c{self.cell:02d}-w{self.world}-t{self.template}-s{self.seed}-r{self.repeat}"
 
 
 def check_supported(cell: Cell) -> None:
@@ -50,32 +33,11 @@ def _served(log_path: Path) -> tuple[str, str]:
 
 
 async def run_one(
-    spec: EpisodeSpec,
-    model: ModelClient,
-    *,
-    settings: ModelSettings,
-    run_dir: Path,
-    run_id: str,
-    commit: str,
+    config: EpisodeConfig, model: ModelClient, *, run_dir: Path, run_id: str
 ) -> ResultRow:
-    cell = CELLS[spec.cell]
-    check_supported(cell)
-    world = generate(spec.world, spec.seed, spec.template)
-    episode_dir = run_dir / spec.episode_id
-    tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
-    config = EpisodeConfig(
-        episode_id=spec.episode_id,
-        cell=cell.number,
-        fault=cell.fault,
-        channel=cell.channel,
-        world=spec.world,
-        template=spec.template,
-        seed=spec.seed,
-        repeat=spec.repeat,
-        agents=AgentsConfig(orchestrator_tools=tools),
-        model=settings,
-        commit=commit,
-    )
+    """Episode → grade → `results.csv` row, also saved as `result.json` next to the logs."""
+    world = generate(config.world, config.seed, config.template)
+    episode_dir = run_dir / config.episode_id
     result = await run_episode(model, world, config, episode_dir=episode_dir)
     g = grade(
         EffectJournal.read(episode_dir / "effects.jsonl"),
@@ -89,27 +51,24 @@ async def run_one(
         orchestrator=ORCHESTRATOR,
         final_text=result.final_text,
     )
-    (episode_dir / "grade.json").write_text(
-        json.dumps({"grade": g.model_dump(), "behaviour": b.model_dump()}, indent=2),
-        encoding="utf-8",
-    )
     served_model, served_provider = _served(episode_dir / "model_calls.jsonl")
-    return ResultRow(
+    row = ResultRow(
         run_id=run_id,
-        episode_id=spec.episode_id,
-        cell=cell.number,
-        block=cell.block,
-        fault=cell.fault,
-        channel=cell.channel,
-        world=spec.world,
-        template=spec.template,
-        seed=spec.seed,
-        repeat=spec.repeat,
+        episode_id=config.episode_id,
+        cell=config.cell,
+        block=config.block,
+        fault=config.fault,
+        channel=config.channel,
+        world=config.world,
+        template=config.template,
+        seed=config.seed,
+        repeat=config.repeat,
         phrasing=world.phrasing,
-        model=settings.model,
-        provider=settings.provider,
+        model=config.model.model if config.model else "unknown",
+        provider=config.model.provider if config.model else "unknown",
         served_model=served_model,
         served_provider=served_provider,
+        fault_fired=result.fault_fired,
         **g.model_dump(),
         **b.model_dump(),
         delegations=result.delegations,
@@ -121,6 +80,10 @@ async def run_one(
         reasoning_tokens=result.reasoning_tokens,
         cached_tokens=result.cached_tokens,
         cost=result.cost,
-        commit=commit,
+        commit=config.commit,
         error=result.error,
     )
+    (episode_dir / "result.json").write_text(
+        json.dumps(row.model_dump(mode="json"), indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return row

@@ -4,10 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 from handoff_bench.agents.call_journal import CallJournal
-from handoff_bench.agents.delegation import AgentsConfig, Delegation, register_finish
+from handoff_bench.agents.delegation import (
+    ORCH_TOOLS_CALIBRATION,
+    ORCH_TOOLS_MAIN,
+    AgentsConfig,
+    Delegation,
+    register_finish,
+)
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, ModelCallLog, StopReason, run_agent
 from handoff_bench.agents.mcp_backend import McpBackend
@@ -15,7 +21,7 @@ from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
-from handoff_bench.cells import Channel, Fault
+from handoff_bench.cells import CELLS, Block, Channel, Fault
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.jsonl import JsonlWriter
@@ -25,21 +31,50 @@ ORCHESTRATOR = "orchestrator"
 
 
 class EpisodeConfig(BaseModel):
-    """Everything that sets an episode apart; written to `config.json` next to its logs."""
+    """Everything that sets an episode apart; written to `config.json` next to its logs.
+    Fault, channel and the orchestrator's tools follow from the cell."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    episode_id: str
     cell: int
-    fault: Fault = "none"
-    channel: Channel = "text"
-    world: int
+    world: int = 1
     template: int
     seed: int
     repeat: int = 0
-    agents: AgentsConfig = AgentsConfig()
+    agents: AgentsConfig
     model: ModelSettings | None = None
     commit: str = "unknown"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _agents_for_block(cls, data: dict[str, Any]) -> dict[str, Any]:
+        if data.get("cell") not in CELLS:
+            raise ValueError(f"unknown cell {data.get('cell')}")
+        if "agents" not in data:
+            main = CELLS[data["cell"]].block == "main"
+            tools = ORCH_TOOLS_MAIN if main else ORCH_TOOLS_CALIBRATION
+            data = {**data, "agents": AgentsConfig(orchestrator_tools=tools)}
+        return data
+
+    @computed_field
+    @property
+    def episode_id(self) -> str:
+        return f"c{self.cell:02d}-w{self.world}-t{self.template}-s{self.seed}-r{self.repeat}"
+
+    @computed_field
+    @property
+    def block(self) -> Block:
+        return CELLS[self.cell].block
+
+    @computed_field
+    @property
+    def fault(self) -> Fault:
+        return CELLS[self.cell].fault
+
+    @computed_field
+    @property
+    def channel(self) -> Channel:
+        return CELLS[self.cell].channel
 
 
 class EpisodeResult(BaseModel):
@@ -67,7 +102,7 @@ def _write_json(path: Path, data: Any) -> None:
 async def run_episode(
     model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
 ) -> EpisodeResult:
-    """Writes config, calls, effects, model_calls, trace and summary to episode_dir."""
+    """Writes config, calls, effects, model_calls and trace to episode_dir."""
     fault = FAULTS[config.fault](world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
@@ -123,7 +158,7 @@ async def run_episode(
     usage = sum((t.usage for t in traces), Usage())
     # A subagent's API / stand failure invalidates the whole episode.
     broken = next((s for s in subagents if s.stop_reason in INVALID_STOPS), None)
-    result = EpisodeResult(
+    return EpisodeResult(
         episode_dir=episode_dir,
         stop_reason=broken.stop_reason if broken else trace.stop_reason,
         steps=trace.steps,
@@ -140,5 +175,3 @@ async def run_episode(
         retries=sum(t.retries for t in traces),
         error=broken.error if broken else trace.error,
     )
-    _write_json(episode_dir / "summary.json", result.model_dump(mode="json"))
-    return result

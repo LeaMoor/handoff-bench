@@ -28,6 +28,7 @@ class ResultRow(BaseModel):
     provider: str
     served_model: str
     served_provider: str
+    fault_fired: bool
     outcome: Outcome
     correct: bool
     false_done: bool

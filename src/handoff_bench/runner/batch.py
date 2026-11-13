@@ -8,8 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
+from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
-from handoff_bench.runner.run import EpisodeSpec, check_supported, run_one
+from handoff_bench.runner.run import check_supported, run_one
 from handoff_bench.worlds import TEMPLATES, WORLDS
 
 
@@ -46,9 +47,17 @@ class BatchConfig(BaseModel):
     def load(cls, path: Path) -> "BatchConfig":
         return cls.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
-    def episodes(self) -> list[EpisodeSpec]:
+    def episodes(self, commit: str) -> list[EpisodeConfig]:
         return [
-            EpisodeSpec(cell=c, world=self.world, template=t, seed=s, repeat=r)
+            EpisodeConfig(
+                cell=c,
+                world=self.world,
+                template=t,
+                seed=s,
+                repeat=r,
+                model=self.model,
+                commit=commit,
+            )
             for c in self.cells
             for t in self.templates
             for s in self.seeds
@@ -67,7 +76,7 @@ class BatchSummary(BaseModel):
 
 async def run_batch(
     config: BatchConfig,
-    make_model: Callable[[EpisodeSpec], ModelClient],
+    make_model: Callable[[EpisodeConfig], ModelClient],
     *,
     run_dir: Path,
     run_id: str,
@@ -79,24 +88,17 @@ async def run_batch(
     limiter = anyio.CapacityLimiter(config.parallel)
     finished, crashed, skipped, spent, cost_missing = 0, 0, 0, 0.0, False
 
-    async def one(spec: EpisodeSpec) -> None:
+    async def one(episode: EpisodeConfig) -> None:
         nonlocal finished, crashed, skipped, spent, cost_missing
         async with limiter:
             if cost_missing or spent >= config.budget_usd:
                 skipped += 1
                 return
             try:
-                row = await run_one(
-                    spec,
-                    make_model(spec),
-                    settings=config.model,
-                    run_dir=run_dir,
-                    run_id=run_id,
-                    commit=commit,
-                )
+                row = await run_one(episode, make_model(episode), run_dir=run_dir, run_id=run_id)
             except Exception:
                 crashed += 1
-                episode_dir = run_dir / spec.episode_id
+                episode_dir = run_dir / episode.episode_id
                 episode_dir.mkdir(parents=True, exist_ok=True)
                 (episode_dir / "crash.txt").write_text(traceback.format_exc(), encoding="utf-8")
                 return
@@ -106,8 +108,8 @@ async def run_batch(
             results.append(row)
 
     async with anyio.create_task_group() as tg:
-        for spec in config.episodes():
-            tg.start_soon(one, spec)
+        for episode in config.episodes(commit):
+            tg.start_soon(one, episode)
     return BatchSummary(
         run_dir=run_dir,
         finished=finished,

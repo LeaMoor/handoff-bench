@@ -77,6 +77,7 @@ def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
         provider="synthetic",
         served_model="synthetic",
         served_provider="synthetic",
+        fault_fired=c.fault in ("pre", "post"),
         outcome=outcome,
         correct=outcome in CORRECT,
         false_done=e.get("false_done", False),
