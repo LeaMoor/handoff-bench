@@ -5,6 +5,7 @@ code: a statement the code builds from the subagent's call journal (C-code) — 
       effect journal, which only the grader reads.
 """
 
+import re
 from typing import Literal
 
 from handoff_bench.agents.call_journal import CallRow
@@ -14,6 +15,7 @@ Channel = Literal["text", "code"]
 
 HEADER = "Subagent's bank calls, from the call log:"
 CHECKS = ("get_invoice", "list_charges")
+_INVOICE_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 
 
 def render(
@@ -35,18 +37,32 @@ def subagent_words(child: AgentTrace) -> str:
 
 
 def statement(calls: list[CallRow]) -> str:
+    """One line per bank call of this subagent (`create_charge` and the checks), numbered by the
+    subagent's own calls. Calls that never reached the bank are left out: dropped by the injector
+    (it reads as "no call") or rejected by the stand for malformed arguments."""
     lines = [HEADER]
     charges = 0
-    for r in sorted(calls, key=lambda r: r.seq):
-        # A call the injector intercepted never reached the bank: it reads as "no call",
-        # otherwise the statement itself would reveal the fault.
-        if r.tool not in ("create_charge", *CHECKS) or r.outcome in ("dropped", "infra_error"):
+    shown = [r for r in sorted(calls, key=lambda r: r.seq) if _reached_bank(r)]
+    # Numbering counts only shown calls: a dropped call is always the subagent's last one,
+    # so no gap gives it away (the journal `seq` would, and would count the orchestrator's calls).
+    for step, r in enumerate(shown, start=1):
+        if r.tool not in ("create_charge", *CHECKS):
             continue
         charges += r.tool == "create_charge"
-        lines.append(f"- step {r.seq}: {r.tool} {r.args.get('invoice_id', '?')}: {_outcome(r)}")
+        lines.append(f"- step {step}: {r.tool} {_invoice(r)}: {_outcome(r)}")
     if charges == 0:
         lines.append("- no create_charge calls")
     return "\n".join(lines)
+
+
+def _reached_bank(r: CallRow) -> bool:
+    return r.outcome != "dropped" and "_raw" not in r.args  # `_raw`: rejected by the gateway
+
+
+def _invoice(r: CallRow) -> str:
+    # The subagent writes the arguments: only an id-like value goes into a code-built line.
+    value = r.args.get("invoice_id")
+    return value if isinstance(value, str) and _INVOICE_ID.fullmatch(value) else "?"
 
 
 def _outcome(r: CallRow) -> str:

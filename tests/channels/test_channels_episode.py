@@ -2,20 +2,24 @@ import json
 
 import pytest
 from helpers.episode import CHARGE, DELEGATE, delegate_result, effects, finish, report, run
+from helpers.fake_model import FakeModel
 
+from handoff_bench.agents.delegation import ORCHESTRATOR_SYSTEM_PROMPT
 from handoff_bench.channels.render import HEADER
 
 pytestmark = pytest.mark.anyio
 
 
-def seen_by_orchestrator(model) -> list[str]:
-    """`result` of every delegate call, as the orchestrator's model received it."""
-    out = []
-    for request in model.requests:
-        for msg in request:
-            if msg.get("role") == "tool" and '"status": "completed"' in msg["content"]:
-                out.append(json.loads(msg["content"])["result"])
-    return list(dict.fromkeys(out))
+def seen_by_orchestrator(model: FakeModel) -> list[str]:
+    """`result` of every delegate call, from the orchestrator's last request."""
+    last = next(
+        r for r in reversed(model.requests) if r[0]["content"] == ORCHESTRATOR_SYSTEM_PROMPT
+    )
+    return [
+        json.loads(m["content"])["result"]
+        for m in last
+        if m["role"] == "tool" and m["content"].endswith('"status": "completed"}')
+    ]
 
 
 async def test_code_channel_pre_says_there_was_no_charge(tmp_path) -> None:
@@ -35,7 +39,7 @@ async def test_code_channel_post_shows_the_charge_text_channel_does_not(tmp_path
 
     (charge,) = effects(tmp_path / "code")
     assert code.requests[-1][-1]["content"] == delegate_result(
-        f"{HEADER}\n- step 2: create_charge INV-12: success, charge {charge.charge_id}"
+        f"{HEADER}\n- step 1: create_charge INV-12: success, charge {charge.charge_id}"
     )
     assert text.requests[-1][-1]["content"] == delegate_result("")
 
@@ -46,5 +50,5 @@ async def test_statement_covers_only_this_subagent(tmp_path) -> None:
 
     first, second = seen_by_orchestrator(model)
     assert first == f"{HEADER}\n- no create_charge calls"
-    assert second.startswith(f"{HEADER}\n- step 4: create_charge INV-12: success")
+    assert second.startswith(f"{HEADER}\n- step 1: create_charge INV-12: success")
     assert second.count("create_charge") == 1
