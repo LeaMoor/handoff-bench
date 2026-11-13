@@ -11,7 +11,7 @@ def test_version() -> None:
 
 
 def test_run_rejects_unknown_fault_and_channel_before_any_model_call() -> None:
-    for args in (["--fault", "timeout"], ["--channel", "code"], ["--template", "9"]):
+    for args in (["--fault", "timeout"], ["--channel", "struct"], ["--template", "9"]):
         result = CliRunner().invoke(app, ["run", *args])
         assert result.exit_code != 0
 

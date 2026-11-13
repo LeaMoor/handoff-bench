@@ -11,7 +11,7 @@
 ```bash
 uv sync
 uv run pytest                 # без ключей и без платных вызовов модели
-uv run stand run --template 1 --seed 1 --fault post   # один эпизод; нужен OPENROUTER_API_KEY в .env
+uv run stand run --template 1 --seed 1 --fault post --channel code   # один эпизод; нужен OPENROUTER_API_KEY в .env
 uv run stand skeleton         # один агент платит счёт; нужен OPENROUTER_API_KEY в .env
 uv run stand bank serve       # банк по HTTP: http://127.0.0.1:8765/mcp
 ```
@@ -25,4 +25,5 @@ uv run stand bank serve       # банк по HTTP: http://127.0.0.1:8765/mcp
 | `src/handoff_bench/runner/` | эпизод «оркестратор → субагент» (`episode.py`); `skeleton.py` — временный, один агент |
 | `src/handoff_bench/worlds/` | мир 1: генератор вариантов по сиду и шаблону задачи; `stand world` — посмотреть мир |
 | `src/handoff_bench/faults/` | инжектор поломок pre / post (`injector.py`) |
-| `channels/`, `grading/` | под задачи 9, 10 |
+| `src/handoff_bench/channels/` | каналы отчёта: «слова» и «выписка» (`render.py`) |
+| `grading/` | под задачу 10 |

@@ -20,6 +20,7 @@ from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, Usage
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
+from handoff_bench.channels.render import Channel
 from handoff_bench.faults.injector import FaultMode, Injector
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.worlds import World
@@ -35,6 +36,7 @@ class EpisodeResult(BaseModel):
     delegations: int
     fault: FaultMode
     fault_fired: bool
+    channel: Channel
     finish_args: dict[str, Any] | None
     cost: float
     prompt_tokens: int
@@ -50,6 +52,7 @@ async def run_episode(
     episode_dir: Path,
     episode_id: str,
     fault: FaultMode = "none",
+    channel: Channel = "text",
     orchestrator_tools: tuple[str, ...] = ORCH_TOOLS_CALIBRATION,
 ) -> EpisodeResult:
     """Run one episode and write calls, effects, model_calls, trace and summary to episode_dir."""
@@ -74,7 +77,13 @@ async def run_episode(
                 hooks=[injector],
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
-            delegation = Delegation(gateway, model=model, log=log, report_lost=injector.report_lost)
+            delegation = Delegation(
+                gateway,
+                model=model,
+                log=log,
+                channel=channel,
+                report_lost=injector.report_lost,
+            )
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,
@@ -108,6 +117,7 @@ async def run_episode(
         delegations=len(subagents),
         fault=fault,
         fault_fired=injector.fired,
+        channel=channel,
         finish_args=trace.finish_args,
         cost=usage.cost,
         prompt_tokens=usage.prompt_tokens,
