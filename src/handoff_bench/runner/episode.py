@@ -1,4 +1,4 @@
-"""One episode: the orchestrator delegates paying the invoice to a subagent."""
+"""One episode: the orchestrator delegates the task of a generated world to a subagent."""
 
 import json
 from pathlib import Path
@@ -47,6 +47,8 @@ class EpisodeResult(BaseModel):
     stop_reason: StopReason
     steps: int
     delegations: int
+    fault: Fault
+    fault_fired: bool
     finish_args: dict[str, Any] | None
     final_text: str | None
     cost: float
@@ -88,11 +90,16 @@ async def run_episode(
                 episode_id=config.episode_id,
                 journal=CallJournal(episode_dir / "calls.jsonl"),
                 backends=[bank],
-                hooks=list(fault.hooks),
+                hooks=[fault.injector],
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
             delegation = Delegation(
-                gateway, model=model, log=log, config=agents, render=RENDERERS[config.channel]
+                gateway,
+                model=model,
+                log=log,
+                report_lost=fault.injector.report_lost,
+                config=agents,
+                render=RENDERERS[config.channel],
             )
             register_finish(gateway)
             spec = AgentSpec(
@@ -121,6 +128,8 @@ async def run_episode(
         stop_reason=broken.stop_reason if broken else trace.stop_reason,
         steps=trace.steps,
         delegations=len(subagents),
+        fault=config.fault,
+        fault_fired=fault.injector.fired,
         finish_args=trace.finish_args,
         final_text=trace.messages[-1].get("content") if trace.stop_reason == "text_only" else None,
         cost=usage.cost,

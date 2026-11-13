@@ -5,11 +5,8 @@ from pathlib import Path
 import pytest
 from helpers.fake_model import FakeModel, Step
 
-from handoff_bench.agents.gateway import CallHook, PendingCall
 from handoff_bench.agents.model_client import ModelSettings
-from handoff_bench.agents.tools import ToolResult
 from handoff_bench.channels.render import RENDERERS
-from handoff_bench.faults.setup import FAULTS, FaultSetup
 from handoff_bench.runner.batch import BatchConfig, run_batch
 from handoff_bench.runner.results import ResultRow
 from handoff_bench.runner.run import EpisodeSpec, run_one
@@ -191,28 +188,24 @@ async def test_crashed_episode_does_not_stop_the_batch(tmp_path) -> None:
     assert "IndexError" in (tmp_path / broken.episode_id / "crash.txt").read_text()
 
 
-class DropFocalCharge(CallHook):
-    def __init__(self, invoice: str) -> None:
-        self.invoice = invoice
+async def test_channel_plugs_in_through_the_registry(tmp_path, monkeypatch) -> None:
+    def statement(child, calls, report_lost) -> str:
+        return f"{[c.tool for c in calls]} lost={report_lost}"
 
-    async def before_call(self, call: PendingCall) -> ToolResult | None:
-        if call.actor == "sub-1" and call.args.get("invoice_id") == self.invoice:
-            return ToolResult(outcome="dropped")
-        return None
-
-
-async def test_fault_and_channel_plug_in_through_their_registries(tmp_path, monkeypatch) -> None:
-    monkeypatch.setitem(
-        FAULTS, "pre", lambda world: FaultSetup(hooks=(DropFocalCharge(world.focal_invoice),))
-    )
-    monkeypatch.setitem(RENDERERS, "code", lambda child, calls: f"{len(calls)} call(s)")
-    spec = EpisodeSpec(cell=4, template=1, seed=1)
-    model = FakeModel([DELEGATE, charges(W), finish("unknown")])
+    monkeypatch.setitem(RENDERERS, "code", statement)
+    spec = EpisodeSpec(cell=5, template=1, seed=1)
+    model = FakeModel([DELEGATE, charges(W), report("done"), finish("unknown")])
 
     row = await run_one(spec, model, settings=SETTINGS, run_dir=tmp_path, run_id="t", commit="abc")
 
-    assert (row.fault, row.channel, row.outcome, row.focal_charges) == ("pre", "code", "unknown", 0)
-    assert json.loads(model.requests[-1][-1]["content"])["result"] == "1 call(s)"
+    assert (row.fault, row.channel, row.outcome, row.focal_charges) == (
+        "post",
+        "code",
+        "unknown",
+        1,
+    )
+    result = json.loads(model.requests[-1][-1]["content"])["result"]
+    assert result == "['create_charge', 'finish_report'] lost=True"
     config = json.loads((tmp_path / spec.episode_id / "config.json").read_text())
-    assert (config["episode"]["cell"], config["episode"]["commit"]) == (4, "abc")
+    assert (config["episode"]["cell"], config["episode"]["commit"]) == (5, "abc")
     assert config["episode"]["agents"]["orchestrator_tools"] == ["delegate", "finish"]

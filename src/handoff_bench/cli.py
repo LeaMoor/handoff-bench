@@ -13,6 +13,13 @@ def _run_id(run_id: str | None, label: str) -> str:
     return run_id or f"{datetime.now():%Y%m%d-%H%M%S}-{label}"
 
 
+@app.callback()
+def main() -> None:
+    """Стенд handoff-bench."""
+
+    # Before the subcommand parses its options: model and provider can come from .env.
+
+
 @app.command()
 def run(
     world: Annotated[int, typer.Option(help="Номер мира")] = 1,
@@ -22,8 +29,12 @@ def run(
         str, typer.Option(help="none | pre | post | timeout_lost | timeout_committed")
     ] = "none",
     channel: Annotated[str, typer.Option(help="text | struct | code")] = "text",
-    model: Annotated[str, typer.Option(help="ID модели в OpenRouter")] = "qwen/qwen3.7-flash",
-    provider: Annotated[str, typer.Option(help="Провайдер в OpenRouter (закреплён)")] = "alibaba",
+    model: Annotated[
+        str, typer.Option(envvar="OPENROUTER_MODEL", help="ID модели в OpenRouter")
+    ] = "qwen/qwen3.7-flash",
+    provider: Annotated[
+        str, typer.Option(envvar="OPENROUTER_PROVIDER", help="Провайдер в OpenRouter (закреплён)")
+    ] = "alibaba",
     model_seed: Annotated[
         int | None, typer.Option(help="Сид модели; не задан — не передаём")
     ] = None,
@@ -37,7 +48,6 @@ def run(
     Нужен OPENROUTER_API_KEY в .env.
     """
     import anyio
-    from dotenv import load_dotenv
 
     from handoff_bench.agents.model_client import ModelSettings, OpenRouterClient
     from handoff_bench.cells import UnsupportedCell, find_cell
@@ -49,7 +59,6 @@ def run(
         check_supported(cell)
     except UnsupportedCell as e:
         raise typer.BadParameter(str(e)) from e
-    load_dotenv()
     settings = ModelSettings(
         model=model,
         provider=provider,
@@ -83,14 +92,12 @@ def batch(
 ) -> None:
     """Пачка эпизодов параллельно, с остановкой по бюджету. Нужен OPENROUTER_API_KEY в .env."""
     import anyio
-    from dotenv import load_dotenv
 
     from handoff_bench.agents.model_client import OpenRouterClient
     from handoff_bench.runner.batch import BatchConfig, run_batch
     from handoff_bench.runner.results import git_commit
 
     cfg = BatchConfig.load(config)
-    load_dotenv()
     client = OpenRouterClient(cfg.model)
     run_id = _run_id(cfg.run_id, config.stem)
     summary = anyio.run(
@@ -158,8 +165,12 @@ def version() -> None:
 
 @app.command()
 def skeleton(
-    model: Annotated[str, typer.Option(help="ID модели в OpenRouter")] = "qwen/qwen3.7-flash",
-    provider: Annotated[str, typer.Option(help="Провайдер в OpenRouter (закреплён)")] = "alibaba",
+    model: Annotated[
+        str, typer.Option(envvar="OPENROUTER_MODEL", help="ID модели в OpenRouter")
+    ] = "qwen/qwen3.7-flash",
+    provider: Annotated[
+        str, typer.Option(envvar="OPENROUTER_PROVIDER", help="Провайдер в OpenRouter (закреплён)")
+    ] = "alibaba",
     seed: Annotated[int, typer.Option(help="Сид мира (сейчас — номера списаний в банке)")] = 0,
     model_seed: Annotated[
         int | None, typer.Option(help="Сид модели; не задан — не передаём")
@@ -170,12 +181,10 @@ def skeleton(
 ) -> None:
     """Скелет: один агент платит счёт INV-12. Нужен OPENROUTER_API_KEY в .env."""
     import anyio
-    from dotenv import load_dotenv
 
     from handoff_bench.agents.model_client import ModelSettings, OpenRouterClient
     from handoff_bench.runner.skeleton import run_skeleton
 
-    load_dotenv()
     settings = ModelSettings(
         model=model,
         provider=provider,

@@ -24,7 +24,8 @@ class PendingCall:
 
 
 class CallHook:
-    """Инжектор: pre — before_call возвращает dropped; post — after_call подменяет отчёт."""
+    """Инжектор: pre — before_call возвращает dropped; post — after_call отмечает субагента,
+    чей отчёт теряется (см. faults/injector.py)."""
 
     async def before_call(self, call: PendingCall) -> ToolResult | None:
         return None

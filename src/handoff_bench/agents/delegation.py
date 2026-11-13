@@ -112,7 +112,8 @@ class AgentsConfig(BaseModel):
 
 
 # What `delegate` hands the orchestrator as `result`: the channel (tasks 9, 16).
-Renderer = Callable[[AgentTrace, list[CallRow]], Any]
+# `report_lost` (post fault) drops only the subagent's words; the trace and the journal keep them.
+Renderer = Callable[[AgentTrace, list[CallRow], bool], Any]
 
 
 def subagent_words(child: AgentTrace) -> str:
@@ -124,6 +125,11 @@ def subagent_words(child: AgentTrace) -> str:
     return ""
 
 
+def words(child: AgentTrace, calls: list[CallRow], report_lost: bool) -> str:
+    """The words channel: what the subagent said itself, or nothing if its report was lost."""
+    return "" if report_lost else subagent_words(child)
+
+
 class Delegation:
     """Registers `delegate` and `finish_report`; keeps the trace of every subagent run."""
 
@@ -133,14 +139,16 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
+        report_lost: Callable[[str], bool] | None = None,
         config: AgentsConfig | None = None,
         render: Renderer | None = None,
     ) -> None:
         self.gateway = gateway
         self.model = model
         self.log = log
+        self.report_lost = report_lost
         self.config = config or AgentsConfig()
-        self.render: Renderer = render or (lambda child, calls: subagent_words(child))
+        self.render: Renderer = render or words
         self.subagents: list[AgentTrace] = []
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
@@ -172,5 +180,6 @@ class Delegation:
         if child.stop_reason in ("api_error", "infra_error"):
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
+        lost = self.report_lost is not None and self.report_lost(spec.actor)
         calls = self.gateway.journal.by_actor(child.actor)
-        return {"status": "completed", "result": self.render(child, calls)}
+        return {"status": "completed", "result": self.render(child, calls, lost)}

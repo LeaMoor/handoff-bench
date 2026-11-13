@@ -11,7 +11,7 @@
 ```bash
 uv sync
 uv run pytest                 # без ключей и без платных вызовов модели
-uv run stand run --template 1 --seed 1      # один эпизод; нужен OPENROUTER_API_KEY в .env
+uv run stand run --template 1 --seed 1 --fault post   # один эпизод; ключ и модель — в .env (см. .env.example)
 uv run stand batch configs/debug.yaml        # пачка → runs/<run_id>/results.csv
 uv run stand report runs/<run_id>            # таблицы, главные числа, предсказания
 uv run --group notebook jupyter lab          # ноутбук notebooks/week2_analysis.py
