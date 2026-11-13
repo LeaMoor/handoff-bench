@@ -1,8 +1,12 @@
 """Orchestrator → subagent handoff: `delegate(goal)`, the subagent's `finish_report`
 and the orchestrator's `finish`."""
 
+from collections.abc import Callable
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
+from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, run_agent
 from handoff_bench.agents.model_client import ModelClient
@@ -95,6 +99,22 @@ def register_finish(gateway: ToolGateway) -> None:
     )
 
 
+class AgentsConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    orchestrator_tools: tuple[str, ...] = ORCH_TOOLS_CALIBRATION
+    orchestrator_prompt: str = ORCHESTRATOR_SYSTEM_PROMPT
+    orchestrator_max_steps: int = ORCH_MAX_STEPS
+    subagent_tools: tuple[str, ...] = SUBAGENT_TOOLS
+    subagent_prompt: str = SUBAGENT_SYSTEM_PROMPT
+    subagent_rules: str = SUBAGENT_RULES
+    subagent_max_steps: int = SUB_MAX_STEPS
+
+
+# What `delegate` hands the orchestrator as `result`: the channel (tasks 9, 16).
+Renderer = Callable[[AgentTrace, list[CallRow]], Any]
+
+
 def subagent_words(child: AgentTrace) -> str:
     """What the subagent said itself: the `finish_report` text, else its last plain answer."""
     if child.finish_tool == "finish_report" and child.finish_args is not None:
@@ -113,10 +133,14 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
+        config: AgentsConfig | None = None,
+        render: Renderer | None = None,
     ) -> None:
         self.gateway = gateway
         self.model = model
         self.log = log
+        self.config = config or AgentsConfig()
+        self.render: Renderer = render or (lambda child, calls: subagent_words(child))
         self.subagents: list[AgentTrace] = []
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
@@ -132,14 +156,14 @@ class Delegation:
         # A fresh actor per delegation: logs and the call journal stay separable per run.
         spec = AgentSpec(
             actor=f"sub-{len(self.subagents) + 1}",
-            system_prompt=SUBAGENT_SYSTEM_PROMPT,
-            max_steps=SUB_MAX_STEPS,
-            tools=self.gateway.openai_tools(list(SUBAGENT_TOOLS)),
+            system_prompt=self.config.subagent_prompt,
+            max_steps=self.config.subagent_max_steps,
+            tools=self.gateway.openai_tools(list(self.config.subagent_tools)),
             finish_tools=frozenset({"finish_report"}),
         )
         child = await run_agent(
             spec,
-            f"{goal}\n\n{SUBAGENT_RULES}",
+            f"{goal}\n\n{self.config.subagent_rules}",
             model=self.model,
             gateway=self.gateway,
             log=self.log,
@@ -148,4 +172,5 @@ class Delegation:
         if child.stop_reason in ("api_error", "infra_error"):
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
-        return {"status": "completed", "result": subagent_words(child)}
+        calls = self.gateway.journal.by_actor(child.actor)
+        return {"status": "completed", "result": self.render(child, calls)}

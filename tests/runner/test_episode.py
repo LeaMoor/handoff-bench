@@ -11,15 +11,30 @@ from handoff_bench.agents.delegation import (
     SUB_MAX_STEPS,
     SUBAGENT_RULES,
     SUBAGENT_SYSTEM_PROMPT,
+    AgentsConfig,
 )
 from handoff_bench.agents.loop import ModelCallLog, rebuild_requests
 from handoff_bench.agents.model_client import ModelCallFailed
 from handoff_bench.billing import EffectJournal
+from handoff_bench.billing.demo import DEMO_INVOICES
 from handoff_bench.jsonl import read_rows
-from handoff_bench.runner.episode import EpisodeResult, run_episode
+from handoff_bench.runner.episode import EpisodeConfig, EpisodeResult, run_episode
+from handoff_bench.worlds import World
 
 pytestmark = pytest.mark.anyio
 
+WORLD = World(
+    world=1,
+    template=1,
+    seed=0,
+    phrasing=0,
+    customer_id="cus_ann",
+    customer_name="Ann Lee",
+    invoices=DEMO_INVOICES,
+    targets=["INV-12"],
+    focal_invoice="INV-12",
+    task="Pay invoice INV-12 of customer Ann Lee (cus_ann) and report the result to me.",
+)
 GOAL = "Pay invoice INV-12 of customer cus_ann (12000 cents)."
 DELEGATE = [("delegate", {"goal": GOAL})]
 CHARGE = [("create_charge", {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": 12000})]
@@ -47,7 +62,10 @@ async def run(
     **kwargs: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
     model = model or FakeModel(script or [])
-    result = await run_episode(model, episode_dir=tmp_path / "ep", episode_id="ep", **kwargs)
+    config = EpisodeConfig(
+        episode_id="ep", cell=1, world=1, template=1, seed=0, agents=AgentsConfig(**kwargs)
+    )
+    result = await run_episode(model, WORLD, config, episode_dir=tmp_path / "ep")
     return model, result
 
 

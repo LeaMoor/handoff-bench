@@ -9,17 +9,127 @@ bank_app = typer.Typer(help="Банк (MCP-сервер billing).", no_args_is_h
 app.add_typer(bank_app, name="bank")
 
 
+def _run_id(run_id: str | None, label: str) -> str:
+    return run_id or f"{datetime.now():%Y%m%d-%H%M%S}-{label}"
+
+
 @app.command()
 def run(
     world: Annotated[int, typer.Option(help="Номер мира")] = 1,
-    fault: Annotated[str, typer.Option(help="none | pre | post | timeout")] = "none",
+    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
+    seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 1,
+    fault: Annotated[
+        str, typer.Option(help="none | pre | post | timeout_lost | timeout_committed")
+    ] = "none",
     channel: Annotated[str, typer.Option(help="text | struct | code")] = "text",
-    seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 0,
+    model: Annotated[str, typer.Option(help="ID модели в OpenRouter")] = "qwen/qwen3.7-flash",
+    provider: Annotated[str, typer.Option(help="Провайдер в OpenRouter (закреплён)")] = "alibaba",
+    model_seed: Annotated[
+        int | None, typer.Option(help="Сид модели; не задан — не передаём")
+    ] = None,
+    temperature: Annotated[float | None, typer.Option(help="Не задано — не передаём")] = None,
+    reasoning_effort: Annotated[str | None, typer.Option(help="low | medium | high")] = None,
+    run_id: Annotated[str | None, typer.Option(help="Имя прогона (по умолчанию — время)")] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
 ) -> None:
-    """Один эпизод: журналы и оценка в runs/<run_id>/."""
-    typer.echo(f"run: world={world} fault={fault} channel={channel} seed={seed}")
-    typer.echo("ещё не реализовано")
-    raise typer.Exit(code=1)
+    """Один эпизод: журналы в runs/<run_id>/<episode_id>/, строка в runs/<run_id>/results.csv.
+
+    Нужен OPENROUTER_API_KEY в .env.
+    """
+    import anyio
+    from dotenv import load_dotenv
+
+    from handoff_bench.agents.model_client import ModelSettings, OpenRouterClient
+    from handoff_bench.cells import UnsupportedCell, find_cell
+    from handoff_bench.runner.results import ResultsCsv, git_commit
+    from handoff_bench.runner.run import EpisodeSpec, check_supported, run_one
+
+    try:
+        cell = find_cell(fault, channel)
+        check_supported(cell)
+    except UnsupportedCell as e:
+        raise typer.BadParameter(str(e)) from e
+    load_dotenv()
+    settings = ModelSettings(
+        model=model,
+        provider=provider,
+        temperature=temperature,
+        seed=model_seed,
+        reasoning_effort=reasoning_effort,
+    )
+    client = OpenRouterClient(settings)
+    run_id = _run_id(run_id, "single")
+    run_dir = runs_dir / run_id
+    results = ResultsCsv(run_dir / "results.csv")
+    spec = EpisodeSpec(cell=cell.number, world=world, template=template, seed=seed)
+    row = anyio.run(
+        lambda: run_one(
+            spec,
+            client,
+            settings=settings,
+            run_dir=run_dir,
+            run_id=run_id,
+            commit=git_commit(),
+        )
+    )
+    results.append(row)
+    typer.echo(row.model_dump_json(indent=2))
+
+
+@app.command()
+def batch(
+    config: Annotated[Path, typer.Argument(help="YAML-конфиг пачки, например configs/debug.yaml")],
+    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
+) -> None:
+    """Пачка эпизодов параллельно, с остановкой по бюджету. Нужен OPENROUTER_API_KEY в .env."""
+    import anyio
+    from dotenv import load_dotenv
+
+    from handoff_bench.agents.model_client import OpenRouterClient
+    from handoff_bench.runner.batch import BatchConfig, run_batch
+    from handoff_bench.runner.results import git_commit
+
+    cfg = BatchConfig.load(config)
+    load_dotenv()
+    client = OpenRouterClient(cfg.model)
+    run_id = _run_id(cfg.run_id, config.stem)
+    summary = anyio.run(
+        lambda: run_batch(
+            cfg,
+            lambda _: client,
+            run_dir=runs_dir / run_id,
+            run_id=run_id,
+            commit=git_commit(),
+        )
+    )
+    typer.echo(summary.model_dump_json(indent=2))
+
+
+@app.command()
+def report(
+    paths: Annotated[
+        list[Path], typer.Argument(help="Папки прогонов runs/<run_id> или файлы results.csv")
+    ],
+) -> None:
+    """Таблица по ячейкам, главные числа, предсказания и критерии пилота."""
+    import pandas as pd
+
+    from handoff_bench.analysis import report as r
+
+    df = r.load_results(*paths)
+    pd.set_option("display.width", 200)
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.precision", 2)
+    sections = [
+        ("По ячейкам", r.cell_table(df)),
+        ("Первое действие оркестратора", r.first_actions(df)),
+        ("Главное число 1: главный блок по каналам", r.main_by_channel(df)),
+        ("Главное число 2: калибровка", r.calibration_summary(df)),
+        ("Предсказания", r.predictions(df)),
+        ("Критерии пилота", r.pilot_checks(df)),
+    ]
+    for title, table in sections:
+        typer.echo(f"\n== {title} ==\n{table.to_string()}")
 
 
 @app.command()

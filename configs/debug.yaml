@@ -1,0 +1,8 @@
+model:
+  model: qwen/qwen3.7-flash
+  provider: alibaba
+cells: [1]
+templates: [1, 2]
+seeds: [1, 2, 3, 4, 5]
+parallel: 4
+budget_usd: 0.5

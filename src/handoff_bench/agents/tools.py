@@ -4,6 +4,8 @@ from typing import Any, Literal, Protocol
 from pydantic import BaseModel, ConfigDict
 
 Outcome = Literal["ok", "error", "timeout", "dropped", "infra_error"]
+StopReason = Literal["finish", "max_steps", "dropped", "text_only", "api_error", "infra_error"]
+INVALID_STOPS: tuple[StopReason, ...] = ("api_error", "infra_error")
 
 
 class ToolResult(BaseModel):
