@@ -62,12 +62,13 @@ async def run(
     *,
     world: World = DEMO_WORLD,
     fault: str = "none",
+    channel: str = "text",
     **agents: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
     """Run an episode into tmp_path/ep; `agents` overrides fields of AgentsConfig."""
     model = model or FakeModel(script or [])
     config = EpisodeConfig(
-        cell=find_cell(fault, "text").number,
+        cell=find_cell(fault, channel).number,
         world=world.world,
         template=world.template,
         seed=world.seed,

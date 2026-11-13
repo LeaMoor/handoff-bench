@@ -6,7 +6,7 @@ import pytest
 from helpers.fake_model import FakeModel, Step
 
 from handoff_bench.agents.model_client import ModelSettings
-from handoff_bench.channels.render import RENDERERS
+from handoff_bench.channels.render import HEADER
 from handoff_bench.runner.batch import BatchConfig, run_batch
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultRow
@@ -182,24 +182,15 @@ async def test_crashed_episode_does_not_stop_the_batch(tmp_path) -> None:
     assert "IndexError" in (tmp_path / broken.episode_id / "crash.txt").read_text()
 
 
-async def test_channel_plugs_in_through_the_registry(tmp_path, monkeypatch) -> None:
-    def statement(child, calls, report_lost) -> str:
-        return f"{[c.tool for c in calls]} lost={report_lost}"
-
-    monkeypatch.setitem(RENDERERS, "code", statement)
+async def test_cell_5_post_statement_shows_the_charge(tmp_path) -> None:
     spec = EpisodeConfig(cell=5, template=1, seed=1, model=SETTINGS, commit="abc")
     model = FakeModel([DELEGATE, charges(W), report("done"), finish("unknown")])
 
     row = await run_one(spec, model, run_dir=tmp_path, run_id="t")
 
-    assert (row.fault, row.channel, row.outcome, row.focal_charges) == (
-        "post",
-        "code",
-        "unknown",
-        1,
-    )
+    assert (row.fault, row.channel, row.fault_fired, row.focal_charges) == ("post", "code", True, 1)
     result = json.loads(model.requests[-1][-1]["content"])["result"]
-    assert result == "['create_charge', 'finish_report'] lost=True"
+    assert result.startswith(f"{HEADER}\n- step 1: create_charge {W.focal_invoice}: success")
     config = json.loads((tmp_path / spec.episode_id / "config.json").read_text())
     assert (config["episode"]["cell"], config["episode"]["commit"]) == (5, "abc")
     assert config["episode"]["agents"]["orchestrator_tools"] == ["delegate", "finish"]

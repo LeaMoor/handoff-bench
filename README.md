@@ -11,7 +11,7 @@
 ```bash
 uv sync
 uv run pytest                 # без ключей и без платных вызовов модели
-uv run stand run --template 1 --seed 1 --fault post   # один эпизод; ключ и модель — в .env (см. .env.example)
+uv run stand run --template 1 --seed 1 --fault post --channel code   # один эпизод; ключ и модель — в .env (см. .env.example)
 uv run stand batch configs/debug.yaml        # пачка → runs/<run_id>/results.csv
 uv run stand report runs/<run_id>            # таблицы, главные числа, предсказания
 uv run --group notebook jupyter lab          # ноутбук notebooks/week2_analysis.py
@@ -31,4 +31,5 @@ uv run stand bank serve --template 1 --seed 1   # банк мира 1 по HTTP:
 | `notebooks/` | ноутбук анализа (jupytext, `.py`) |
 | `configs/` | конфиги пачек для `stand batch` |
 | `src/handoff_bench/worlds/` | мир 1: генератор вариантов по сиду и шаблону задачи; `stand world` — посмотреть мир |
-| `src/handoff_bench/faults/`, `channels/` | реестры поломок (`FAULTS`) и каналов (`RENDERERS`); задачи 8, 15 и 9, 16 |
+| `src/handoff_bench/faults/` | инжектор pre / post (`injector.py`) и реестр поломок `FAULTS` (`setup.py`) |
+| `src/handoff_bench/channels/` | каналы «слова» и «выписка» и реестр `RENDERERS` (`render.py`) |

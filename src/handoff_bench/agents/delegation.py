@@ -116,20 +116,6 @@ class AgentsConfig(BaseModel):
 Renderer = Callable[[AgentTrace, list[CallRow], bool], Any]
 
 
-def subagent_words(child: AgentTrace) -> str:
-    """What the subagent said itself: the `finish_report` text, else its last plain answer."""
-    if child.finish_tool == "finish_report" and child.finish_args is not None:
-        return child.finish_args["text"]
-    if child.stop_reason == "text_only":
-        return child.messages[-1].get("content") or ""
-    return ""
-
-
-def words(child: AgentTrace, calls: list[CallRow], report_lost: bool) -> str:
-    """The words channel: what the subagent said itself, or nothing if its report was lost."""
-    return "" if report_lost else subagent_words(child)
-
-
 class Delegation:
     """Registers `delegate` and `finish_report`; keeps the trace of every subagent run."""
 
@@ -139,16 +125,16 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
+        render: Renderer,
         report_lost: Callable[[str], bool] | None = None,
         config: AgentsConfig | None = None,
-        render: Renderer | None = None,
     ) -> None:
         self.gateway = gateway
         self.model = model
         self.log = log
         self.report_lost = report_lost
         self.config = config or AgentsConfig()
-        self.render: Renderer = render or words
+        self.render = render
         self.subagents: list[AgentTrace] = []
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
