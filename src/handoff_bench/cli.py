@@ -4,6 +4,7 @@ from typing import Annotated, cast, get_args
 
 import typer
 
+from handoff_bench.channels.render import Channel
 from handoff_bench.faults.injector import FaultMode
 
 app = typer.Typer(help="Стенд handoff-bench.", no_args_is_help=True)
@@ -20,15 +21,12 @@ def main() -> None:
     load_dotenv()
 
 
-CHANNELS = ("text",)  # struct, code — задачи 9 и 16
-
-
 @app.command()
 def run(
     world: Annotated[int, typer.Option(help="Номер мира")] = 1,
     template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
     fault: Annotated[str, typer.Option(help="none | pre | post")] = "none",
-    channel: Annotated[str, typer.Option(help="text (struct, code — позже)")] = "text",
+    channel: Annotated[str, typer.Option(help="text | code (struct — задача 16)")] = "text",
     seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 0,
     model: Annotated[
         str, typer.Option(envvar="OPENROUTER_MODEL", help="ID модели в OpenRouter")
@@ -54,8 +52,9 @@ def run(
     faults = get_args(FaultMode)
     if fault not in faults:
         raise typer.BadParameter(f"fault must be one of {', '.join(faults)}")
-    if channel not in CHANNELS:
-        raise typer.BadParameter(f"channel must be one of {', '.join(CHANNELS)}")
+    channels = get_args(Channel)
+    if channel not in channels:
+        raise typer.BadParameter(f"channel must be one of {', '.join(channels)}")
     try:
         w = generate(world, seed, template)
     except ValueError as e:
@@ -73,6 +72,7 @@ def run(
             episode_dir=runs_dir / "single" / episode_id,
             episode_id=episode_id,
             fault=cast(FaultMode, fault),
+            channel=cast(Channel, channel),
         )
     )
     typer.echo(result.model_dump_json(indent=2))

@@ -8,6 +8,7 @@ from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, run_agent
 from handoff_bench.agents.model_client import ModelClient
 from handoff_bench.agents.tools import InfraError, ToolCallError
+from handoff_bench.channels.render import Channel, render
 from handoff_bench.jsonl import JsonlWriter
 
 STATUSES = ("done", "failed", "unknown")
@@ -96,15 +97,6 @@ def register_finish(gateway: ToolGateway) -> None:
     )
 
 
-def subagent_words(child: AgentTrace) -> str:
-    """What the subagent said itself: the `finish_report` text, else its last plain answer."""
-    if child.finish_tool == "finish_report" and child.finish_args is not None:
-        return child.finish_args["text"]
-    if child.stop_reason == "text_only":
-        return child.messages[-1].get("content") or ""
-    return ""
-
-
 class Delegation:
     """Registers `delegate` and `finish_report`; keeps the trace of every subagent run."""
 
@@ -114,9 +106,11 @@ class Delegation:
         *,
         model: ModelClient,
         log: JsonlWriter[ModelCallLog] | None = None,
+        channel: Channel = "text",
         report_lost: Callable[[str], bool] | None = None,
     ) -> None:
         self.gateway = gateway
+        self.channel = channel
         self.model = model
         self.log = log
         self.report_lost = report_lost
@@ -153,4 +147,6 @@ class Delegation:
             raise InfraError(child.stop_reason, child.error or "")
         # A lost report (post fault) drops only the subagent's words; the trace keeps them.
         lost = self.report_lost is not None and self.report_lost(spec.actor)
-        return {"status": "completed", "result": "" if lost else subagent_words(child)}
+        calls = self.gateway.journal.by_actor(spec.actor)
+        result = render(self.channel, child, calls, report_lost=lost)
+        return {"status": "completed", "result": result}
