@@ -172,7 +172,9 @@ async def run_episode(
         orchestrator_responses=[
             len(m["tool_calls"]) for m in trace.messages if m.get("tool_calls")
         ],
-        fault_fired=fault.injector.fired,
+        # Timeout faults live in the bank: they fired if a call came back as a timeout.
+        fault_fired=fault.injector.fired
+        or any(r.outcome == "timeout" for r in gateway.journal.rows),
         finish_args=trace.finish_args,
         final_text=trace.messages[-1].get("content") if trace.stop_reason == "text_only" else None,
         cost=usage.cost,
