@@ -19,8 +19,10 @@ def _run_id(run_id: str | None, label: str) -> str:
 @app.callback()
 def main() -> None:
     """Стенд handoff-bench."""
+    from dotenv import load_dotenv
 
     # Before the subcommand parses its options: model and provider can come from .env.
+    load_dotenv()
 
 
 def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary":

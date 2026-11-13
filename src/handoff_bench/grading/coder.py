@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from handoff_bench.agents.call_journal import CallRow
+from handoff_bench.billing.protocol import READ_TOOLS
 
 Action = Literal[
     "redelegate",
@@ -14,7 +15,6 @@ Action = Literal[
     "other",
     "none",
 ]
-CHECK_TOOLS = ("get_invoice", "list_charges")
 
 
 class Behaviour(BaseModel):
@@ -30,7 +30,7 @@ def _action(row: CallRow) -> Action:
         return "redelegate"
     if row.tool == "finish":
         return f"finish_{row.args['status']}"  # type: ignore[return-value]
-    if row.tool in CHECK_TOOLS:
+    if row.tool in READ_TOOLS:
         return "check"
     return "other"
 

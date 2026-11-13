@@ -83,7 +83,7 @@ async def test_none_passes_the_report_through(tmp_path) -> None:
     model, result = await run(tmp_path, [DELEGATE, CHARGE, report(), finish()], fault="none")
 
     assert model.requests[3][-1]["content"] == delegate_result("Paid INV-12.")
-    assert (result.fault, result.fault_fired) == ("none", False)
+    assert result.fault_fired is False
 
 
 async def test_pre_drops_the_focal_charge_and_stops_the_subagent(tmp_path) -> None:

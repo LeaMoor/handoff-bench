@@ -13,10 +13,10 @@ import re
 from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.delegation import Renderer
 from handoff_bench.agents.loop import AgentTrace
+from handoff_bench.billing.protocol import READ_TOOLS
 from handoff_bench.cells import Channel
 
 HEADER = "Subagent's bank calls, from the call log:"
-CHECKS = ("get_invoice", "list_charges")
 _INVOICE_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 
 
@@ -46,7 +46,7 @@ def statement(calls: list[CallRow]) -> str:
     # Numbering counts only shown calls: a dropped call is always the subagent's last one,
     # so no gap gives it away (the journal `seq` would, and would count the orchestrator's calls).
     for step, r in enumerate(shown, start=1):
-        if r.tool not in ("create_charge", *CHECKS):
+        if r.tool not in ("create_charge", *READ_TOOLS):
             continue
         charges += r.tool == "create_charge"
         lines.append(f"- step {step}: {r.tool} {_invoice(r)}: {_outcome(r)}")
@@ -56,7 +56,7 @@ def statement(calls: list[CallRow]) -> str:
 
 
 def _reached_bank(r: CallRow) -> bool:
-    return r.outcome != "dropped" and "_raw" not in r.args  # `_raw`: rejected by the gateway
+    return r.outcome not in ("dropped", "rejected")
 
 
 def _invoice(r: CallRow) -> str:

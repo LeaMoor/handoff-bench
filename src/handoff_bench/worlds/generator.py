@@ -87,6 +87,10 @@ class World(BaseModel):
     focal_invoice: str  # where faults hit; must be charged exactly once
     task: str  # the orchestrator's task
 
+    @property
+    def focal(self) -> Invoice:
+        return next(inv for inv in self.invoices if inv.invoice_id == self.focal_invoice)
+
 
 def generate(world: int, seed: int, template: int) -> World:
     """The same (world, seed, template) always gives the same world."""

@@ -110,9 +110,7 @@ def test_words_without_finish_report(stop: StopReason, last: str, expected: str)
 
 
 def test_calls_that_never_reached_the_bank_are_left_out() -> None:
-    malformed = row(3, "create_charge", "error", code="invalid_arguments").model_copy(
-        update={"args": {"_raw": "{not json"}}
-    )
+    malformed = row(3, "create_charge", "rejected", code="invalid_arguments")
     calls = [row(2, "get_invoice", result=INVOICE), malformed, row(4, "list_charges", result=[])]
     assert render("code", trace(), calls) == "\n".join(
         [

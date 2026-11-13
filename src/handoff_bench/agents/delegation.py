@@ -10,7 +10,7 @@ from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, run_agent
 from handoff_bench.agents.model_client import ModelClient
-from handoff_bench.agents.tools import InfraError, ToolCallError
+from handoff_bench.agents.tools import INVALID_STOPS, InfraError, ToolCallError
 from handoff_bench.jsonl import JsonlWriter
 
 STATUSES = ("done", "failed", "unknown")
@@ -163,7 +163,7 @@ class Delegation:
             log=self.log,
         )
         self.subagents.append(child)
-        if child.stop_reason in ("api_error", "infra_error"):
+        if child.stop_reason in INVALID_STOPS:
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
         lost = self.report_lost is not None and self.report_lost(spec.actor)
