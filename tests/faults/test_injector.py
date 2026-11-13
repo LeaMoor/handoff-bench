@@ -138,3 +138,16 @@ async def test_wrong_charge_is_not_a_fault_trigger(tmp_path, fault) -> None:
     assert result.fault_fired is False
     assert "customer_mismatch" in model.requests[2][-1]["content"]
     assert model.requests[-1][-1]["content"] == delegate_result("Wrong customer.")
+
+
+@pytest.mark.parametrize("amount", ["12000", 1200])
+@pytest.mark.parametrize(("fault", "charged"), [("pre", 0), ("post", 1)])
+async def test_any_call_the_bank_would_execute_is_a_trigger(
+    tmp_path, amount, fault, charged
+) -> None:
+    # The bank coerces "12000" and does not check the amount against the invoice.
+    pay = [("create_charge", {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": amount})]
+    _, result = await run(tmp_path, [DELEGATE, pay, report(), finish("unknown")], fault=fault)
+
+    assert result.fault_fired is True
+    assert len(effects(tmp_path)) == charged

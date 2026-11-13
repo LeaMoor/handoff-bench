@@ -1,7 +1,7 @@
 """Faults on the subagent's payment of the focal invoice.
 
-Both modes hit the same call: the first create_charge that pays the focal invoice correctly
-(right invoice, customer and amount).
+Both modes target the same call: the first create_charge the bank would execute for the focal
+invoice (right invoice and customer, positive amount; the bank does not check the amount).
 pre:  the call is not executed and the subagent stops.
 post: the call goes through and the subagent finishes, but its report is lost.
 Either way the orchestrator gets the same empty `delegate` result. A fault fires at most
@@ -33,13 +33,13 @@ class Injector(CallHook):
         return self.mode == "post" and self.fired_on == actor
 
     def _hits(self, call: PendingCall) -> bool:
-        # Same trigger for pre and post: a wrong call fails in the bank in both worlds alike.
+        # A call the bank would reject fails alike in pre and post, so it is not a trigger.
         return (
             not self.fired
             and call.tool == "create_charge"
             and call.args.get("invoice_id") == self.focal.invoice_id
             and call.args.get("customer_id") == self.focal.customer_id
-            and call.args.get("amount") == self.focal.amount
+            and _positive_number(call.args.get("amount"))
         )
 
     async def before_call(self, call: PendingCall) -> ToolResult | None:
@@ -49,6 +49,15 @@ class Injector(CallHook):
         return None
 
     async def after_call(self, call: PendingCall, result: ToolResult) -> ToolResult:
-        if self.mode == "post" and self._hits(call):
+        # post means "the charge went through": a call the bank refused does not count.
+        if self.mode == "post" and result.outcome == "ok" and self._hits(call):
             self.fired_on = call.actor
         return result
+
+
+def _positive_number(value: object) -> bool:
+    """The bank coerces types (the string 86200 is charged as 86200), so the trigger must too."""
+    try:
+        return float(value) > 0  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return False

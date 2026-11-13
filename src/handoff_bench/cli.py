@@ -1,8 +1,10 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast, get_args
 
 import typer
+
+from handoff_bench.faults.injector import FaultMode
 
 app = typer.Typer(help="Стенд handoff-bench.", no_args_is_help=True)
 bank_app = typer.Typer(help="Банк (MCP-сервер billing).", no_args_is_help=True)
@@ -18,7 +20,6 @@ def main() -> None:
     load_dotenv()
 
 
-FAULTS = ("none", "pre", "post")
 CHANNELS = ("text",)  # struct, code — задачи 9 и 16
 
 
@@ -50,8 +51,9 @@ def run(
     from handoff_bench.runner.episode import run_episode
     from handoff_bench.worlds import generate
 
-    if fault not in FAULTS:
-        raise typer.BadParameter(f"fault must be one of {', '.join(FAULTS)}")
+    faults = get_args(FaultMode)
+    if fault not in faults:
+        raise typer.BadParameter(f"fault must be one of {', '.join(faults)}")
     if channel not in CHANNELS:
         raise typer.BadParameter(f"channel must be one of {', '.join(CHANNELS)}")
     try:
@@ -70,7 +72,7 @@ def run(
             world=w,
             episode_dir=runs_dir / "single" / episode_id,
             episode_id=episode_id,
-            fault=fault,  # type: ignore[arg-type]
+            fault=cast(FaultMode, fault),
         )
     )
     typer.echo(result.model_dump_json(indent=2))

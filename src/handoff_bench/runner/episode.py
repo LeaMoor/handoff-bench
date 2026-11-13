@@ -60,7 +60,9 @@ async def run_episode(
         id_seed=world.seed,
     )
     service.add_invoices(world.invoices)
-    focal = next(inv for inv in world.invoices if inv.invoice_id == world.focal_invoice)
+    focal = next((inv for inv in world.invoices if inv.invoice_id == world.focal_invoice), None)
+    if focal is None:
+        raise ValueError(f"focal invoice {world.focal_invoice} is not among the world's invoices")
     injector = Injector(fault, focal)
 
     with service, running_server(service) as url:
