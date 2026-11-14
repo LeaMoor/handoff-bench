@@ -127,3 +127,24 @@ async def test_fatal_api_error_becomes_model_call_failed() -> None:
 def test_model_seed_is_not_sent_by_default() -> None:
     client = OpenRouterClient(ModelSettings(model="m", provider="p"), api_key="test")
     assert "seed" not in client.request_params([], [])
+
+
+def test_anthropic_models_get_cache_breakpoints_others_do_not() -> None:
+    messages = [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": "goal"},
+        {"role": "assistant", "content": None, "tool_calls": []},
+        {"role": "tool", "tool_call_id": "c1", "content": "[]"},
+    ]
+
+    def sent(model: str) -> list[dict]:
+        client = OpenRouterClient(ModelSettings(model=model, provider="p"), api_key="k")
+        return client.request_params(messages, [])["messages"]
+
+    assert sent("qwen/qwen3.7-flash") == messages
+    marked = sent("anthropic/claude-haiku-5.5")
+    cache = {"type": "ephemeral"}
+    assert marked[0]["content"] == [{"type": "text", "text": "sys", "cache_control": cache}]
+    assert marked[-1]["content"] == [{"type": "text", "text": "[]", "cache_control": cache}]
+    assert marked[1:3] == messages[1:3]
+    assert messages[0]["content"] == "sys"  # the caller's history is untouched

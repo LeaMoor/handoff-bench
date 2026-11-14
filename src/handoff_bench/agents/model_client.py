@@ -1,6 +1,7 @@
 """Провайдер закреплён: иначе OpenRouter раскидает запросы по хостерам с разной квантизацией.
 `reasoning_details` надо возвращать в историю без изменений."""
 
+import copy
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -128,7 +129,9 @@ class OpenRouterClient:
             extra_body["reasoning"] = {"effort": s.reasoning_effort}
         params: dict[str, Any] = {
             "model": s.model,
-            "messages": messages,
+            "messages": with_cache_breakpoints(messages)
+            if s.model.startswith("anthropic/")
+            else messages,
             "tools": tools,
             "tool_choice": "auto",
             "extra_body": extra_body,
@@ -155,6 +158,21 @@ class OpenRouterClient:
             once, retryable=(*RETRYABLE, EmptyResponse), base_delay=self.retry_delay
         )
         return parse_completion(resp.model_dump(), retries, time.monotonic() - started)
+
+
+CACHE = {"type": "ephemeral"}
+
+
+def with_cache_breakpoints(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Anthropic models cache only behind an explicit `cache_control` (other providers on
+    OpenRouter cache by themselves). Breakpoints on the system prompt and on the last message:
+    in an agent loop each request then reads the whole previous history from the cache.
+    Request-only: the history and the logs keep plain messages."""
+    out = copy.deepcopy(messages)
+    marked = [m for m in (out[:1] + out[-1:]) if isinstance(m.get("content"), str)]
+    for m in {id(m): m for m in marked}.values():
+        m["content"] = [{"type": "text", "text": m["content"], "cache_control": CACHE}]
+    return out
 
 
 def parse_completion(raw: dict[str, Any], retries: int, latency_s: float) -> ModelResponse:

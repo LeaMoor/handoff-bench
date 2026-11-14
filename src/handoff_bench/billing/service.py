@@ -144,10 +144,11 @@ class BillingService:
 
             # «Не прошло»: ключ не сохранён, повтор с ним спишет заново.
             timed_out = self._take_timeout(invoice_id)
+            # Drawn in both worlds: otherwise a later charge gets a different id in each.
+            charge_id = self._new_charge_id()
             if timed_out and not self._timeout_commits():
                 raise BankTimeout()
 
-            charge_id = self._new_charge_id()
             visible_from = step + self.config.visibility_delay + 1
             with self._db:
                 self._db.execute(
