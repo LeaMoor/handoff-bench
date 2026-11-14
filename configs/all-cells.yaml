@@ -1,0 +1,10 @@
+# Plan, Friday of week 1: one debug episode in each of the 11 cells.
+model:
+  model: qwen/qwen3.7-flash
+  provider: alibaba
+cells: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+templates: [1]
+seeds: [1]
+parallel: 4
+budget_usd: 0.2
+allow_dirty: true  # debug runs; main runs go from a tag (plan)

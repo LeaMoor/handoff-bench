@@ -5,7 +5,7 @@ import copy
 import os
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 import anyio
 import openai
@@ -24,6 +24,8 @@ class ModelSettings(BaseModel):
     seed: int | None = None  # сид модели, не сид мира
     reasoning_effort: str | None = None
     max_tokens: int | None = None
+    # "required": the agent cannot end with plain text, it has to call a tool (e.g. finish).
+    tool_choice: Literal["auto", "required"] = "auto"
 
 
 class ToolCall(BaseModel):
@@ -133,7 +135,7 @@ class OpenRouterClient:
             if s.model.startswith("anthropic/")
             else messages,
             "tools": tools,
-            "tool_choice": "auto",
+            "tool_choice": s.tool_choice,
             "extra_body": extra_body,
         }
         for name in ("temperature", "seed", "max_tokens"):

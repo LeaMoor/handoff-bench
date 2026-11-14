@@ -129,6 +129,15 @@ def test_model_seed_is_not_sent_by_default() -> None:
     assert "seed" not in client.request_params([], [])
 
 
+def test_tool_choice_defaults_to_auto_and_can_be_required() -> None:
+    def params(**kw: object) -> dict:
+        settings = ModelSettings(model="m", provider="p", **kw)
+        return OpenRouterClient(settings, api_key="k").request_params([], [])
+
+    assert params()["tool_choice"] == "auto"
+    assert params(tool_choice="required")["tool_choice"] == "required"
+
+
 def test_anthropic_models_get_cache_breakpoints_others_do_not() -> None:
     messages = [
         {"role": "system", "content": "sys"},
