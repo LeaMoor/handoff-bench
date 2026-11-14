@@ -127,3 +127,12 @@ async def test_fatal_api_error_becomes_model_call_failed() -> None:
 def test_model_seed_is_not_sent_by_default() -> None:
     client = OpenRouterClient(ModelSettings(model="m", provider="p"), api_key="test")
     assert "seed" not in client.request_params([], [])
+
+
+def test_tool_choice_defaults_to_auto_and_can_be_required() -> None:
+    def params(**kw: object) -> dict:
+        settings = ModelSettings(model="m", provider="p", **kw)
+        return OpenRouterClient(settings, api_key="k").request_params([], [])
+
+    assert params()["tool_choice"] == "auto"
+    assert params(tool_choice="required")["tool_choice"] == "required"
