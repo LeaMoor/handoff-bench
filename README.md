@@ -32,4 +32,4 @@ uv run stand bank serve --template 1 --seed 1   # банк мира 1 по HTTP:
 | `configs/` | конфиги пачек для `stand batch` |
 | `src/handoff_bench/worlds/` | мир 1: генератор вариантов по сиду и шаблону задачи; `stand world` — посмотреть мир |
 | `src/handoff_bench/faults/` | инжектор pre / post (`injector.py`) и реестр поломок `FAULTS` (`setup.py`) |
-| `src/handoff_bench/channels/` | каналы «слова» и «выписка» и реестр `RENDERERS` (`render.py`) |
+| `src/handoff_bench/channels/` | каналы «слова», «бланк» и «выписка» и реестр `RENDERERS` (`render.py`) |

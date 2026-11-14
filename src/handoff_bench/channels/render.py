@@ -3,7 +3,7 @@
 text: the subagent's own words (C-text).
 code: a statement the code builds from the subagent's call journal (C-code) — never from the
       effect journal, which only the grader reads.
-struct: task 16.
+struct: the subagent's report form — status, done, uncertain and text (C-struct).
 
 To add a channel, add an entry to RENDERERS; `cells.py` already names all of them.
 """
@@ -34,6 +34,25 @@ def subagent_words(child: AgentTrace) -> str:
     if child.stop_reason == "text_only":
         return child.messages[-1].get("content") or ""
     return ""
+
+
+def form(child: AgentTrace) -> str:
+    """The `finish_report` fields, one per line; without a report, the subagent's words."""
+    if child.finish_tool != "finish_report" or child.finish_args is None:
+        return subagent_words(child)
+    report = child.finish_args
+    return "\n".join(
+        [
+            f"status: {report['status']}",
+            _items("done", report["done"]),
+            _items("uncertain", report["uncertain"]),
+            f"text: {report['text']}",
+        ]
+    )
+
+
+def _items(name: str, items: list[str]) -> str:
+    return f"{name}: none" if not items else "\n".join([f"{name}:", *(f"- {i}" for i in items)])
 
 
 def statement(calls: list[CallRow]) -> str:
@@ -82,5 +101,7 @@ def _outcome(r: CallRow) -> str:
 
 RENDERERS: dict[Channel, Renderer] = {
     "text": lambda child, calls, report_lost: "" if report_lost else subagent_words(child),
+    # Like the words, the form is the subagent's own report: a lost report loses it too.
+    "struct": lambda child, calls, report_lost: "" if report_lost else form(child),
     "code": lambda child, calls, report_lost: statement(calls),
 }

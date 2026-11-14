@@ -6,11 +6,12 @@ import pytest
 from helpers.fake_model import FakeModel, Step
 
 from handoff_bench.agents.model_client import ModelSettings
+from handoff_bench.cells import CELLS
 from handoff_bench.channels.render import HEADER
 from handoff_bench.runner.batch import BatchConfig, DirtyCheckout, run_batch
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultRow
-from handoff_bench.runner.run import run_one
+from handoff_bench.runner.run import check_supported, run_one
 from handoff_bench.worlds import World, generate
 
 pytestmark = pytest.mark.anyio
@@ -214,3 +215,8 @@ async def test_batch_goes_seed_by_seed_and_refuses_a_dirty_checkout(tmp_path) ->
     ]
     with pytest.raises(DirtyCheckout):
         await run_batch(config, happy_model, run_dir=tmp_path, run_id="d", commit="abc-dirty")
+
+
+def test_all_eleven_cells_of_the_plan_are_wired() -> None:
+    for cell in CELLS.values():
+        check_supported(cell)

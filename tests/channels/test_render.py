@@ -128,3 +128,48 @@ def test_invoice_text_from_the_subagent_cannot_forge_lines() -> None:
         render("code", trace(), [forged])
         == f"{HEADER}\n- step 1: create_charge ?: error invoice_not_found"
     )
+
+
+def test_three_channels_on_one_trace_give_three_correct_strings() -> None:
+    timeout = {
+        "status": "unknown",
+        "done": ["looked up INV-12"],
+        "uncertain": ["charge INV-12: bank timed out", "INV-12 not visible yet"],
+        "text": "Not sure the charge went through.",
+    }
+    calls = [
+        row(2, "get_invoice", result=INVOICE),
+        row(3, "create_charge", "timeout", code="timeout"),
+        row(4, "list_charges", result=[]),
+    ]
+    sub = trace(report=timeout)
+
+    assert render("text", sub, calls) == "Not sure the charge went through."
+    assert render("struct", sub, calls) == "\n".join(
+        [
+            "status: unknown",
+            "done:",
+            "- looked up INV-12",
+            "uncertain:",
+            "- charge INV-12: bank timed out",
+            "- INV-12 not visible yet",
+            "text: Not sure the charge went through.",
+        ]
+    )
+    assert render("code", sub, calls) == "\n".join(
+        [
+            HEADER,
+            "- step 1: get_invoice INV-12: status open",
+            "- step 2: create_charge INV-12: timeout, outcome unknown",
+            "- step 3: list_charges INV-12: no charges",
+        ]
+    )
+
+
+def test_struct_empty_lists_lost_report_and_no_report() -> None:
+    assert render("struct", trace(), POST_CALLS) == (
+        "status: done\ndone:\n- charged INV-12\nuncertain: none\ntext: Paid INV-12."
+    )
+    assert render("struct", trace(), POST_CALLS, report_lost=True) == ""
+    no_report = trace(stop="text_only", report=None, last="I paid it.")
+    assert render("struct", no_report, []) == render("text", no_report, []) == "I paid it."
