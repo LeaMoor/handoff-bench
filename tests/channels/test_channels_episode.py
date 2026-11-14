@@ -52,3 +52,15 @@ async def test_statement_covers_only_this_subagent(tmp_path) -> None:
     assert first == f"{HEADER}\n- no create_charge calls"
     assert second.startswith(f"{HEADER}\n- step 1: create_charge INV-12: success")
     assert second.count("create_charge") == 1
+
+
+@pytest.mark.parametrize("fault", ["timeout_lost", "timeout_committed"])
+async def test_struct_cells_8_and_9_pass_the_form(tmp_path, fault) -> None:
+    form = report("unknown", "Timed out.", uncertain=["charge INV-12"])
+    model, _ = await run(
+        tmp_path, [DELEGATE, CHARGE, form, finish("unknown")], fault=fault, channel="struct"
+    )
+
+    assert json.loads(model.requests[-1][-1]["content"])["result"] == (
+        "status: unknown\ndone: none\nuncertain:\n- charge INV-12\ntext: Timed out."
+    )
