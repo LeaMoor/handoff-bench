@@ -74,3 +74,11 @@ def test_get_invoice_status_respects_delay(make_bank: MakeBank) -> None:
 
     statuses = [bank.get_invoice("INV-12").status for _ in range(3)]
     assert statuses == ["open", "open", "paid"]
+
+
+def test_blind_retry_gets_the_same_charge_id_in_both_worlds(make_bank: MakeBank) -> None:
+    committed, lost = timeout_bank(make_bank, True), timeout_bank(make_bank, False)
+    for bank in (committed, lost):
+        first_response(bank)
+    retry = [b.create_charge("INV-12", "cus_ann", 12000, actor="sub") for b in (committed, lost)]
+    assert retry[0].charge_id == retry[1].charge_id
