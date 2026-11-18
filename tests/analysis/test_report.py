@@ -35,7 +35,7 @@ def ep(cell: int, outcome: str, seed: int = 1, repeat: int = 0, **extra) -> dict
         "seed": seed,
         "repeat": repeat,
         "fault": CELLS[cell].fault,
-        "fault_fired": CELLS[cell].fault in ("pre", "post"),
+        "fault_fired": CELLS[cell].fault != "none",
         **extra,
     }
 
@@ -69,7 +69,9 @@ def test_calibration_pair_error_and_unknown_pairs() -> None:
 def test_synthetic_data_recovers_the_effects_put_in() -> None:
     df = synthetic_results(repeats=2)
     not_fired = report.cell_table(df)["fault_not_fired"]
-    assert not_fired.loc[[2, 3, 4, 5]].sum() > 0 and not_fired.loc[[1, 6]].sum() == 0
+    assert not_fired.loc[1] == 0 and not_fired.loc[[2, 3, 4, 5]].sum() > 0
+    main = df[df["cell"].isin(report.MAIN_CELLS)]
+    assert report.main_by_channel(df)["n"].sum() == main["fault_fired"].sum() < len(main)
     checks = report.predictions(df)["passed"].drop("main: struct no worse than code")
 
     assert checks.all()
