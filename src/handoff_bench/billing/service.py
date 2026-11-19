@@ -20,6 +20,8 @@ from handoff_bench.billing.models import (
     InvoiceView,
 )
 
+NEVER_VISIBLE = 2**62  # bank step a hidden charge would become visible at
+
 _SCHEMA = """
 CREATE TABLE invoices (
     invoice_id  TEXT PRIMARY KEY,
@@ -150,6 +152,10 @@ class BillingService:
                 raise BankTimeout()
 
             visible_from = step + self.config.visibility_delay + 1
+            if timed_out and self.config.timeout is not None and self.config.timeout.hidden:
+                visible_from = NEVER_VISIBLE
+            if invoice_id == self.config.hidden_invoice:
+                visible_from = NEVER_VISIBLE
             with self._db:
                 self._db.execute(
                     "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from handoff_bench.agents.tools import StopReason
-from handoff_bench.cells import Block, Channel, Fault
+from handoff_bench.cells import Agent, Block, Channel, Delay, Fault
 from handoff_bench.grading.coder import Action
 from handoff_bench.grading.grader import Claim, Effect, Outcome
 
@@ -19,6 +19,9 @@ class ResultRow(BaseModel):
     block: Block
     fault: Fault
     channel: Channel
+    delay: Delay
+    rules: bool
+    agent: Agent
     world: int
     template: int
     seed: int

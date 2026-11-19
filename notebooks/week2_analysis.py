@@ -42,12 +42,18 @@ report.cell_table(df)
 report.first_actions(df)
 
 # %% [markdown]
-# ## Main number 1: main block (cells 6-11)
+# ## Main number 1: main block where a check cannot help (long delay, no rules)
 # Share of correct outcomes (EOS or honest "unknown") per channel, 95% Wilson interval,
 # and the share of episodes where the orchestrator checked the bank itself.
 
 # %%
-report.main_by_channel(df)
+report.main_by_channel(df, **report.PRIMARY)
+
+# %% [markdown]
+# Every condition: who pays (B0 single agent or delegated), delay, rules block, channel.
+
+# %%
+report.main_grid(df)
 
 # %% [markdown]
 # ## Main number 2: calibration (cells 2-5)

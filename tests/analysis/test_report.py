@@ -58,7 +58,7 @@ def test_calibration_pair_error_and_unknown_pairs() -> None:
         ep(3, "duplicate", seed=5),
     )
     pairs = report.calibration_pairs(df)
-    summary = report.calibration_summary(df).loc["text"]
+    summary = report.calibration_summary(df).loc[("text", "short")]
 
     assert sorted(pairs["error"]) == [0, 1, 2]
     assert (summary["pairs"], summary["pairs_without_unknown"]) == (3, 2)
@@ -70,7 +70,7 @@ def test_synthetic_data_recovers_the_effects_put_in() -> None:
     df = synthetic_results(repeats=2)
     not_fired = report.cell_table(df)["fault_not_fired"]
     assert not_fired.loc[1] == 0 and not_fired.loc[[2, 3, 4, 5]].sum() > 0
-    main = df[df["cell"].isin(report.MAIN_CELLS)]
+    main = df[df["cell"].isin(report.MAIN_CELLS) & (df["agent"] == "delegated")]
     assert report.main_by_channel(df)["n"].sum() == main["fault_fired"].sum() < len(main)
     checks = report.predictions(df)["passed"].drop("main: struct no worse than code")
 

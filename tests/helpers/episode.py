@@ -63,16 +63,25 @@ async def run(
     world: World = DEMO_WORLD,
     fault: str = "none",
     channel: str = "text",
+    delay: str = "short",
+    rules: bool = True,
+    agent: str = "delegated",
     **agents: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
     """Run an episode into tmp_path/ep; `agents` overrides fields of AgentsConfig."""
     model = model or FakeModel(script or [])
+    cell = find_cell(fault, channel, delay=delay, rules=rules, agent=agent)
+    extra: dict[str, Any] = {}
+    if agents:
+        if not rules:
+            agents.setdefault("subagent_rules", "")
+        extra["agents"] = AgentsConfig(**agents)
     config = EpisodeConfig(
-        cell=find_cell(fault, channel).number,
+        cell=cell.number,
         world=world.world,
         template=world.template,
         seed=world.seed,
-        agents=AgentsConfig(**agents),
+        **extra,
     )
     result = await run_episode(model, world, config, episode_dir=tmp_path / "ep")
     return model, result

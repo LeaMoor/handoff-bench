@@ -10,6 +10,8 @@ from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
+    SINGLE_SYSTEM_PROMPT,
+    SINGLE_TOOLS,
     AgentsConfig,
     Delegation,
     register_finish,
@@ -21,9 +23,9 @@ from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
-from handoff_bench.cells import CELLS, Block, Channel, Fault
+from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault
 from handoff_bench.channels.render import RENDERERS
-from handoff_bench.faults.setup import FAULTS
+from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.worlds import World
 
@@ -32,7 +34,7 @@ ORCHESTRATOR = "orchestrator"
 
 class EpisodeConfig(BaseModel):
     """Everything that sets an episode apart; written to `config.json` next to its logs.
-    Fault, channel and the orchestrator's tools follow from the cell."""
+    Fault, channel, delay, rules, agent and the orchestrator's tools follow from the cell."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -53,13 +55,12 @@ class EpisodeConfig(BaseModel):
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
-        for name in ("block", "fault", "channel"):
+        for name in ("block", "fault", "channel", "delay", "rules", "agent"):
             if name in data and data.pop(name) != getattr(cell, name):
                 raise ValueError(f"{name} does not match cell {cell.number}")
         data.pop("episode_id", None)
         if "agents" not in data:
-            tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
-            data["agents"] = AgentsConfig(orchestrator_tools=tools)
+            data["agents"] = _agents_for(cell)
         return data
 
     @computed_field
@@ -81,6 +82,32 @@ class EpisodeConfig(BaseModel):
     @property
     def channel(self) -> Channel:
         return CELLS[self.cell].channel
+
+    @computed_field
+    @property
+    def delay(self) -> Delay:
+        return CELLS[self.cell].delay
+
+    @computed_field
+    @property
+    def rules(self) -> bool:
+        return CELLS[self.cell].rules
+
+    @computed_field
+    @property
+    def agent(self) -> Agent:
+        return CELLS[self.cell].agent
+
+
+def _agents_for(cell: Cell) -> AgentsConfig:
+    if cell.agent == "single":
+        return AgentsConfig(
+            orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
+        )
+    tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
+    if cell.rules:
+        return AgentsConfig(orchestrator_tools=tools)
+    return AgentsConfig(orchestrator_tools=tools, subagent_rules="")
 
 
 class EpisodeResult(BaseModel):
@@ -109,7 +136,7 @@ async def run_episode(
     model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
-    fault = FAULTS[config.fault](world)
+    fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
     _write_json(

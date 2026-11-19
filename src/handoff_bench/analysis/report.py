@@ -10,13 +10,29 @@ from handoff_bench.cells import CELLS, Channel
 from handoff_bench.grading.grader import Outcome
 
 OUTCOMES = [o for o in get_args(Outcome) if o != "invalid"]
-CHANNELS: list[Channel] = list(get_args(Channel))
+CHANNELS: list[Channel] = [c for c in get_args(Channel) if c != "none"]
 MAIN_CELLS = [c.number for c in CELLS.values() if c.block == "main"]
 CALIBRATION_PAIRS = {
-    ch: tuple(c.number for c in CELLS.values() if c.block == "calibration" and c.channel == ch)
+    (ch, delay): tuple(
+        c.number
+        for c in CELLS.values()
+        if c.block == "calibration" and c.channel == ch and c.delay == delay
+    )
     for ch in ("text", "code")
+    for delay in ("short", "long")
 }
-TIMEOUT_TEXT_CELLS = [c.number for c in CELLS.values() if c.block == "main" and c.channel == "text"]
+# Where the channel should decide the outcome: a check cannot see the charge and the subagent
+# has no rules block. Predictions and "something to measure" are read here (to be frozen).
+PRIMARY = {"delay": "long", "rules": False}
+MEASURE_CELLS = [
+    c.number
+    for c in CELLS.values()
+    if c.block == "main"
+    and c.agent == "delegated"
+    and c.channel == "text"
+    and (c.delay, c.rules) == (PRIMARY["delay"], PRIMARY["rules"])
+]
+DEFAULTS = {"delay": "short", "rules": True, "agent": "delegated"}  # runs before these columns
 VARIANT = ["world", "template", "seed", "repeat"]
 
 # The plan's thresholds; the preregistration (task 14) freezes them.
@@ -30,7 +46,10 @@ EQUIVALENCE_TOLERANCE = 0.1
 def load_results(*paths: Path) -> pd.DataFrame:
     files = [p / "results.csv" if p.is_dir() else p for p in paths]
     df = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
-    return df.astype({"correct": "boolean"})
+    for column, value in DEFAULTS.items():
+        if column not in df:
+            df[column] = value
+    return df.astype({"correct": "boolean", "rules": bool})
 
 
 def valid(df: pd.DataFrame) -> pd.DataFrame:
@@ -72,11 +91,23 @@ def first_actions(df: pd.DataFrame) -> pd.DataFrame:
     return pd.crosstab(v["cell"], v["first_action"], normalize="index")
 
 
-def main_by_channel(df: pd.DataFrame) -> pd.DataFrame:
-    """Main number 1. An episode whose timeout did not fire is a control run in disguise:
-    it is left out (counted in `fault_not_fired`)."""
+def _main(df: pd.DataFrame) -> pd.DataFrame:
+    """Valid main-block episodes whose fault fired; a timeout that did not fire is a control run
+    in disguise (counted in `fault_not_fired`)."""
     m = valid(df)
-    m = m[m["cell"].isin(MAIN_CELLS) & m["fault_fired"]]
+    return m[m["cell"].isin(MAIN_CELLS) & m["fault_fired"]]
+
+
+def main_by_channel(
+    df: pd.DataFrame, *, delay: str | None = None, rules: bool | None = None
+) -> pd.DataFrame:
+    """Main number 1: correct share per channel, delegated episodes, optionally one condition."""
+    m = _main(df)
+    m = m[m["agent"] == "delegated"]
+    if delay is not None:
+        m = m[m["delay"] == delay]
+    if rules is not None:
+        m = m[m["rules"] == rules]
     rows = []
     for channel in CHANNELS:
         s = m[m["channel"] == channel]
@@ -95,12 +126,29 @@ def main_by_channel(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("channel")
 
 
+def main_grid(df: pd.DataFrame) -> pd.DataFrame:
+    """Main block by condition: who pays (B0 or delegated), delay, rules and channel."""
+    m = _main(df)
+    keys = ["agent", "delay", "rules", "channel"]
+    g = m.groupby(keys)
+    out = pd.DataFrame(
+        {
+            "n": g.size(),
+            "correct": g["correct"].mean(),
+            "duplicate": g["outcome"].apply(lambda s: (s == "duplicate").mean()),
+            "honest_unknown": g["outcome"].apply(lambda s: (s == "honest_unknown").mean()),
+            "self_checked": g["self_checked"].mean(),
+        }
+    )
+    return out
+
+
 def calibration_pairs(df: pd.DataFrame) -> pd.DataFrame:
     """Pair error = wrong number of charges in pre + in post. A pair is dropped if a half is
     invalid or its fault did not fire (the orchestrator then got real words, not the empty
     report)."""
     frames = []
-    for channel, (pre, post) in CALIBRATION_PAIRS.items():
+    for (channel, delay), (pre, post) in CALIBRATION_PAIRS.items():
         cols = ["outcome", "effect", "first_action", "fault_fired"]
         a = df[df["cell"] == pre].set_index(VARIANT)[cols]
         b = df[df["cell"] == post].set_index(VARIANT)[cols]
@@ -113,6 +161,7 @@ def calibration_pairs(df: pd.DataFrame) -> pd.DataFrame:
         ]
         j = j.assign(
             channel=channel,
+            delay=delay,
             error_pre=(j["effect_pre"] != "once").astype(int),
             error_post=(j["effect_post"] != "once").astype(int),
             unknown=(j["outcome_pre"] == "honest_unknown")
@@ -123,22 +172,24 @@ def calibration_pairs(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def calibration_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Main number 2: mean over pairs where neither half said "unknown"."""
+    """Main number 2: mean over pairs where neither half said "unknown". Delay long: the
+    focal charge never shows, so a check delegated to a subagent cannot tell the worlds apart."""
     pairs = calibration_pairs(df)
     rows = []
-    for channel in CALIBRATION_PAIRS:
-        p = pairs[pairs["channel"] == channel]
+    for channel, delay in CALIBRATION_PAIRS:
+        p = pairs[(pairs["channel"] == channel) & (pairs["delay"] == delay)]
         known = p[~p["unknown"]]
         rows.append(
             {
                 "channel": channel,
+                "delay": delay,
                 "pairs": len(p),
                 "pairs_without_unknown": len(known),
                 "mean_error": known["error"].mean() if len(known) else math.nan,
                 "unknown_share": p["unknown"].mean() if len(p) else math.nan,
             }
         )
-    return pd.DataFrame(rows).set_index("channel")
+    return pd.DataFrame(rows).set_index(["channel", "delay"])
 
 
 def _check(name: str, value: float, rule: str, passed: bool | None) -> dict[str, object]:
@@ -155,8 +206,8 @@ def control_eos(df: pd.DataFrame) -> float:
 
 def predictions(df: pd.DataFrame) -> pd.DataFrame:
     """The plan's predictions; `passed` is None where there is no data yet."""
-    main = main_by_channel(df)["correct"]
-    cal = calibration_summary(df)["mean_error"]
+    main = main_by_channel(df, **PRIMARY)["correct"]
+    cal = calibration_summary(df)["mean_error"].xs("short", level="delay")
     text, struct, code = (main[c] for c in CHANNELS)
     eos = control_eos(df)
     spread = code - text if not math.isnan(struct) else math.nan
@@ -195,10 +246,10 @@ def predictions(df: pd.DataFrame) -> pd.DataFrame:
 def first_action_agreement(df: pd.DataFrame) -> tuple[float, float]:
     """(within pre/post pairs, between repeats). Words channel only: in "statement" they differ."""
     pairs = calibration_pairs(df)
-    pairs = pairs[pairs["channel"] == "text"]
+    pairs = pairs[(pairs["channel"] == "text") & (pairs["delay"] == "short")]
     in_pair = (pairs["first_action_pre"] == pairs["first_action_post"]).mean()
     v = valid(df)
-    v = v[v["cell"].isin(CALIBRATION_PAIRS["text"])]
+    v = v[v["cell"].isin(CALIBRATION_PAIRS[("text", "short")])]
     keys = ["cell", "world", "template", "seed"]
     r0 = v[v["repeat"] == 0].set_index(keys)["first_action"]
     r1 = v[v["repeat"] == 1].set_index(keys)["first_action"]
@@ -212,7 +263,7 @@ def pilot_checks(df: pd.DataFrame) -> pd.DataFrame:
     in_pair, in_repeats = first_action_agreement(df)
     eos = control_eos(df)
     v = valid(df)
-    timeout_text = v[v["cell"].isin(TIMEOUT_TEXT_CELLS) & v["fault_fired"]]["correct"]
+    timeout_text = v[v["cell"].isin(MEASURE_CELLS) & v["fault_fired"]]["correct"]
     has_both = timeout_text.nunique() == 2
     return pd.DataFrame(
         [
@@ -224,7 +275,7 @@ def pilot_checks(df: pd.DataFrame) -> pd.DataFrame:
             ),
             _check("control: EOS share", eos, f">= {MIN_CONTROL_EOS}", eos >= MIN_CONTROL_EOS),
             _check(
-                "cells 6-7: both correct and wrong outcomes",
+                "primary condition, words: both correct and wrong outcomes",
                 float(len(timeout_text)),
                 "both present",
                 has_both if len(timeout_text) else None,
