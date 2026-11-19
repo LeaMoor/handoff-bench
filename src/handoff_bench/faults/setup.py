@@ -15,6 +15,8 @@ from handoff_bench.worlds import World
 class FaultSetup:
     injector: Injector
     bank: BankConfig = field(default_factory=BankConfig)
+    deliveries: int = 1  # how many times the harness runs each delegation
+    respawn_on_lost: bool = False  # a lost report makes the harness start a new subagent
 
 
 def _injected(mode: FaultMode) -> Callable[[World], FaultSetup]:
@@ -45,6 +47,11 @@ FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
     "post": _injected("post"),
     "timeout_lost": _timeout(commits=False),
     "timeout_committed": _timeout(commits=True),
+    # M4: the system repeats the work, not the orchestrator.
+    "respawn": lambda world: FaultSetup(
+        injector=Injector("post", world.focal), respawn_on_lost=True
+    ),
+    "redeliver": lambda world: FaultSetup(injector=Injector("none", world.focal), deliveries=2),
 }
 
 

@@ -66,11 +66,12 @@ async def run(
     delay: str = "short",
     rules: bool = True,
     agent: str = "delegated",
+    key: str = "subagent",
     **agents: Any,
 ) -> tuple[FakeModel, EpisodeResult]:
     """Run an episode into tmp_path/ep; `agents` overrides fields of AgentsConfig."""
     model = model or FakeModel(script or [])
-    cell = find_cell(fault, channel, delay=delay, rules=rules, agent=agent)
+    cell = find_cell(fault, channel, delay=delay, rules=rules, agent=agent, key=key)
     extra: dict[str, Any] = {}
     if agents:
         if not rules:

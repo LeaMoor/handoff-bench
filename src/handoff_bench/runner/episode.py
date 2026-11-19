@@ -10,6 +10,7 @@ from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
+    ORCHESTRATOR_SYSTEM_PROMPT,
     SINGLE_SYSTEM_PROMPT,
     SINGLE_TOOLS,
     AgentsConfig,
@@ -23,10 +24,11 @@ from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
-from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault
+from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault, KeySource
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.jsonl import JsonlWriter
+from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
 from handoff_bench.worlds import World
 
 ORCHESTRATOR = "orchestrator"
@@ -55,7 +57,7 @@ class EpisodeConfig(BaseModel):
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
-        for name in ("block", "fault", "channel", "delay", "rules", "agent"):
+        for name in ("block", "fault", "channel", "delay", "rules", "agent", "key"):
             if name in data and data.pop(name) != getattr(cell, name):
                 raise ValueError(f"{name} does not match cell {cell.number}")
         data.pop("episode_id", None)
@@ -98,6 +100,11 @@ class EpisodeConfig(BaseModel):
     def agent(self) -> Agent:
         return CELLS[self.cell].agent
 
+    @computed_field
+    @property
+    def key(self) -> KeySource:
+        return CELLS[self.cell].key
+
 
 def _agents_for(cell: Cell) -> AgentsConfig:
     if cell.agent == "single":
@@ -105,9 +112,12 @@ def _agents_for(cell: Cell) -> AgentsConfig:
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
     tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
-    if cell.rules:
-        return AgentsConfig(orchestrator_tools=tools)
-    return AgentsConfig(orchestrator_tools=tools, subagent_rules="")
+    extra: dict[str, Any] = {}
+    if not cell.rules:
+        extra["subagent_rules"] = ""
+    if cell.key == "orchestrator":
+        extra["orchestrator_prompt"] = ORCHESTRATOR_SYSTEM_PROMPT + ORCHESTRATOR_KEY_PROMPT
+    return AgentsConfig(orchestrator_tools=tools, **extra)
 
 
 class EpisodeResult(BaseModel):
@@ -152,13 +162,15 @@ async def run_episode(
     )
     service.add_invoices(world.invoices)
 
+    tasks: dict[str, str] = {}
+    keys = KeyHook(config.key, tasks)
     with service, running_server(service) as url:
         async with McpBackend(url) as bank:
             gateway = ToolGateway(
                 episode_id=config.episode_id,
                 journal=CallJournal(episode_dir / "calls.jsonl"),
                 backends=[bank],
-                hooks=[fault.injector],
+                hooks=[keys, fault.injector],
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
             delegation = Delegation(
@@ -168,6 +180,10 @@ async def run_episode(
                 report_lost=fault.injector.report_lost,
                 config=agents,
                 render=RENDERERS[config.channel],
+                deliveries=fault.deliveries,
+                respawn_on_lost=fault.respawn_on_lost,
+                tasks=tasks,
+                hide_key=config.key == "none",
             )
             register_finish(gateway)
             spec = AgentSpec(

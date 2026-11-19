@@ -2,9 +2,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main"]
-Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed"]
-Channel = Literal["text", "struct", "code", "none"]  # none: a single agent, no delegate
+Block = Literal["control", "calibration", "main", "keys"]
+Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
+KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
+# code_key: the statement plus the idempotency key of each charge; none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
@@ -20,6 +22,7 @@ class Cell(BaseModel):
     delay: Delay = "short"
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
+    key: KeySource = "subagent"  # who sets the idempotency key (M4)
 
 
 _TIMEOUTS: tuple[Fault, ...] = ("timeout_lost", "timeout_committed")
@@ -70,6 +73,41 @@ for fault, channel in (("pre", "text"), ("post", "text"), ("pre", "code"), ("pos
             delay="long",
         )
     )
+# M4: the system repeats the work itself, so the key decides, not the orchestrator.
+# respawn: the report is lost after the charge and the harness starts a new subagent (new task);
+# redeliver: the same delegation is delivered twice (same task).
+# Cells 36-47: a check can see the first charge; 48-59: it cannot (only the key prevents a repeat).
+for delay in ("short", "long"):
+    for fault in ("respawn", "redeliver"):
+        for key in ("none", "subagent", "orchestrator", "task", "intent", "pinned"):
+            _cells.append(
+                Cell(
+                    number=len(_cells) + 1,
+                    block="keys",
+                    fault=fault,
+                    channel="text",
+                    delay=delay,
+                    key=key,
+                )
+            )
+# Cells 60-63: like 34-35 and 28-29, but the statement shows the charge's key — does the
+# orchestrator pass a key it can see on to the next subagent?
+for block, fault, rules in (
+    ("calibration", "pre", True),
+    ("calibration", "post", True),
+    ("main", "timeout_lost", False),
+    ("main", "timeout_committed", False),
+):
+    _cells.append(
+        Cell(
+            number=len(_cells) + 1,
+            block=block,
+            fault=fault,
+            channel="code_key",
+            delay="long",
+            rules=rules,
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 
 
@@ -84,12 +122,13 @@ def find_cell(
     delay: str = "short",
     rules: bool = True,
     agent: str = "delegated",
+    key: str = "subagent",
 ) -> Cell:
-    key = (fault, channel, delay, rules, agent)
+    wanted = (fault, channel, delay, rules, agent, key)
     for cell in CELLS.values():
-        if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent) == key:
+        if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted:
             return cell
     raise UnsupportedCell(
         f"no cell with fault={fault!r}, channel={channel!r}, delay={delay!r}, "
-        f"rules={rules}, agent={agent!r}"
+        f"rules={rules}, agent={agent!r}, key={key!r}"
     )
