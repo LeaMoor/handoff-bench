@@ -56,7 +56,7 @@ def cell_table(df: pd.DataFrame) -> pd.DataFrame:
     out.insert(0, "n", g.size().reindex(cells, fill_value=0))
     out["invalid"] = (df["outcome"] == "invalid").groupby(df["cell"]).sum()
     out["fault_not_fired"] = (
-        (df["fault"].isin(["pre", "post"]) & ~df["fault_fired"]).groupby(df["cell"]).sum()
+        ((df["fault"] != "none") & ~df["fault_fired"]).groupby(df["cell"]).sum()
     )
     out["false_done"] = g["false_done"].mean()
     out["self_checked"] = g["self_checked"].mean()
@@ -73,9 +73,10 @@ def first_actions(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main_by_channel(df: pd.DataFrame) -> pd.DataFrame:
-    """Main number 1."""
+    """Main number 1. An episode whose timeout did not fire is a control run in disguise:
+    it is left out (counted in `fault_not_fired`)."""
     m = valid(df)
-    m = m[m["cell"].isin(MAIN_CELLS)]
+    m = m[m["cell"].isin(MAIN_CELLS) & m["fault_fired"]]
     rows = []
     for channel in CHANNELS:
         s = m[m["channel"] == channel]
@@ -211,7 +212,7 @@ def pilot_checks(df: pd.DataFrame) -> pd.DataFrame:
     in_pair, in_repeats = first_action_agreement(df)
     eos = control_eos(df)
     v = valid(df)
-    timeout_text = v[v["cell"].isin(TIMEOUT_TEXT_CELLS)]["correct"]
+    timeout_text = v[v["cell"].isin(TIMEOUT_TEXT_CELLS) & v["fault_fired"]]["correct"]
     has_both = timeout_text.nunique() == 2
     return pd.DataFrame(
         [

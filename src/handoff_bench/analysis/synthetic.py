@@ -90,7 +90,7 @@ def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
         provider="synthetic",
         served_model="synthetic",
         served_provider="synthetic",
-        fault_fired=e.get("fault_fired", c.fault in ("pre", "post")),
+        fault_fired=e.get("fault_fired", c.fault != "none"),
         outcome=outcome,
         correct=outcome in CORRECT,
         false_done=e.get("false_done", False),
@@ -139,7 +139,7 @@ def synthetic_results(
                     else:
                         reaction = ""
                     e = _episode(cell.number, reaction, rng)
-                    if cell.fault in ("pre", "post") and rng.random() < FAULT_NOT_FIRED:
+                    if cell.fault != "none" and rng.random() < FAULT_NOT_FIRED:
                         e["fault_fired"] = False
                     rows.append(_row(cell.number, t, s, r, e))
     return pd.DataFrame(rows)
