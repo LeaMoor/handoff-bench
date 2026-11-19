@@ -5,6 +5,7 @@
 - [docs/plan-weeks-1-2.md](docs/plan-weeks-1-2.md) — план на недели 1–2; как с ним работаем — [docs/README.md](docs/README.md)
 - [DECISIONS.md](DECISIONS.md) — что решили и почему, открытые вопросы
 - [BACKLOG.md](BACKLOG.md) — что по плану ещё не сделано
+- [docs/plan-part-1.md](docs/plan-part-1.md) — следующий план: эксперименты части 1 на одном компьютере
 
 ## Быстрый старт
 
