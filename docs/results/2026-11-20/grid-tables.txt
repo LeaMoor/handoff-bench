@@ -1,0 +1,120 @@
+
+correct by condition and channel (n per cell in the last table)
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                  1.0                      0.98           0.86                    0.57        0.95           0.55
+deleg/long/no-rules  code                 0.98                      0.81           0.64                    0.43        0.81           0.74
+                     struct               0.95                      0.98            0.9                    0.45        0.98           0.71
+                     text                 0.98                      0.98           0.86                    0.55        0.95           0.74
+deleg/long/rules     code                  1.0                      0.76           0.62                    0.52        0.62            0.6
+                     struct                1.0                      0.95           0.88                    0.55        0.83           0.67
+                     text                  1.0                      0.95            0.9                    0.48        0.86           0.79
+deleg/short/no-rules code                  1.0                      0.98           0.95                    0.52        0.98           0.57
+                     struct                1.0                      0.93           0.98                    0.48         1.0           0.71
+                     text                  1.0                      0.98            0.9                    0.48         1.0           0.79
+deleg/short/rules    code                  1.0                      0.95            1.0                    0.62        0.98            0.6
+                     struct                1.0                       1.0           0.95                    0.55        0.98           0.74
+                     text                  1.0                       1.0           0.98                    0.38        0.98           0.64
+
+duplicate by condition and channel (n per cell in the last table)
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                 0.00                      0.00           0.14                    0.43        0.00           0.31
+deleg/long/no-rules  code                 0.02                      0.19           0.36                    0.50        0.19           0.21
+                     struct               0.05                      0.02           0.10                    0.52        0.00           0.24
+                     text                 0.02                      0.02           0.14                    0.45        0.05           0.12
+deleg/long/rules     code                 0.00                      0.24           0.38                    0.48        0.38           0.14
+                     struct               0.00                      0.00           0.12                    0.43        0.14           0.19
+                     text                 0.00                      0.05           0.10                    0.48        0.07           0.12
+deleg/short/no-rules code                 0.00                      0.00           0.05                    0.48        0.02           0.29
+                     struct               0.00                      0.00           0.02                    0.52        0.00           0.19
+                     text                 0.00                      0.00           0.10                    0.52        0.00           0.05
+deleg/short/rules    code                 0.00                      0.00           0.00                    0.38        0.00           0.14
+                     struct               0.00                      0.00           0.02                    0.45        0.00           0.10
+                     text                 0.00                      0.00           0.02                    0.50        0.00           0.12
+
+false_done by condition and channel (n per cell in the last table)
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                  0.0                       0.0            0.0                    0.00        0.00           0.02
+deleg/long/no-rules  code                  0.0                       0.0            0.0                    0.02        0.00           0.00
+                     struct                0.0                       0.0            0.0                    0.02        0.00           0.02
+                     text                  0.0                       0.0            0.0                    0.00        0.00           0.07
+deleg/long/rules     code                  0.0                       0.0            0.0                    0.00        0.00           0.14
+                     struct                0.0                       0.0            0.0                    0.00        0.00           0.07
+                     text                  0.0                       0.0            0.0                    0.02        0.00           0.07
+deleg/short/no-rules code                  0.0                       0.0            0.0                    0.00        0.00           0.07
+                     struct                0.0                       0.0            0.0                    0.00        0.00           0.07
+                     text                  0.0                       0.0            0.0                    0.00        0.00           0.05
+deleg/short/rules    code                  0.0                       0.0            0.0                    0.00        0.02           0.10
+                     struct                0.0                       0.0            0.0                    0.00        0.00           0.02
+                     text                  0.0                       0.0            0.0                    0.12        0.00           0.10
+
+honest_unknown by condition and channel (n per cell in the last table)
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                 0.67                      0.50           0.21                    0.29        0.31           0.36
+deleg/long/no-rules  code                 0.74                      0.31           0.14                    0.05        0.33           0.55
+                     struct               0.76                      0.52           0.29                    0.05        0.45           0.43
+                     text                 0.81                      0.48           0.24                    0.07        0.38           0.45
+deleg/long/rules     code                 0.95                      0.45           0.12                    0.07        0.21           0.43
+                     struct               0.93                      0.50           0.36                    0.14        0.81           0.48
+                     text                 0.95                      0.50           0.36                    0.02        0.71           0.52
+deleg/short/no-rules code                 0.24                      0.02           0.00                    0.02        0.02           0.38
+                     struct               0.21                      0.02           0.00                    0.12        0.10           0.40
+                     text                 0.26                      0.00           0.00                    0.07        0.05           0.50
+deleg/short/rules    code                 0.50                      0.19           0.00                    0.12        0.12           0.52
+                     struct               0.48                      0.07           0.00                    0.12        0.55           0.60
+                     text                 0.45                      0.05           0.02                    0.07        0.57           0.48
+
+self_checked by condition and channel (n per cell in the last table)
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                 1.00                      1.00           1.00                    0.52        1.00           0.67
+deleg/long/no-rules  code                 1.00                      1.00           1.00                    0.48        0.95           0.33
+                     struct               1.00                      1.00           0.95                    0.31        0.60           0.29
+                     text                 1.00                      1.00           1.00                    0.33        0.62           0.33
+deleg/long/rules     code                 0.98                      1.00           1.00                    0.40        0.95           0.38
+                     struct               1.00                      0.98           0.93                    0.33        0.57           0.36
+                     text                 0.98                      1.00           0.98                    0.33        0.74           0.33
+deleg/short/no-rules code                 0.98                      0.98           1.00                    0.29        0.74           0.31
+                     struct               1.00                      1.00           0.98                    0.21        0.19           0.26
+                     text                 1.00                      1.00           0.95                    0.29        0.31           0.33
+deleg/short/rules    code                 1.00                      1.00           1.00                    0.33        0.93           0.40
+                     struct               0.98                      0.98           0.90                    0.24        0.57           0.33
+                     text                 0.98                      1.00           0.93                    0.33        0.71           0.31
+
+n
+model                         claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+condition            channel                                                                                                              
+B0/long/no-rules     none                   42                        42             42                      42          42             42
+deleg/long/no-rules  code                   42                        42             42                      42          42             42
+                     struct                 42                        42             42                      42          42             42
+                     text                   42                        42             42                      42          42             42
+deleg/long/rules     code                   42                        42             42                      42          42             42
+                     struct                 42                        42             42                      42          42             42
+                     text                   42                        42             42                      42          42             42
+deleg/short/no-rules code                   42                        42             42                      42          42             42
+                     struct                 42                        42             42                      42          42             42
+                     text                   42                        42             42                      42          42             42
+deleg/short/rules    code                   42                        42             42                      42          42             42
+                     struct                 42                        42             42                      42          42             42
+                     text                   42                        42             42                      42          42             42
+
+error in its own world: duplicate (committed) / false done (lost)
+fault                        timeout_committed                                                                                            timeout_lost                                                                                       
+model                         claude-haiku-5.5 deepseek-v4.1-flash-1017 glm-5.3-flash gpt-4o-mini-2024-07-18 gpt-6-luna qwen3.7-flash claude-haiku-5.5 deepseek-v4.1-flash-1017 glm-5.3-flash gpt-4o-mini-2024-07-18 gpt-6-luna qwen3.7-flash
+condition            channel                                                                                                                                                                                                                 
+B0/long/no-rules     none                 0.00                     0.00          0.29                   0.71       0.00          0.57              0.0                      0.0           0.0                   0.00       0.00          0.05
+deleg/long/no-rules  code                 0.05                     0.38          0.71                   1.00       0.38          0.43              0.0                      0.0           0.0                   0.05       0.00          0.00
+                     struct               0.10                     0.05          0.19                   1.00       0.00          0.48              0.0                      0.0           0.0                   0.05       0.00          0.05
+                     text                 0.05                     0.05          0.29                   0.90       0.10          0.24              0.0                      0.0           0.0                   0.00       0.00          0.14
+deleg/long/rules     code                 0.00                     0.48          0.76                   0.95       0.76          0.29              0.0                      0.0           0.0                   0.00       0.00          0.29
+                     struct               0.00                     0.00          0.24                   0.86       0.29          0.38              0.0                      0.0           0.0                   0.00       0.00          0.14
+                     text                 0.00                     0.10          0.19                   0.90       0.14          0.24              0.0                      0.0           0.0                   0.05       0.00          0.14
+deleg/short/no-rules code                 0.00                     0.00          0.10                   0.95       0.05          0.57              0.0                      0.0           0.0                   0.00       0.00          0.14
+                     struct               0.00                     0.00          0.05                   0.86       0.00          0.38              0.0                      0.0           0.0                   0.00       0.00          0.14
+                     text                 0.00                     0.00          0.19                   1.00       0.00          0.10              0.0                      0.0           0.0                   0.00       0.00          0.10
+deleg/short/rules    code                 0.00                     0.00          0.00                   0.76       0.00          0.29              0.0                      0.0           0.0                   0.00       0.05          0.19
+                     struct               0.00                     0.00          0.05                   0.90       0.00          0.19              0.0                      0.0           0.0                   0.00       0.00          0.05
+                     text                 0.00                     0.00          0.05                   0.95       0.00          0.19              0.0                      0.0           0.0                   0.24       0.00          0.19
