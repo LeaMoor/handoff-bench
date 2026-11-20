@@ -18,6 +18,7 @@ from handoff_bench.cells import Channel
 
 HEADER = "Subagent's bank calls, from the call log:"
 _INVOICE_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
+_KEY = re.compile(r"[A-Za-z0-9_.:\-]{1,80}")
 
 
 def render(
@@ -55,7 +56,7 @@ def _items(name: str, items: list[str]) -> str:
     return f"{name}: none" if not items else "\n".join([f"{name}:", *(f"- {i}" for i in items)])
 
 
-def statement(calls: list[CallRow]) -> str:
+def statement(calls: list[CallRow], *, show_key: bool = False) -> str:
     """One line per bank call of this subagent (`create_charge` and the checks), numbered by the
     subagent's own calls. Calls that never reached the bank are left out: dropped by the injector
     (it reads as "no call") or rejected by the stand for malformed arguments."""
@@ -68,7 +69,7 @@ def statement(calls: list[CallRow]) -> str:
         if r.tool not in ("create_charge", *READ_TOOLS):
             continue
         charges += r.tool == "create_charge"
-        lines.append(f"- step {step}: {r.tool} {_invoice(r)}: {_outcome(r)}")
+        lines.append(f"- step {step}: {r.tool} {_invoice(r)}{_key(r, show_key)}: {_outcome(r)}")
     if charges == 0:
         lines.append("- no create_charge calls")
     return "\n".join(lines)
@@ -76,6 +77,16 @@ def statement(calls: list[CallRow]) -> str:
 
 def _reached_bank(r: CallRow) -> bool:
     return r.outcome not in ("dropped", "rejected")
+
+
+def _key(r: CallRow, show: bool) -> str:
+    # code_key: the key the subagent sent, so the orchestrator can pass it on (M4).
+    value = r.args.get("idempotency_key")
+    if not show or r.tool != "create_charge":
+        return ""
+    if not isinstance(value, str) or not value:
+        return " (no idempotency key)"
+    return f" (idempotency key {value if _KEY.fullmatch(value) else '?'})"
 
 
 def _invoice(r: CallRow) -> str:
@@ -104,6 +115,7 @@ RENDERERS: dict[Channel, Renderer] = {
     # Like the words, the form is the subagent's own report: a lost report loses it too.
     "struct": lambda child, calls, report_lost: "" if report_lost else form(child),
     "code": lambda child, calls, report_lost: statement(calls),
+    "code_key": lambda child, calls, report_lost: statement(calls, show_key=True),
     # A single agent never delegates; the entry only keeps the episode wiring uniform.
     "none": lambda child, calls, report_lost: subagent_words(child),
 }

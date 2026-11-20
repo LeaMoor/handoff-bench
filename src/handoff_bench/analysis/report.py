@@ -13,13 +13,17 @@ OUTCOMES = [o for o in get_args(Outcome) if o != "invalid"]
 CHANNELS: list[Channel] = [c for c in get_args(Channel) if c != "none"]
 MAIN_CELLS = [c.number for c in CELLS.values() if c.block == "main"]
 CALIBRATION_PAIRS = {
-    (ch, delay): tuple(
-        c.number
-        for c in CELLS.values()
-        if c.block == "calibration" and c.channel == ch and c.delay == delay
-    )
-    for ch in ("text", "code")
+    (ch, delay): pair
+    for ch in ("text", "code", "code_key")
     for delay in ("short", "long")
+    if len(
+        pair := tuple(
+            c.number
+            for c in CELLS.values()
+            if c.block == "calibration" and c.channel == ch and c.delay == delay
+        )
+    )
+    == 2
 }
 # Where the channel should decide the outcome: a check cannot see the charge and the subagent
 # has no rules block. Predictions and "something to measure" are read here (to be frozen).
@@ -32,7 +36,12 @@ MEASURE_CELLS = [
     and c.channel == "text"
     and (c.delay, c.rules) == (PRIMARY["delay"], PRIMARY["rules"])
 ]
-DEFAULTS = {"delay": "short", "rules": True, "agent": "delegated"}  # runs before these columns
+DEFAULTS = {
+    "delay": "short",
+    "rules": True,
+    "agent": "delegated",
+    "key": "subagent",
+}  # runs before these columns
 VARIANT = ["world", "template", "seed", "repeat"]
 
 # The plan's thresholds; the preregistration (task 14) freezes them.
@@ -208,7 +217,7 @@ def predictions(df: pd.DataFrame) -> pd.DataFrame:
     """The plan's predictions; `passed` is None where there is no data yet."""
     main = main_by_channel(df, **PRIMARY)["correct"]
     cal = calibration_summary(df)["mean_error"].xs("short", level="delay")
-    text, struct, code = (main[c] for c in CHANNELS)
+    text, struct, code = (main[c] for c in ("text", "struct", "code"))
     eos = control_eos(df)
     spread = code - text if not math.isnan(struct) else math.nan
     return pd.DataFrame(

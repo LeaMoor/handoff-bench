@@ -12,12 +12,14 @@ class FakeModel:
         self.script = list(script)
         self.cost = cost_per_call
         self.requests: list[list[dict[str, Any]]] = []
+        self.tools: list[list[dict[str, Any]]] = []
         self._ids = count(1)
 
     async def complete(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> ModelResponse:
         self.requests.append([dict(m) for m in messages])
+        self.tools.append(tools)
         step = self.script.pop(0)
         if isinstance(step, str):
             calls: list[ToolCall] = []

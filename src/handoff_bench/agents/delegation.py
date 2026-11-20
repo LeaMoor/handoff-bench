@@ -1,6 +1,7 @@
 """Orchestrator → subagent handoff: `delegate(goal)`, the subagent's `finish_report`
 and the orchestrator's `finish`."""
 
+import copy
 from collections.abc import Callable
 from typing import Any
 
@@ -134,6 +135,10 @@ class Delegation:
         render: Renderer,
         report_lost: Callable[[str], bool] | None = None,
         config: AgentsConfig | None = None,
+        deliveries: int = 1,
+        respawn_on_lost: bool = False,
+        tasks: dict[str, str] | None = None,
+        hide_key: bool = False,
     ) -> None:
         self.gateway = gateway
         self.model = model
@@ -141,7 +146,12 @@ class Delegation:
         self.report_lost = report_lost
         self.config = config or AgentsConfig()
         self.render = render
+        self.deliveries = deliveries
+        self.respawn_on_lost = respawn_on_lost
+        self.tasks = tasks if tasks is not None else {}  # subagent → the task it runs
+        self.hide_key = hide_key
         self.subagents: list[AgentTrace] = []
+        self._task_count = 0
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
         )
@@ -149,16 +159,28 @@ class Delegation:
             gateway, "finish_report", "text", "Finish the task and report the outcome."
         )
 
-    async def _delegate(self, actor: str, args: dict[str, Any]) -> dict[str, Any]:
-        goal = args.get("goal")
-        if not isinstance(goal, str) or not goal.strip():
-            raise ToolCallError("invalid_goal", "goal must be a non-empty string")
-        # A fresh actor per delegation: logs and the call journal stay separable per run.
+    def _new_task(self) -> str:
+        self._task_count += 1
+        return f"t{self._task_count}"
+
+    def _subagent_tools(self) -> list[dict[str, Any]]:
+        tools = self.gateway.openai_tools(list(self.config.subagent_tools))
+        if not self.hide_key:
+            return tools
+        out = copy.deepcopy(tools)
+        for tool in out:
+            tool["function"]["parameters"].get("properties", {}).pop("idempotency_key", None)
+        return out
+
+    async def _run_subagent(self, goal: str, task: str) -> tuple[AgentTrace, bool]:
+        # A fresh actor per run: logs and the call journal stay separable per run.
+        actor = f"sub-{len(self.subagents) + 1}"
+        self.tasks[actor] = task
         spec = AgentSpec(
-            actor=f"sub-{len(self.subagents) + 1}",
+            actor=actor,
             system_prompt=self.config.subagent_prompt,
             max_steps=self.config.subagent_max_steps,
-            tools=self.gateway.openai_tools(list(self.config.subagent_tools)),
+            tools=self._subagent_tools(),
             finish_tools=frozenset({"finish_report"}),
         )
         child = await run_agent(
@@ -172,6 +194,18 @@ class Delegation:
         if child.stop_reason in INVALID_STOPS:
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
-        lost = self.report_lost is not None and self.report_lost(spec.actor)
+        return child, self.report_lost is not None and self.report_lost(actor)
+
+    async def _delegate(self, actor: str, args: dict[str, Any]) -> dict[str, Any]:
+        goal = args.get("goal")
+        if not isinstance(goal, str) or not goal.strip():
+            raise ToolCallError("invalid_goal", "goal must be a non-empty string")
+        task = self._new_task()
+        # M4: the harness itself repeats the work — a double delivery runs the same task again,
+        # a respawn after a lost report runs it as a new task.
+        for _ in range(self.deliveries):
+            child, lost = await self._run_subagent(goal, task)
+        if lost and self.respawn_on_lost:
+            child, lost = await self._run_subagent(goal, self._new_task())
         calls = self.gateway.journal.by_actor(child.actor)
         return {"status": "completed", "result": self.render(child, calls, lost)}

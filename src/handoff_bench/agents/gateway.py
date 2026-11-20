@@ -27,6 +27,11 @@ class CallHook:
     """Инжектор: pre — before_call возвращает dropped; post — after_call отмечает субагента,
     чей отчёт теряется (см. faults/injector.py)."""
 
+    def rewrite(self, call: PendingCall) -> PendingCall:
+        """A harness-side change of the arguments before the call runs (the journal keeps
+        what the model sent; the bank sees the rewritten call)."""
+        return call
+
     async def before_call(self, call: PendingCall) -> ToolResult | None:
         return None
 
@@ -109,6 +114,8 @@ class ToolGateway:
         return result
 
     async def _run(self, call: PendingCall) -> ToolResult:
+        for hook in self.hooks:
+            call = hook.rewrite(call)
         for hook in self.hooks:
             early = await hook.before_call(call)
             if early is not None:

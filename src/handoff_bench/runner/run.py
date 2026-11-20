@@ -62,6 +62,7 @@ async def run_one(
         delay=config.delay,
         rules=config.rules,
         agent=config.agent,
+        key=config.key,
         world=config.world,
         template=config.template,
         seed=config.seed,
