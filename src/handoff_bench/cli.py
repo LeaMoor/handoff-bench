@@ -57,7 +57,16 @@ def run(
     fault: Annotated[
         str, typer.Option(help="none | pre | post | timeout_lost | timeout_committed")
     ] = "none",
-    channel: Annotated[str, typer.Option(help="text | struct | code")] = "text",
+    channel: Annotated[
+        str, typer.Option(help="text | struct | code; none for --agent single")
+    ] = "text",
+    delay: Annotated[
+        str, typer.Option(help="short | long (long: the timed-out charge never shows)")
+    ] = "short",
+    rules: Annotated[bool, typer.Option(help="Блок правил у субагента")] = True,
+    agent: Annotated[
+        str, typer.Option(help="delegated | single (B0: платит сам оркестратор)")
+    ] = "delegated",
     model: Annotated[
         str, typer.Option(envvar="OPENROUTER_MODEL", help="ID модели в OpenRouter")
     ] = "qwen/qwen3.7-flash",
@@ -94,7 +103,7 @@ def run(
                 seed=model_seed,
                 reasoning_effort=reasoning_effort,
             ),
-            cells=[find_cell(fault, channel).number],
+            cells=[find_cell(fault, channel, delay=delay, rules=rules, agent=agent).number],
             world=world,
             templates=[template],
             seeds=[seed],
@@ -140,7 +149,11 @@ def report(
     sections = [
         ("По ячейкам", r.cell_table(df)),
         ("Первое действие оркестратора", r.first_actions(df)),
-        ("Главное число 1: главный блок по каналам", r.main_by_channel(df)),
+        (
+            "Главное число 1: главный блок по каналам (где проверка не спасает)",
+            r.main_by_channel(df, **r.PRIMARY),
+        ),
+        ("Главный блок по условиям", r.main_grid(df)),
         ("Главное число 2: калибровка", r.calibration_summary(df)),
         ("Предсказания", r.predictions(df)),
         ("Критерии пилота", r.pilot_checks(df)),

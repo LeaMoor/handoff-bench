@@ -104,4 +104,6 @@ RENDERERS: dict[Channel, Renderer] = {
     # Like the words, the form is the subagent's own report: a lost report loses it too.
     "struct": lambda child, calls, report_lost: "" if report_lost else form(child),
     "code": lambda child, calls, report_lost: statement(calls),
+    # A single agent never delegates; the entry only keeps the episode wiring uniform.
+    "none": lambda child, calls, report_lost: subagent_words(child),
 }

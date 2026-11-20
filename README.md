@@ -6,6 +6,7 @@
 - [DECISIONS.md](DECISIONS.md) — что решили и почему, открытые вопросы
 - [BACKLOG.md](BACKLOG.md) — что по плану ещё не сделано
 - [docs/plan-part-1.md](docs/plan-part-1.md) — следующий план: эксперименты части 1 на одном компьютере
+- [docs/results/](docs/results/) — прогоны и их разбор; скрипты разбора — `scripts/`
 
 ## Быстрый старт
 
@@ -26,7 +27,7 @@ uv run stand bank serve --template 1 --seed 1   # банк мира 1 по HTTP:
 | `src/handoff_bench/billing/` | банк: ядро (`service.py`), MCP-сервер (`server.py`), контракт (`protocol.py`), журнал эффектов |
 | `src/handoff_bench/agents/` | шлюз вызовов и журнал вызовов, бэкенды инструментов, клиент модели, агентный цикл, `delegate` и субагент (`delegation.py`) |
 | `src/handoff_bench/runner/` | эпизод и его конфиг (`episode.py`), эпизод → оценка → строка (`run.py`), пачка (`batch.py`), схема `results.csv` (`results.py`) |
-| `src/handoff_bench/cells.py` | 11 ячеек первых прогонов: поломка × канал |
+| `src/handoff_bench/cells.py` | ячейки: контроль, калибровка, главный блок (канал × мир × задержка × правила) и B0 |
 | `src/handoff_bench/grading/` | грейдер (`grader.py`) и кодер поведения (`coder.py`) |
 | `src/handoff_bench/analysis/` | расчёты по `results.csv` (`report.py`) и отладочные данные (`synthetic.py`) |
 | `notebooks/` | ноутбук анализа (jupytext, `.py`) |

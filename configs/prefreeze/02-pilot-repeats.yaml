@@ -1,0 +1,16 @@
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells:
+- 2
+- 3
+templates:
+- 1
+- 2
+seeds:
+- 1
+repeats: 2
+parallel: 4
+budget_usd: 0.2
+allow_dirty: true
+run_id: prefreeze-02-pilot-repeats

@@ -3,10 +3,10 @@
 To add a fault, add an entry to FAULTS; `cells.py` already names all of them."""
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from handoff_bench.billing import BankConfig, TimeoutRule
-from handoff_bench.cells import Fault
+from handoff_bench.cells import Delay, Fault
 from handoff_bench.faults.injector import FaultMode, Injector
 from handoff_bench.worlds import World
 
@@ -46,3 +46,19 @@ FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
     "timeout_lost": _timeout(commits=False),
     "timeout_committed": _timeout(commits=True),
 }
+
+
+def with_delay(setup: FaultSetup, delay: Delay, world: World) -> FaultSetup:
+    """Long delay: a check reads "no charges" in both worlds.
+
+    Timeout: the timed-out charge, if it went through, stays invisible (a late commit).
+    Pre / post: every charge on the focal invoice stays invisible, so a check delegated to
+    a new subagent cannot tell the worlds apart (calibration without the loophole)."""
+    if delay == "short":
+        return setup
+    rule = setup.bank.timeout
+    if rule is not None:
+        update = {"timeout": rule.model_copy(update={"hidden": True})}
+    else:
+        update = {"hidden_invoice": world.focal_invoice}
+    return replace(setup, bank=setup.bank.model_copy(update=update))

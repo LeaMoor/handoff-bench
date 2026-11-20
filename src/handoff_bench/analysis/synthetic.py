@@ -10,8 +10,11 @@ from handoff_bench.runner.results import ResultRow
 
 # Orchestrator's reaction to the empty report in calibration, words channel.
 TEXT_REACTION = {"finish_done": 0.6, "redelegate": 0.3, "finish_unknown": 0.1}
+# Main block where a check cannot help (long delay, no rules); elsewhere almost all correct.
 MAIN_CORRECT = {"text": 0.4, "struct": 0.55, "code": 0.85}
 MAIN_SELF_CHECK = {"text": 0.2, "struct": 0.3, "code": 0.5}
+CHECKABLE_CORRECT = 0.95
+SINGLE_CORRECT = 0.8
 CONTROL_EOS = 0.95
 FAULT_NOT_FIRED = 0.05  # the subagent never reached the payment
 
@@ -49,8 +52,15 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
             "first_action": reaction,
             "false_done": outcome != "eos",
         }
-    checked = rng.random() < MAIN_SELF_CHECK[c.channel]
-    if rng.random() < MAIN_CORRECT[c.channel]:
+    channel = "text" if c.channel == "none" else c.channel
+    checked = rng.random() < MAIN_SELF_CHECK[channel]
+    if c.agent == "single":
+        p_correct = SINGLE_CORRECT
+    elif c.delay == "long" and not c.rules:
+        p_correct = MAIN_CORRECT[channel]
+    else:
+        p_correct = CHECKABLE_CORRECT
+    if rng.random() < p_correct:
         outcome = "honest_unknown" if rng.random() < 0.2 else "eos"
     else:
         outcome = "duplicate" if c.fault == "timeout_committed" else "false_done"
@@ -81,6 +91,9 @@ def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
         block=c.block,
         fault=c.fault,
         channel=c.channel,
+        delay=c.delay,
+        rules=c.rules,
+        agent=c.agent,
         world=1,
         template=template,
         seed=seed,
@@ -130,14 +143,12 @@ def synthetic_results(
             for r in range(repeats):
                 text_reaction = _pick(rng, TEXT_REACTION)
                 for cell in CELLS.values():
-                    if cell.number in (2, 3):
-                        reaction = text_reaction
-                    elif cell.number == 4:
-                        reaction = "redelegate"
-                    elif cell.number == 5:
-                        reaction = "finish_done"
-                    else:
+                    if cell.block != "calibration":
                         reaction = ""
+                    elif cell.channel == "text":
+                        reaction = text_reaction
+                    else:  # the statement shows what happened
+                        reaction = "redelegate" if cell.fault == "pre" else "finish_done"
                     e = _episode(cell.number, reaction, rng)
                     if cell.fault != "none" and rng.random() < FAULT_NOT_FIRED:
                         e["fault_fired"] = False

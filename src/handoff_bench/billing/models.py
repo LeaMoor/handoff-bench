@@ -36,11 +36,15 @@ class TimeoutRule(_Frozen):
     calls: int = Field(default=1, ge=1)
     # True — мир «списание прошло», False — «не прошло»; вызывающий в обоих получает таймаут.
     commits: bool
+    # A late commit: the committed charge never shows in list_charges / get_invoice status.
+    hidden: bool = False
 
 
 class BankConfig(_Frozen):
     visibility_delay: int = Field(default=0, ge=0)
     timeout: TimeoutRule | None = None
+    # Charges on this invoice never show to checks: calibration without the check loophole.
+    hidden_invoice: str | None = None
 
 
 class EffectRow(_Frozen):

@@ -183,6 +183,7 @@ def call(tool: str, outcome: str = "ok", **args) -> tuple[str, str, dict]:
 
 
 DELEGATE = call("delegate")
+CHECK = call("delegate", check=True)  # its subagent only reads the bank
 
 
 def done(status: str = "done") -> tuple[str, str, dict]:
@@ -241,13 +242,39 @@ CODER = {
     "question in plain text": ([[DELEGATE]], "Should I retry?", "ask_user", "ask_user", False),
     "statement in plain text": ([[DELEGATE]], "It is paid.", "other", "other", False),
     "no delegation": ([[done("failed")]], None, "none", "none", False),
+    "delegated check, then done": (
+        [[DELEGATE], [CHECK], [done()]],
+        None,
+        "delegate_check",
+        "finish_done",
+        False,
+    ),
+    "delegated check, then pay again": (
+        [[DELEGATE], [CHECK], [DELEGATE], [done()]],
+        None,
+        "delegate_check",
+        "redelegate",
+        False,
+    ),
+    "single agent: check after its own timeout, then charge again": (
+        [
+            [call("create_charge", "timeout")],
+            [call("list_charges")],
+            [call("create_charge")],
+            [done()],
+        ],
+        None,
+        "check",
+        "charge_again",
+        True,
+    ),
 }
 
 
 def journal(responses: list[list[tuple[str, str, dict]]]) -> list[CallRow]:
     """Orchestrator rows in `seq` order; each accepted delegate runs a subagent call in between,
     and its own row is written after the subagent's, as in the real journal."""
-    rows, seq = [], 0
+    rows, seq, subagents = [], 0, 0
     for response in responses:
         for tool, outcome, args in response:
             seq += 1
@@ -256,17 +283,18 @@ def journal(responses: list[list[tuple[str, str, dict]]]) -> list[CallRow]:
                 seq=seq,
                 actor="orchestrator",
                 tool=tool,
-                args=args,
+                args={k: v for k, v in args.items() if k != "check"},
                 outcome=outcome,
             )
             if tool == "delegate" and outcome == "ok":
                 seq += 1
+                subagents += 1
                 rows.append(
                     CallRow(
                         episode_id="ep",
                         seq=seq,
-                        actor="sub-1",
-                        tool="create_charge",
+                        actor=f"sub-{subagents}",
+                        tool="get_invoice" if args.get("check") else "create_charge",
                         args={},
                         outcome="ok",
                     )

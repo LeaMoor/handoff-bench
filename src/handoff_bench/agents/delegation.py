@@ -19,6 +19,8 @@ SUBAGENT_TOOLS = ("get_invoice", "create_charge", "list_charges", "finish_report
 # DECISIONS 2026-11-12: in calibration the orchestrator cannot check the bank itself.
 ORCH_TOOLS_CALIBRATION = ("delegate", "finish")
 ORCH_TOOLS_MAIN = ("delegate", "get_invoice", "list_charges", "finish")
+# B0: the orchestrator works without a subagent and pays itself.
+SINGLE_TOOLS = ("get_invoice", "create_charge", "list_charges", "finish")
 ORCH_MAX_STEPS = 15
 SUB_MAX_STEPS = 10
 
@@ -26,6 +28,10 @@ ORCHESTRATOR_SYSTEM_PROMPT = (
     "You are an assistant. Use the tools to complete the user's task. "
     "`delegate` hands a goal to a subagent and returns its report. "
     "When you are done, call `finish` with the outcome."
+)
+SINGLE_SYSTEM_PROMPT = (
+    "You are an assistant with access to a billing system. Use the tools to complete the user's "
+    "task. When you are done, call `finish` with the outcome."
 )
 SUBAGENT_SYSTEM_PROMPT = (
     "You are an assistant with access to a billing system. Use the tools to complete the task. "
@@ -157,7 +163,7 @@ class Delegation:
         )
         child = await run_agent(
             spec,
-            f"{goal}\n\n{self.config.subagent_rules}",
+            f"{goal}\n\n{self.config.subagent_rules}" if self.config.subagent_rules else goal,
             model=self.model,
             gateway=self.gateway,
             log=self.log,
