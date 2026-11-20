@@ -1,4 +1,4 @@
-"""Main grid (cells 6-31) for every model: outcome shares by condition.
+"""Main grid (cells 6-31, hedged statement 64-67) for every model: outcome shares by condition.
 
 Usage: uv run python scripts/grid.py [runs/prefreeze-*]
 """
@@ -21,7 +21,7 @@ for run in runs:
     if run.name in BROKEN or not (run / "results.csv").exists():
         continue
     df = r.load_results(run)
-    frames.append(df[df["cell"].between(6, 31)])
+    frames.append(df[df["cell"].between(6, 31) | df["cell"].between(64, 67)])
 df = pd.concat(frames, ignore_index=True)
 df["model"] = df["model"].str.split("/").str[-1]
 # Cells 28-29 were also run next to code_key: the same episode twice, keep one.

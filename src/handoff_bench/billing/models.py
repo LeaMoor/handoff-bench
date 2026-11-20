@@ -53,7 +53,8 @@ class BankConfig(_Frozen):
     visibility_delay: int = Field(default=0, ge=0)
     timeout: TimeoutRule | None = None
     processing: ProcessingRule | None = None
-    # Charges on this invoice never show to checks: calibration without the check loophole.
+    # The first charge on this invoice never shows to checks — the one the fault hit
+    # (calibration without the loophole, M4). Later charges, a repayment too, show as usual.
     hidden_invoice: str | None = None
 
 
