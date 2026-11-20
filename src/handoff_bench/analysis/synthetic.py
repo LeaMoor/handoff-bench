@@ -52,7 +52,7 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
             "first_action": reaction,
             "false_done": outcome != "eos",
         }
-    channel = {"none": "text", "code_key": "code"}.get(c.channel, c.channel)
+    channel = {"none": "text", "code_key": "code", "code_hedged": "code"}.get(c.channel, c.channel)
     checked = rng.random() < MAIN_SELF_CHECK[channel]
     if c.agent == "single":
         p_correct = SINGLE_CORRECT

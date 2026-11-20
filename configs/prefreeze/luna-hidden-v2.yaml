@@ -1,7 +1,7 @@
 model:
-  model: moonshotai/kimi-k3.1-pro
-  provider: moonshotai
-run_id: prefreeze-kimi-calibration-hidden
+  model: openai/gpt-6-luna
+  provider: openai
+run_id: prefreeze-luna-hidden-v2
 cells:
 - 32
 - 33
@@ -20,5 +20,5 @@ seeds:
 - 6
 - 7
 parallel: 4
-budget_usd: 7.0
+budget_usd: 0.15
 allow_dirty: true

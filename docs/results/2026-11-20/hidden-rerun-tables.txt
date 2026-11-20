@@ -1,0 +1,41 @@
+
+duplicate
+model          claude-haiku-5.5       deepseek-v4.1-flash-1017       glm-5.3-flash       gpt-4o-mini-2024-07-18       gpt-6-luna       qwen3.7-flash      
+version                     new   old                      new   old           new   old                    new   old        new   old           new   old
+fault channel                                                                                                                                             
+post  code                 0.00  0.00                     0.43  0.29          0.33  0.48                    0.1  0.05       0.10  0.00          0.05  0.05
+      code_key             0.00  0.00                     0.05  0.24          0.24  0.24                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 0.43  0.57                     0.86  1.00          0.76  0.90                    0.1  0.10       0.86  0.71          0.19  0.00
+pre   code                 0.00  0.00                     0.00  0.33          0.00  0.62                    0.0  0.00       0.00  0.05          0.00  0.05
+      code_key             0.00  0.00                     0.00  0.14          0.00  0.33                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 0.00  0.00                     0.00  0.00          0.00  0.10                    0.0  0.00       0.00  0.05          0.00  0.00
+
+correct
+model          claude-haiku-5.5       deepseek-v4.1-flash-1017       glm-5.3-flash       gpt-4o-mini-2024-07-18       gpt-6-luna       qwen3.7-flash      
+version                     new   old                      new   old           new   old                    new   old        new   old           new   old
+fault channel                                                                                                                                             
+post  code                 1.00  1.00                     0.57  0.67          0.67  0.52                   0.90  0.95       0.90  1.00          0.48  0.29
+      code_key             1.00  1.00                     0.95  0.76          0.76  0.76                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 0.57  0.43                     0.14  0.00          0.24  0.10                   0.90  0.90       0.14  0.29          0.29  0.81
+pre   code                 0.95  0.90                     1.00  0.67          1.00  0.38                   0.43  0.57       0.95  0.95          0.00  0.05
+      code_key             1.00  0.90                     0.90  0.76          1.00  0.67                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 1.00  0.95                     1.00  1.00          0.95  0.90                   0.05  0.14       0.90  0.90          0.05  0.05
+
+honest_unknown
+model          claude-haiku-5.5       deepseek-v4.1-flash-1017       glm-5.3-flash       gpt-4o-mini-2024-07-18       gpt-6-luna       qwen3.7-flash      
+version                     new   old                      new   old           new   old                    new   old        new   old           new   old
+fault channel                                                                                                                                             
+post  code                 0.90  0.90                     0.57  0.67          0.24  0.14                   0.19  0.24       0.24  0.33          0.14  0.10
+      code_key             0.81  1.00                     0.95  0.76          0.33  0.33                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 0.57  0.43                     0.14  0.00          0.19  0.05                   0.05  0.05       0.14  0.29          0.00  0.00
+pre   code                 0.29  0.86                     0.29  0.67          0.00  0.24                   0.33  0.57       0.05  0.43          0.00  0.00
+      code_key             0.48  0.76                     0.33  0.76          0.00  0.38                    NaN   NaN        NaN   NaN           NaN   NaN
+      text                 0.38  0.90                     0.00  1.00          0.00  0.62                   0.05  0.14       0.19  0.33          0.00  0.05
+
+error averaged over the two worlds (pre, post)
+model    claude-haiku-5.5       deepseek-v4.1-flash-1017       glm-5.3-flash       gpt-4o-mini-2024-07-18       gpt-6-luna       qwen3.7-flash      
+version               new   old                      new   old           new   old                    new   old        new   old           new   old
+channel                                                                                                                                             
+code                 0.02  0.05                     0.21  0.33          0.17  0.55                   0.33  0.24       0.07  0.02          0.76  0.83
+code_key             0.00  0.05                     0.07  0.24          0.12  0.29                    NaN   NaN        NaN   NaN           NaN   NaN
+text                 0.21  0.31                     0.43  0.50          0.40  0.50                   0.52  0.48       0.48  0.40          0.83  0.57

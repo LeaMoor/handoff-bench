@@ -1,0 +1,24 @@
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+run_id: prefreeze-haiku-hedged
+cells:
+- 64
+- 65
+- 66
+- 67
+templates:
+- 1
+- 2
+- 3
+seeds:
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+parallel: 4
+budget_usd: 0.35
+allow_dirty: true

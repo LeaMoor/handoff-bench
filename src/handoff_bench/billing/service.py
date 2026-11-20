@@ -154,7 +154,7 @@ class BillingService:
             visible_from = step + self.config.visibility_delay + 1
             if timed_out and self.config.timeout is not None and self.config.timeout.hidden:
                 visible_from = NEVER_VISIBLE
-            if invoice_id == self.config.hidden_invoice:
+            if invoice_id == self.config.hidden_invoice and not self._has_charge(invoice_id):
                 visible_from = NEVER_VISIBLE
             with self._db:
                 self._db.execute(
@@ -191,6 +191,10 @@ class BillingService:
             if timed_out:
                 raise BankTimeout()
             return self._charge_view(charge_id)
+
+    def _has_charge(self, invoice_id: str) -> bool:
+        row = self._db.execute("SELECT 1 FROM charges WHERE invoice_id = ? LIMIT 1", (invoice_id,))
+        return row.fetchone() is not None
 
     def list_charges(self, invoice_id: str) -> list[ChargeView]:
         with self._lock:

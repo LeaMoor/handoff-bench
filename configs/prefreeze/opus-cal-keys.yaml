@@ -1,0 +1,13 @@
+# Claude Opus 5.5 (plan step 6): calibration without the loophole (32-35) and M4 with the charge
+# invisible, keys K0, K1, K2, K4 (48, 49, 50, 52 respawn; 54, 55, 56, 58 redeliver).
+# 9 episodes per cell; ~$0.11 per episode (40x Haiku), ~$12 in all.
+model:
+  model: anthropic/claude-opus-5.5
+  provider: anthropic
+run_id: prefreeze-opus-cal-keys
+cells: [32, 33, 34, 35, 48, 49, 50, 52, 54, 55, 56, 58]
+templates: [1, 2, 3]
+seeds: [1, 2, 3]
+parallel: 4
+budget_usd: 22
+allow_dirty: true

@@ -5,8 +5,9 @@ from pydantic import BaseModel, ConfigDict
 Block = Literal["control", "calibration", "main", "keys"]
 Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
-# code_key: the statement plus the idempotency key of each charge; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "none"]
+# code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
+# a note that a timed-out charge may have gone through unseen; none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
@@ -108,6 +109,20 @@ for block, fault, rules in (
             rules=rules,
         )
     )
+# Cells 64-67: like 22-23 and 28-29, but the statement warns that checks can lag a timed-out
+# charge — does a warning bring back the caution the subagent's words carry?
+for rules in (True, False):
+    for fault in _TIMEOUTS:
+        _cells.append(
+            Cell(
+                number=len(_cells) + 1,
+                block="main",
+                fault=fault,
+                channel="code_hedged",
+                delay="long",
+                rules=rules,
+            )
+        )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 
 
