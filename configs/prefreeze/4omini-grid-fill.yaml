@@ -1,0 +1,15 @@
+model:
+  model: openai/gpt-4o-mini-2024-07-18
+  provider: openai
+run_id: prefreeze-4omini-grid-fill
+cells:
+- 29
+- 30
+- 31
+templates:
+- 3
+seeds:
+- 7
+parallel: 4
+budget_usd: 0.1
+allow_dirty: true

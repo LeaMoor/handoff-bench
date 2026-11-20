@@ -1,0 +1,13 @@
+model:
+  model: moonshotai/kimi-k3.1-pro
+  provider: moonshotai
+run_id: prefreeze-kimi-smoke
+cells:
+- 33
+templates:
+- 1
+seeds:
+- 1
+parallel: 4
+budget_usd: 0.3
+allow_dirty: true
