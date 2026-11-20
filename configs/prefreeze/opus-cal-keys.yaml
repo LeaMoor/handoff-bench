@@ -1,0 +1,10 @@
+model:
+  model: anthropic/claude-opus-5.5
+  provider: anthropic
+run_id: prefreeze-opus-cal-keys
+cells: [32, 33, 34, 35, 48, 49, 50, 52, 54, 55, 56, 58]
+templates: [1, 2]
+seeds: [1, 2, 3, 4, 5]
+parallel: 4
+budget_usd: 15
+allow_dirty: true

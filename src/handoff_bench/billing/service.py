@@ -18,6 +18,7 @@ from handoff_bench.billing.models import (
     EffectRow,
     Invoice,
     InvoiceView,
+    ReportedAs,
 )
 
 NEVER_VISIBLE = 2**62  # bank step a hidden charge would become visible at
@@ -37,7 +38,8 @@ CREATE TABLE charges (
     idempotency_key TEXT,
     actor           TEXT NOT NULL,
     step            INTEGER NOT NULL,
-    visible_from    INTEGER NOT NULL
+    visible_from    INTEGER NOT NULL,
+    status          TEXT NOT NULL
 );
 CREATE TABLE idempotency_keys (
     key         TEXT PRIMARY KEY,
@@ -65,6 +67,7 @@ class BillingService:
         self._rng = random.Random(id_seed)
         self._step = 0
         self._timeouts_fired = 0
+        self._processing_fired = False
         self._lock = threading.Lock()
         if str(db_path) != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -148,6 +151,7 @@ class BillingService:
             timed_out = self._take_timeout(invoice_id)
             # Drawn in both worlds: otherwise a later charge gets a different id in each.
             charge_id = self._new_charge_id()
+            processing = self._take_processing(invoice_id)
             if timed_out and not self._timeout_commits():
                 raise BankTimeout()
 
@@ -156,9 +160,12 @@ class BillingService:
                 visible_from = NEVER_VISIBLE
             if invoice_id == self.config.hidden_invoice:
                 visible_from = NEVER_VISIBLE
+            if processing:
+                # Both worlds show and key the same processing charge; only the effect differs.
+                visible_from = step + 1
             with self._db:
                 self._db.execute(
-                    "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         charge_id,
                         invoice_id,
@@ -168,6 +175,7 @@ class BillingService:
                         actor,
                         step,
                         visible_from,
+                        "processing" if processing else "succeeded",
                     ),
                 )
                 if idempotency_key is not None:
@@ -175,6 +183,13 @@ class BillingService:
                         "INSERT INTO idempotency_keys VALUES (?, ?, ?, ?, ?)",
                         (idempotency_key, invoice_id, customer_id, amount, charge_id),
                     )
+            if processing and not self.config.processing.settles:  # type: ignore[union-attr]
+                return self._charge_view(charge_id)
+            reported_as: ReportedAs = "succeeded"
+            if processing:
+                reported_as = "processing"
+            elif timed_out:
+                reported_as = "timeout"
             self.journal.write(
                 EffectRow(
                     episode_id=self.episode_id,
@@ -185,7 +200,7 @@ class BillingService:
                     charge_id=charge_id,
                     idempotency_key=idempotency_key,
                     actor=actor,
-                    reported_as="timeout" if timed_out else "succeeded",
+                    reported_as=reported_as,
                 )
             )
             if timed_out:
@@ -214,14 +229,15 @@ class BillingService:
     def _visible_total(self, invoice_id: str) -> int:
         (total,) = self._db.execute(
             "SELECT COALESCE(SUM(amount), 0) FROM charges "
-            "WHERE invoice_id = ? AND visible_from <= ?",
+            "WHERE invoice_id = ? AND visible_from <= ? AND status = 'succeeded'",
             (invoice_id, self._step),
         ).fetchone()
         return total
 
     def _charge_view(self, charge_id: str) -> ChargeView:
         row = self._db.execute(
-            "SELECT charge_id, invoice_id, customer_id, amount FROM charges WHERE charge_id = ?",
+            "SELECT charge_id, invoice_id, customer_id, amount, status FROM charges "
+            "WHERE charge_id = ?",
             (charge_id,),
         ).fetchone()
         return ChargeView(**dict(row))
@@ -235,6 +251,13 @@ class BillingService:
 
     def _timeout_commits(self) -> bool:
         return self.config.timeout is not None and self.config.timeout.commits
+
+    def _take_processing(self, invoice_id: str) -> bool:
+        rule = self.config.processing
+        if rule is None or rule.invoice_id != invoice_id or self._processing_fired:
+            return False
+        self._processing_fired = True
+        return True
 
     def _new_charge_id(self) -> str:
         while True:

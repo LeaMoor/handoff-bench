@@ -2,8 +2,18 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys"]
-Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
+Block = Literal["control", "calibration", "main", "keys", "processing"]
+Fault = Literal[
+    "none",
+    "pre",
+    "post",
+    "timeout_lost",
+    "timeout_committed",
+    "respawn",
+    "redeliver",
+    "processing_settles",
+    "processing_fails",
+]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; none: a single agent.
 Channel = Literal["text", "struct", "code", "code_key", "none"]
@@ -106,6 +116,21 @@ for block, fault, rules in (
             channel="code_key",
             delay="long",
             rules=rules,
+        )
+    )
+# M3, cells 64-69: the bank answers the first focal charge with `processing` (as real payment
+# APIs do); it settles or fails only after the episode. No rules block, so nothing hints at
+# "processing is not paid"; the orchestrator can check the bank itself.
+for fault, channel in [
+    (f, ch) for ch in ("text", "struct", "code") for f in ("processing_settles", "processing_fails")
+]:
+    _cells.append(
+        Cell(
+            number=len(_cells) + 1,
+            block="processing",
+            fault=fault,
+            channel=channel,
+            rules=False,
         )
     )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}

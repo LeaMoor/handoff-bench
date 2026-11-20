@@ -100,14 +100,21 @@ def _outcome(r: CallRow) -> str:
         return "timeout, outcome unknown"
     if r.outcome != "ok":
         return f"error {r.error_code}"
+    if r.tool == "create_charge" and r.result.get("status") == "processing":
+        return f"processing, final outcome not known yet, charge {r.result['charge_id']}"
     if r.tool == "create_charge":
         return f"success, charge {r.result['charge_id']}"
     if r.tool == "get_invoice":
         return f"status {r.result['status']}"
-    ids = [c["charge_id"] for c in r.result]
+    ids = [_listed(c) for c in r.result]
     if not ids:
         return "no charges"
     return f"{len(ids)} charge{'s' if len(ids) > 1 else ''} ({', '.join(ids)})"
+
+
+def _listed(charge: dict) -> str:
+    status = charge.get("status", "succeeded")
+    return charge["charge_id"] if status == "succeeded" else f"{charge['charge_id']} {status}"
 
 
 RENDERERS: dict[Channel, Renderer] = {
