@@ -9,6 +9,7 @@ from handoff_bench.billing.models import Invoice
 
 WORLDS = (1,)
 TEMPLATES = (1, 2, 3)
+OWNERSHIP_TEMPLATE = 2
 
 CUSTOMERS = (
     ("cus_ann", "Ann Lee"),
@@ -101,29 +102,32 @@ class World(BaseModel):
         return next(inv for inv in self.invoices if inv.invoice_id == self.focal_invoice)
 
 
-def generate(world: int, seed: int, template: int) -> World:
+def generate(world: int, seed: int, template: int, *, ownership: bool = False) -> World:
     """The same (world, seed, template) always gives the same world."""
     if world not in WORLDS:
         raise ValueError(f"unknown world {world}; known: {WORLDS}")
     if template not in TEMPLATES:
         raise ValueError(f"unknown template {template}; known: {TEMPLATES}")
 
+    if ownership and template != OWNERSHIP_TEMPLATE:
+        raise ValueError(f"M8 requires template {OWNERSHIP_TEMPLATE}")
+
     # A str seed is hashed with sha512, so the world does not depend on PYTHONHASHSEED.
     rng = random.Random(f"world-{world}/template-{template}/seed-{seed}")
     cid, name = rng.choice(CUSTOMERS)
-    numbers = _invoice_numbers(rng, template)
+    n_targets = 3 if ownership else 2 if template == 2 else 1
+    numbers = _invoice_numbers(rng, template, n_targets)
     if template == 3:
         invoices, focal = _similar_invoices(rng, cid, numbers)
         targets = [focal.invoice_id]
     else:
-        n_targets = 1 if template == 1 else 2
         own = [_invoice(rng, num, cid) for num in numbers[:n_targets]]
         others = [c for c, _ in CUSTOMERS if c != cid]
         foreign = [_invoice(rng, num, rng.choice(others)) for num in numbers[n_targets:]]
         invoices = own + foreign
         targets = [inv.invoice_id for inv in own]
-        # Template 2: the fault hits the second payment, after the first one succeeded.
-        focal = own[-1]
+        # Template 2 targets the second payment, which is the shared invoice in M8.
+        focal = own[1] if ownership else own[-1]
 
     phrasing = seed % len(PHRASINGS[template])
     task = PHRASINGS[template][phrasing].format(
@@ -134,6 +138,12 @@ def generate(world: int, seed: int, template: int) -> World:
         name=name,
         cid=cid,
     )
+    if ownership:
+        phrasing = 0
+        task = (
+            f"Pay invoices {', '.join(targets)} for {name} ({cid}) exactly once each. "
+            "Report the outcome for each invoice."
+        )
     return World(
         world=world,
         template=template,
@@ -148,8 +158,7 @@ def generate(world: int, seed: int, template: int) -> World:
     )
 
 
-def _invoice_numbers(rng: random.Random, template: int) -> list[int]:
-    n_targets = 2 if template == 2 else 1
+def _invoice_numbers(rng: random.Random, template: int, n_targets: int) -> list[int]:
     n_total = n_targets + rng.choice((2, 3))
     if template == 3:
         # Similar invoices are numbered in a row, as if issued month after month.

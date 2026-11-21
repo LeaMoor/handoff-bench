@@ -135,15 +135,18 @@ def _row(cell: int, template: int, seed: int, repeat: int, e: dict) -> dict:
 def synthetic_results(
     *, templates: int = 3, seeds: int = 7, repeats: int = 1, seed: int = 0
 ) -> pd.DataFrame:
-    """All 11 cells x templates x seeds x repeats. Both halves of a pre/post pair share the
-    orchestrator's reaction, as equivalence demands."""
+    """Generate the timeout and calibration dataset, including its controls.
+
+    Both halves of a pre/post pair share the orchestrator's reaction.
+    """
     rng = random.Random(seed)
     rows = []
+    cells = [cell for cell in CELLS.values() if cell.ownership is None]
     for t in range(1, templates + 1):
         for s in range(1, seeds + 1):
             for r in range(repeats):
                 text_reaction = _pick(rng, TEXT_REACTION)
-                for cell in CELLS.values():
+                for cell in cells:
                     if cell.block != "calibration":
                         reaction = ""
                     elif cell.channel == "text":

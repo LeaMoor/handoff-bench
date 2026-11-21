@@ -10,6 +10,7 @@ from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
+from handoff_bench.grading.ownership import grade_ownership
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
 from handoff_bench.runner.results import ResultRow
@@ -36,17 +37,21 @@ async def run_one(
     config: EpisodeConfig, model: ModelClient, *, run_dir: Path, run_id: str
 ) -> ResultRow:
     """Episode → grade → `results.csv` row, also saved as `result.json` next to the logs."""
-    world = generate(config.world, config.seed, config.template)
+    is_ownership = config.ownership is not None
+    world = generate(config.world, config.seed, config.template, ownership=is_ownership)
     episode_dir = run_dir / config.episode_id
     result = await run_episode(model, world, config, episode_dir=episode_dir)
+    effects = EffectJournal.read(episode_dir / "effects.jsonl")
+    calls = CallJournal.read(episode_dir / "calls.jsonl")
     g = grade(
-        EffectJournal.read(episode_dir / "effects.jsonl"),
+        effects,
         world=world,
         finish_args=result.finish_args,
         stop_reason=result.stop_reason,
+        all_targets=is_ownership,
     )
     b = code_behaviour(
-        CallJournal.read(episode_dir / "calls.jsonl"),
+        calls,
         orchestrator=ORCHESTRATOR,
         responses=result.orchestrator_responses,
         final_text=result.final_text,
@@ -86,6 +91,16 @@ async def run_one(
         cost=result.cost,
         commit=config.commit,
         error=result.error,
+        ownership=grade_ownership(
+            effects,
+            calls,
+            world=world,
+            finish_args=result.finish_args,
+            concurrent=result.parallel_overlap,
+            child_actors=set(result.parallel_tasks or {}),
+        )
+        if is_ownership
+        else None,
     )
     (episode_dir / "result.json").write_text(
         json.dumps(row.model_dump(mode="json"), indent=2, ensure_ascii=False), encoding="utf-8"

@@ -14,6 +14,7 @@ from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
 from handoff_bench.runner.run import check_supported, run_one
 from handoff_bench.worlds import TEMPLATES, WORLDS
+from handoff_bench.worlds.generator import OWNERSHIP_TEMPLATE
 
 
 class BatchConfig(BaseModel):
@@ -44,6 +45,8 @@ class BatchConfig(BaseModel):
             if number not in CELLS:
                 raise ValueError(f"unknown cell {number}")
             check_supported(CELLS[number])
+            if CELLS[number].ownership is not None and self.templates != [OWNERSHIP_TEMPLATE]:
+                raise ValueError(f"M8 requires templates: [{OWNERSHIP_TEMPLATE}]")
         return self
 
     @classmethod

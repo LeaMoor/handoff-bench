@@ -2,13 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys"]
+Block = Literal["control", "calibration", "main", "keys", "ownership"]
 Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; none: a single agent.
 Channel = Literal["text", "struct", "code", "code_key", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
+Ownership = Literal["disjoint", "overlap", "d12"]
 
 
 class Cell(BaseModel):
@@ -23,6 +24,7 @@ class Cell(BaseModel):
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
     key: KeySource = "subagent"  # who sets the idempotency key (M4)
+    ownership: Ownership | None = None
 
 
 _TIMEOUTS: tuple[Fault, ...] = ("timeout_lost", "timeout_committed")
@@ -108,6 +110,18 @@ for block, fault, rules in (
             rules=rules,
         )
     )
+# M8 uses 70-72 to leave 64-69 available for M3.
+_cells.extend(
+    Cell(
+        number=number,
+        block="ownership",
+        fault="none",
+        channel="text",
+        key="none",
+        ownership=condition,
+    )
+    for number, condition in ((70, "disjoint"), (71, "overlap"), (72, "d12"))
+)
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 
 
@@ -126,7 +140,10 @@ def find_cell(
 ) -> Cell:
     wanted = (fault, channel, delay, rules, agent, key)
     for cell in CELLS.values():
-        if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted:
+        if (
+            cell.ownership is None
+            and (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted
+        ):
             return cell
     raise UnsupportedCell(
         f"no cell with fault={fault!r}, channel={channel!r}, delay={delay!r}, "

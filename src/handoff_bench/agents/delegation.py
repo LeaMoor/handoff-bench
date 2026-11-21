@@ -2,16 +2,17 @@
 and the orchestrator's `finish`."""
 
 import copy
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
+import anyio
 from pydantic import BaseModel, ConfigDict
 
 from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, run_agent
 from handoff_bench.agents.model_client import ModelClient
-from handoff_bench.agents.tools import INVALID_STOPS, InfraError, ToolCallError
+from handoff_bench.agents.tools import EMPTY_PARAMS, INVALID_STOPS, InfraError, ToolCallError
 from handoff_bench.jsonl import JsonlWriter
 
 STATUSES = ("done", "failed", "unknown")
@@ -22,6 +23,7 @@ ORCH_TOOLS_CALIBRATION = ("delegate", "finish")
 ORCH_TOOLS_MAIN = ("delegate", "get_invoice", "list_charges", "finish")
 # B0: the orchestrator works without a subagent and pays itself.
 SINGLE_TOOLS = ("get_invoice", "create_charge", "list_charges", "finish")
+PARALLEL_TOOLS = ("delegate_parallel", "finish")
 ORCH_MAX_STEPS = 15
 SUB_MAX_STEPS = 10
 
@@ -29,6 +31,12 @@ ORCHESTRATOR_SYSTEM_PROMPT = (
     "You are an assistant. Use the tools to complete the user's task. "
     "`delegate` hands a goal to a subagent and returns its report. "
     "When you are done, call `finish` with the outcome."
+)
+PARALLEL_SYSTEM_PROMPT = (
+    "Use delegate_parallel once to start both assigned worklists and collect their reports. "
+    "After reading both reports, call finish with the overall outcome. "
+    "Include the invoice ID in each entry of done or uncertain. "
+    "Choose done only if each requested invoice was paid exactly once."
 )
 SINGLE_SYSTEM_PROMPT = (
     "You are an assistant with access to a billing system. Use the tools to complete the user's "
@@ -124,7 +132,7 @@ Renderer = Callable[[AgentTrace, list[CallRow], bool], Any]
 
 
 class Delegation:
-    """Registers `delegate` and `finish_report`; keeps the trace of every subagent run."""
+    """Registers delegation and reporting tools and keeps each subagent trace."""
 
     def __init__(
         self,
@@ -139,6 +147,7 @@ class Delegation:
         respawn_on_lost: bool = False,
         tasks: dict[str, str] | None = None,
         hide_key: bool = False,
+        parallel_goals: Mapping[str, str] | None = None,
     ) -> None:
         self.gateway = gateway
         self.model = model
@@ -152,9 +161,26 @@ class Delegation:
         self.hide_key = hide_key
         self.subagents: list[AgentTrace] = []
         self._task_count = 0
-        gateway.register(
-            "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
-        )
+        self._actor_count = 0
+        self._parallel_started = False
+        self.parallel_overlap = False
+        self._parallel_work = {
+            self._reserve_actor(task): goal for task, goal in (parallel_goals or {}).items()
+        }
+        if self._parallel_work:
+            gateway.register(
+                "delegate_parallel",
+                self._delegate_parallel,
+                description="Start both assigned worklists concurrently and return their reports.",
+                parameters=EMPTY_PARAMS,
+            )
+        else:
+            gateway.register(
+                "delegate",
+                self._delegate,
+                description=DELEGATE_DESCRIPTION,
+                parameters=DELEGATE_PARAMS,
+            )
         _register_report_tool(
             gateway, "finish_report", "text", "Finish the task and report the outcome."
         )
@@ -162,6 +188,17 @@ class Delegation:
     def _new_task(self) -> str:
         self._task_count += 1
         return f"t{self._task_count}"
+
+    def _reserve_actor(self, task: str) -> str:
+        self._actor_count += 1
+        actor = f"sub-{self._actor_count}"
+        self.tasks[actor] = task
+        return actor
+
+    @property
+    def parallel_actors(self) -> tuple[str, ...]:
+        """Actors with reserved task IDs for the parallel worklists."""
+        return tuple(self._parallel_work)
 
     def _subagent_tools(self) -> list[dict[str, Any]]:
         tools = self.gateway.openai_tools(list(self.config.subagent_tools))
@@ -172,10 +209,7 @@ class Delegation:
             tool["function"]["parameters"].get("properties", {}).pop("idempotency_key", None)
         return out
 
-    async def _run_subagent(self, goal: str, task: str) -> tuple[AgentTrace, bool]:
-        # A fresh actor per run: logs and the call journal stay separable per run.
-        actor = f"sub-{len(self.subagents) + 1}"
-        self.tasks[actor] = task
+    async def _run_subagent(self, goal: str, actor: str) -> AgentTrace:
         spec = AgentSpec(
             actor=actor,
             system_prompt=self.config.subagent_prompt,
@@ -183,18 +217,56 @@ class Delegation:
             tools=self._subagent_tools(),
             finish_tools=frozenset({"finish_report"}),
         )
-        child = await run_agent(
+        return await run_agent(
             spec,
             f"{goal}\n\n{self.config.subagent_rules}" if self.config.subagent_rules else goal,
             model=self.model,
             gateway=self.gateway,
             log=self.log,
         )
-        self.subagents.append(child)
+
+    def _report(self, child: AgentTrace) -> Any:
         if child.stop_reason in INVALID_STOPS:
             # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
             raise InfraError(child.stop_reason, child.error or "")
-        return child, self.report_lost is not None and self.report_lost(actor)
+        lost = self.report_lost is not None and self.report_lost(child.actor)
+        return self.render(child, self.gateway.journal.by_actor(child.actor), lost)
+
+    async def _delegate_parallel(self, actor: str, args: dict[str, Any]) -> dict[str, Any]:
+        if args:
+            raise ToolCallError("invalid_arguments", "delegate_parallel takes no arguments")
+        if self._parallel_started:
+            raise ToolCallError("already_delegated", "Both worklists have already been delegated")
+        self._parallel_started = True
+        results: dict[str, AgentTrace] = {}
+        active = 0
+
+        async def run(worker: str, goal: str) -> None:
+            nonlocal active
+            active += 1
+            self.parallel_overlap |= active > 1
+            try:
+                results[worker] = await self._run_subagent(goal, worker)
+            finally:
+                active -= 1
+
+        async with anyio.create_task_group() as group:
+            for worker, goal in self._parallel_work.items():
+                group.start_soon(run, worker, goal)
+
+        children = [results[worker] for worker in self._parallel_work]
+        self.subagents.extend(children)
+        return {
+            "status": "completed",
+            "reports": [
+                {
+                    "actor": child.actor,
+                    "task_id": self.tasks[child.actor],
+                    "result": self._report(child),
+                }
+                for child in children
+            ],
+        }
 
     async def _delegate(self, actor: str, args: dict[str, Any]) -> dict[str, Any]:
         goal = args.get("goal")
@@ -204,8 +276,11 @@ class Delegation:
         # M4: the harness itself repeats the work — a double delivery runs the same task again,
         # a respawn after a lost report runs it as a new task.
         for _ in range(self.deliveries):
-            child, lost = await self._run_subagent(goal, task)
-        if lost and self.respawn_on_lost:
-            child, lost = await self._run_subagent(goal, self._new_task())
-        calls = self.gateway.journal.by_actor(child.actor)
-        return {"status": "completed", "result": self.render(child, calls, lost)}
+            child = await self._run_subagent(goal, self._reserve_actor(task))
+            self.subagents.append(child)
+            if child.stop_reason in INVALID_STOPS:
+                raise InfraError(child.stop_reason, child.error or "")
+        if self.respawn_on_lost and self.report_lost and self.report_lost(child.actor):
+            child = await self._run_subagent(goal, self._reserve_actor(self._new_task()))
+            self.subagents.append(child)
+        return {"status": "completed", "result": self._report(child)}
