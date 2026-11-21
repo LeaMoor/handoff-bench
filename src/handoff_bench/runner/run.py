@@ -10,6 +10,7 @@ from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
+from handoff_bench.grading.partial import grade_partial
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
 from handoff_bench.runner.results import ResultRow
@@ -39,14 +40,30 @@ async def run_one(
     world = generate(config.world, config.seed, config.template)
     episode_dir = run_dir / config.episode_id
     result = await run_episode(model, world, config, episode_dir=episode_dir)
+    effects = EffectJournal.read(episode_dir / "effects.jsonl")
+    calls = CallJournal.read(episode_dir / "calls.jsonl")
+    whole_batch = config.block == "partial_execution"
     g = grade(
-        EffectJournal.read(episode_dir / "effects.jsonl"),
+        effects,
         world=world,
         finish_args=result.finish_args,
         stop_reason=result.stop_reason,
+        whole_batch=whole_batch,
     )
+    if whole_batch:
+        partial = grade_partial(
+            effects,
+            calls,
+            world=world,
+            trace_path=episode_dir / "trace.json",
+            fault_expected=config.fault != "none",
+            stop_reason=result.stop_reason,
+        )
+        (episode_dir / "partial_execution.json").write_text(
+            partial.model_dump_json(indent=2), encoding="utf-8"
+        )
     b = code_behaviour(
-        CallJournal.read(episode_dir / "calls.jsonl"),
+        calls,
         orchestrator=ORCHESTRATOR,
         responses=result.orchestrator_responses,
         final_text=result.final_text,

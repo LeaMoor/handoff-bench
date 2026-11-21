@@ -26,10 +26,11 @@ from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
 from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault, KeySource
 from handoff_bench.channels.render import RENDERERS
+from handoff_bench.faults.partial import PartialExecution
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
-from handoff_bench.worlds import World
+from handoff_bench.worlds import BATCH_TEMPLATE, World
 
 ORCHESTRATOR = "orchestrator"
 
@@ -55,6 +56,8 @@ class EpisodeConfig(BaseModel):
         if data.get("cell") not in CELLS:
             raise ValueError(f"unknown cell {data.get('cell')}")
         cell = CELLS[data["cell"]]
+        if cell.block == "partial_execution" and data.get("template") != BATCH_TEMPLATE:
+            raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
         for name in ("block", "fault", "channel", "delay", "rules", "agent", "key"):
@@ -111,7 +114,9 @@ def _agents_for(cell: Cell) -> AgentsConfig:
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
-    tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
+    tools = (
+        ORCH_TOOLS_MAIN if cell.block in ("main", "partial_execution") else ORCH_TOOLS_CALIBRATION
+    )
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
@@ -146,9 +151,10 @@ async def run_episode(
     model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
-    fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
+    effects = EffectJournal(episode_dir / "effects.jsonl")
+    fault = with_delay(FAULTS[config.fault](world, effects), config.delay, world)
     _write_json(
         episode_dir / "config.json",
         {"episode": config.model_dump(mode="json"), "bank": fault.bank.model_dump(mode="json")},
@@ -156,7 +162,7 @@ async def run_episode(
     service = BillingService(
         episode_id=config.episode_id,
         config=fault.bank,
-        journal=EffectJournal(episode_dir / "effects.jsonl"),
+        journal=effects,
         db_path=episode_dir / "bank.sqlite",
         id_seed=config.seed,
     )
@@ -196,11 +202,15 @@ async def run_episode(
             trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
 
     subagents = delegation.subagents
+    fault_trace = {}
+    if isinstance(fault.injector, PartialExecution) and fault.injector.stop is not None:
+        fault_trace["partial_stop"] = fault.injector.stop.model_dump(mode="json")
     _write_json(
         episode_dir / "trace.json",
         {
             "orchestrator": trace.model_dump(mode="json"),
             "subagents": [s.model_dump(mode="json") for s in subagents],
+            **fault_trace,
         },
     )
     traces = [trace, *subagents]

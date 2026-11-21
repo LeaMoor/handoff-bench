@@ -2,8 +2,18 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys"]
-Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
+Block = Literal["control", "calibration", "main", "keys", "partial_execution"]
+Fault = Literal[
+    "none",
+    "pre",
+    "post",
+    "timeout_lost",
+    "timeout_committed",
+    "respawn",
+    "redeliver",
+    "partial_after_one",
+    "partial_after_two",
+]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; none: a single agent.
 Channel = Literal["text", "struct", "code", "code_key", "none"]
@@ -108,6 +118,26 @@ for block, fault, rules in (
             rules=rules,
         )
     )
+# M3 partial execution. Cells 64-69 are reserved by the processing arm of M3.
+_cells.extend(
+    [
+        Cell(number=70, block="partial_execution", fault="none", channel="text", key="none"),
+        Cell(
+            number=71,
+            block="partial_execution",
+            fault="partial_after_one",
+            channel="text",
+            key="none",
+        ),
+        Cell(
+            number=72,
+            block="partial_execution",
+            fault="partial_after_two",
+            channel="text",
+            key="none",
+        ),
+    ]
+)
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 
 

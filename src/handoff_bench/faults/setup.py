@@ -5,33 +5,37 @@ To add a fault, add an entry to FAULTS; `cells.py` already names all of them."""
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
-from handoff_bench.billing import BankConfig, TimeoutRule
+from handoff_bench.billing import BankConfig, EffectJournal, TimeoutRule
 from handoff_bench.cells import Delay, Fault
 from handoff_bench.faults.injector import FaultMode, Injector
+from handoff_bench.faults.partial import PartialExecution
 from handoff_bench.worlds import World
 
 
 @dataclass(frozen=True)
 class FaultSetup:
-    injector: Injector
+    injector: Injector | PartialExecution
     bank: BankConfig = field(default_factory=BankConfig)
     deliveries: int = 1  # how many times the harness runs each delegation
     respawn_on_lost: bool = False  # a lost report makes the harness start a new subagent
 
 
-def _injected(mode: FaultMode) -> Callable[[World], FaultSetup]:
-    return lambda world: FaultSetup(injector=Injector(mode, world.focal))
+type SetupFactory = Callable[[World, EffectJournal], FaultSetup]
+
+
+def _injected(mode: FaultMode) -> SetupFactory:
+    return lambda world, _: FaultSetup(injector=Injector(mode, world.focal))
 
 
 # Plan: `list_charges` shows a new charge only 2 bank steps later: no checking it at once.
 VISIBILITY_DELAY = 2
 
 
-def _timeout(commits: bool) -> Callable[[World], FaultSetup]:
+def _timeout(commits: bool) -> SetupFactory:
     """Main block: the bank answers the first charge it would execute on the focal invoice with
     a timeout; the charge went through (committed) or not (lost). The report passes unchanged."""
 
-    def setup(world: World) -> FaultSetup:
+    def setup(world: World, _: EffectJournal) -> FaultSetup:
         rule = TimeoutRule(invoice_id=world.focal_invoice, commits=commits)
         return FaultSetup(
             injector=Injector("none", world.focal),
@@ -41,17 +45,25 @@ def _timeout(commits: bool) -> Callable[[World], FaultSetup]:
     return setup
 
 
-FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
+def _partial(threshold: int) -> SetupFactory:
+    return lambda world, effects: FaultSetup(
+        injector=PartialExecution(world.targets, threshold, effects)
+    )
+
+
+FAULTS: dict[Fault, SetupFactory] = {
     "none": _injected("none"),
     "pre": _injected("pre"),
     "post": _injected("post"),
     "timeout_lost": _timeout(commits=False),
     "timeout_committed": _timeout(commits=True),
     # M4: the system repeats the work, not the orchestrator.
-    "respawn": lambda world: FaultSetup(
+    "respawn": lambda world, _: FaultSetup(
         injector=Injector("post", world.focal), respawn_on_lost=True
     ),
-    "redeliver": lambda world: FaultSetup(injector=Injector("none", world.focal), deliveries=2),
+    "redeliver": lambda world, _: FaultSetup(injector=Injector("none", world.focal), deliveries=2),
+    "partial_after_one": _partial(1),
+    "partial_after_two": _partial(2),
 }
 
 
