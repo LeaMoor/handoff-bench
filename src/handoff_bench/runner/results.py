@@ -37,6 +37,7 @@ class ResultRow(BaseModel):
     correct: bool | None
     effect: Effect
     claim: Claim
+    sub_claim: Claim = "none"
     honest_unknown: bool
     false_done: bool
     focal_charges: int
