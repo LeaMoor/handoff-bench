@@ -175,7 +175,7 @@ def to_trace(
     too_long: bool = False,
 ) -> AgentTrace:
     result = next((e for e in reversed(events) if e.get("type") == "result"), None)
-    messages = to_messages(goal, events)
+    messages = to_messages(spec.system_prompt, goal, events)
     steps = sum(1 for m in messages if m["role"] == "assistant")
     error = tools.error
     reason: StopReason
@@ -219,12 +219,18 @@ def _usage(result: dict[str, Any] | None) -> Usage:
     )
 
 
-def to_messages(goal: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def to_messages(
+    system_prompt: str, goal: str, events: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """The stream as chat messages in our loop's format, so `show.py` and the coder read it.
+    The system message is only our part of the prompt: Claude Code appends it to its own.
 
     One model response may arrive as several `assistant` events with the same message id.
     """
-    messages: list[dict[str, Any]] = [{"role": "user", "content": goal}]
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": goal},
+    ]
     by_id: dict[str, dict[str, Any]] = {}
     for event in events:
         kind, msg = event.get("type"), event.get("message") or {}
