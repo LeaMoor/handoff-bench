@@ -18,6 +18,7 @@ from handoff_bench.billing.models import (
     EffectRow,
     Invoice,
     InvoiceView,
+    ProcessingRule,
     ReportedAs,
 )
 
@@ -160,9 +161,6 @@ class BillingService:
                 visible_from = NEVER_VISIBLE
             if invoice_id == self.config.hidden_invoice:
                 visible_from = NEVER_VISIBLE
-            if processing:
-                # Both worlds show and key the same processing charge; only the effect differs.
-                visible_from = step + 1
             with self._db:
                 self._db.execute(
                     "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -175,7 +173,7 @@ class BillingService:
                         actor,
                         step,
                         visible_from,
-                        "processing" if processing else "succeeded",
+                        "succeeded" if processing is None else "processing",
                     ),
                 )
                 if idempotency_key is not None:
@@ -183,10 +181,11 @@ class BillingService:
                         "INSERT INTO idempotency_keys VALUES (?, ?, ?, ?, ?)",
                         (idempotency_key, invoice_id, customer_id, amount, charge_id),
                     )
-            if processing and not self.config.processing.settles:  # type: ignore[union-attr]
+            if processing is not None and not processing.settles:
+                # Both worlds show and key the same processing charge; only the effect differs.
                 return self._charge_view(charge_id)
             reported_as: ReportedAs = "succeeded"
-            if processing:
+            if processing is not None:
                 reported_as = "processing"
             elif timed_out:
                 reported_as = "timeout"
@@ -252,12 +251,12 @@ class BillingService:
     def _timeout_commits(self) -> bool:
         return self.config.timeout is not None and self.config.timeout.commits
 
-    def _take_processing(self, invoice_id: str) -> bool:
+    def _take_processing(self, invoice_id: str) -> ProcessingRule | None:
         rule = self.config.processing
         if rule is None or rule.invoice_id != invoice_id or self._processing_fired:
-            return False
+            return None
         self._processing_fired = True
-        return True
+        return rule
 
     def _new_charge_id(self) -> str:
         while True:

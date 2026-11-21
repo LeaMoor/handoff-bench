@@ -58,7 +58,8 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
     checked = rng.random() < MAIN_SELF_CHECK[channel]
     if c.agent == "single":
         p_correct = SINGLE_CORRECT
-    elif c.delay == "long" and not c.rules:
+    elif c.block == "processing" or (c.delay == "long" and not c.rules):
+        # Processing: a check shows the same open invoice and processing charge in both worlds.
         p_correct = MAIN_CORRECT[channel]
     else:
         p_correct = CHECKABLE_CORRECT

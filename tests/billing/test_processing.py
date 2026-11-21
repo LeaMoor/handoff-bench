@@ -46,3 +46,17 @@ def test_retry_without_a_key_charges_again(
 
     assert second.status == "succeeded"
     assert len(bank.journal.rows) == effects
+
+
+def test_processing_charge_keeps_the_bank_visibility_rules(make_bank: MakeBank) -> None:
+    # Long delay hides the invoice's charges; processing must not punch a hole in that.
+    for settles in (True, False):
+        bank = make_bank(
+            BankConfig(
+                processing=ProcessingRule(invoice_id="INV-12", settles=settles),
+                hidden_invoice="INV-12",
+            )
+        )
+        bank.create_charge("INV-12", "cus_ann", 12000, "k1", actor="sub")
+        bank.create_charge("INV-12", "cus_ann", 12000, "k2", actor="sub")
+        assert bank.list_charges("INV-12") == []

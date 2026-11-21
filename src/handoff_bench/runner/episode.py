@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
-from handoff_bench.agents.call_journal import CallJournal, CallRow
+from handoff_bench.agents.call_journal import CallJournal, CallRow, is_processing
 from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
@@ -233,12 +233,7 @@ async def run_episode(
 
 
 def _bank_fault(r: CallRow) -> bool:
-    return r.outcome == "timeout" or (
-        r.tool == "create_charge"
-        and r.outcome == "ok"
-        and isinstance(r.result, dict)
-        and r.result.get("status") == "processing"
-    )
+    return r.outcome == "timeout" or is_processing(r)
 
 
 def _faulted_claim(subagents: list[AgentTrace], rows: list[CallRow], fired_on: str | None) -> Claim:

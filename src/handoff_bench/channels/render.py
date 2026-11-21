@@ -10,7 +10,7 @@ To add a channel, add an entry to RENDERERS; `cells.py` already names all of the
 
 import re
 
-from handoff_bench.agents.call_journal import CallRow
+from handoff_bench.agents.call_journal import CallRow, is_processing
 from handoff_bench.agents.delegation import Renderer
 from handoff_bench.agents.loop import AgentTrace
 from handoff_bench.billing.protocol import READ_TOOLS
@@ -100,7 +100,7 @@ def _outcome(r: CallRow) -> str:
         return "timeout, outcome unknown"
     if r.outcome != "ok":
         return f"error {r.error_code}"
-    if r.tool == "create_charge" and r.result.get("status") == "processing":
+    if is_processing(r):
         return f"processing, final outcome not known yet, charge {r.result['charge_id']}"
     if r.tool == "create_charge":
         return f"success, charge {r.result['charge_id']}"
