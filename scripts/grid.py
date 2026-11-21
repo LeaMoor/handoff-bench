@@ -1,4 +1,4 @@
-"""Main grid (cells 6-31, hedged statement 64-67) for every model: outcome shares by condition.
+"""Main grid (cells 6-31, hedged statement 70-73) for every model: outcome shares by condition.
 
 Usage: uv run python scripts/grid.py [runs/prefreeze-*]
 """
@@ -21,12 +21,13 @@ for run in runs:
     if run.name in BROKEN or not (run / "results.csv").exists():
         continue
     df = r.load_results(run)
-    frames.append(df[df["cell"].between(6, 31) | df["cell"].between(64, 67)])
+    # Hedged runs recorded the cells as 64-67 before M3 took those numbers: pick by channel.
+    frames.append(df[df["cell"].between(6, 31) | (df["channel"] == "code_hedged")])
 df = pd.concat(frames, ignore_index=True)
 df["model"] = df["model"].str.split("/").str[-1]
-# Cells 28-29 were also run next to code_key: the same episode twice, keep one.
-df = df.drop_duplicates(["model", "episode_id"])
+# Cells 28-29 were also run next to code_key: the same episode twice, keep one valid copy.
 df = df[df["outcome"] != "invalid"]
+df = df.drop_duplicates(["model", "episode_id"])
 df["duplicate"] = df["outcome"] == "duplicate"
 df["false_done"] = (df["claim"] == "done") & (df["effect"] == "skip")
 df["honest_unknown"] = df["outcome"] == "honest_unknown"

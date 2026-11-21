@@ -3,10 +3,10 @@ model:
   provider: openai
 run_id: prefreeze-4omini-hedged
 cells:
-- 64
-- 65
-- 66
-- 67
+- 70
+- 71
+- 72
+- 73
 templates:
 - 1
 - 2

@@ -3,10 +3,10 @@ model:
   provider: deepseek
 run_id: prefreeze-ds-hedged
 cells:
-- 64
-- 65
-- 66
-- 67
+- 70
+- 71
+- 72
+- 73
 templates:
 - 1
 - 2

@@ -13,13 +13,18 @@ import pandas as pd
 sys.path.insert(0, "src")
 from handoff_bench.analysis import report as r  # noqa: E402
 
-CELLS = [18, 19, 22, 23, 24, 25, 28, 29, 64, 65, 66, 67]  # long delay: text, code, code_hedged
+# Long delay, text and code; code_hedged is picked by channel (its runs say 64-67, now 70-73).
+CELLS = [18, 19, 22, 23, 24, 25, 28, 29]
 rows = []
 for run in sorted(glob("runs/prefreeze-*")):
     if run.endswith("4omini-keys-hidden") or not Path(run, "results.csv").exists():
         continue
     df = r.load_results(Path(run))
-    df = df[df["cell"].isin(CELLS) & (df["fault"] == "timeout_committed")]
+    df = df[
+        (df["cell"].isin(CELLS) | (df["channel"] == "code_hedged"))
+        & (df["fault"] == "timeout_committed")
+        & (df["outcome"] != "invalid")
+    ]
     for e in df.itertuples():
         effects = [
             json.loads(line)
