@@ -42,6 +42,7 @@ DEFAULTS = {
     "agent": "delegated",
     "key": "subagent",
     "sub_claim": "none",
+    "orchestrator": "stand",
 }  # runs before these columns
 VARIANT = ["world", "template", "seed", "repeat"]
 

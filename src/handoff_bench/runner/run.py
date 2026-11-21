@@ -10,6 +10,7 @@ from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
+from handoff_bench.harness.claude_code import ClaudeCodeOrchestrator
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
 from handoff_bench.runner.results import ResultRow
@@ -38,7 +39,8 @@ async def run_one(
     """Episode → grade → `results.csv` row, also saved as `result.json` next to the logs."""
     world = generate(config.world, config.seed, config.template)
     episode_dir = run_dir / config.episode_id
-    result = await run_episode(model, world, config, episode_dir=episode_dir)
+    harness = ClaudeCodeOrchestrator(config.orchestrator) if config.orchestrator else None
+    result = await run_episode(model, world, config, episode_dir=episode_dir, orchestrator=harness)
     g = grade(
         EffectJournal.read(episode_dir / "effects.jsonl"),
         world=world,
@@ -70,6 +72,7 @@ async def run_one(
         phrasing=world.phrasing,
         model=config.model.model if config.model else "unknown",
         provider=config.model.provider if config.model else "unknown",
+        orchestrator=config.orchestrator.label if config.orchestrator else "stand",
         served_model=served_model,
         served_provider=served_provider,
         fault_fired=result.fault_fired,

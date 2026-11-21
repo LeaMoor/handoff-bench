@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from handoff_bench.agents.loop import ModelCallLog
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
+from handoff_bench.harness.claude_code import HarnessSettings
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
@@ -21,6 +22,7 @@ class BatchConfig(BaseModel):
 
     run_id: str | None = None
     model: ModelSettings
+    orchestrator: HarnessSettings | None = None  # None: our loop on `model`
     cells: list[int]
     world: int = 1
     templates: list[int]
@@ -59,6 +61,7 @@ class BatchConfig(BaseModel):
                 seed=s,
                 repeat=r,
                 model=self.model,
+                orchestrator=self.orchestrator,
                 commit=commit,
             )
             for t in self.templates

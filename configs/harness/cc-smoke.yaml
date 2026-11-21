@@ -1,0 +1,22 @@
+# Claude Code as the orchestrator (Pro subscription), our subagent on OpenRouter.
+# M4 with the charge invisible: respawn × no key / subagent's key / system key by intent.
+# `binary`: the Claude Code CLI you are logged in with (`claude` on PATH by default).
+run_id: harness-cc-smoke
+orchestrator:
+  harness: claude_code
+  model: opus
+  binary: claude
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells:
+- 48
+- 49
+- 52
+templates:
+- 1
+seeds:
+- 1
+parallel: 1
+# Includes what the harness reports as the API-equivalent cost; on a subscription it is not charged.
+budget_usd: 3

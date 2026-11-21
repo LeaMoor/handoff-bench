@@ -30,6 +30,7 @@ class ResultRow(BaseModel):
     phrasing: int
     model: str
     provider: str
+    orchestrator: str = "stand"  # our loop, or a harness: `claude_code:opus`
     served_model: str
     served_provider: str
     fault_fired: bool

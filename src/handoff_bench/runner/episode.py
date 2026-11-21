@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
@@ -28,11 +28,20 @@ from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
+from handoff_bench.harness.claude_code import HarnessSettings
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
 from handoff_bench.worlds import World
 
 ORCHESTRATOR = "orchestrator"
+
+
+class Orchestrator(Protocol):
+    """An orchestrator from outside the stand: gets the task and its tools, returns its trace."""
+
+    async def run(
+        self, spec: AgentSpec, goal: str, *, gateway: ToolGateway, episode_dir: Path
+    ) -> AgentTrace: ...
 
 
 class EpisodeConfig(BaseModel):
@@ -48,6 +57,8 @@ class EpisodeConfig(BaseModel):
     repeat: int = 0
     agents: AgentsConfig
     model: ModelSettings | None = None
+    # None: our own loop on `model`; otherwise a harness (Claude Code) is the orchestrator.
+    orchestrator: HarnessSettings | None = None
     commit: str = "unknown"
 
     @model_validator(mode="before")
@@ -145,9 +156,15 @@ def _write_json(path: Path, data: Any) -> None:
 
 
 async def run_episode(
-    model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
+    model: ModelClient,
+    world: World,
+    config: EpisodeConfig,
+    *,
+    episode_dir: Path,
+    orchestrator: Orchestrator | None = None,
 ) -> EpisodeResult:
-    """Writes config, calls, effects, model_calls and trace to episode_dir."""
+    """Writes config, calls, effects, model_calls and trace to episode_dir. `model` runs the
+    subagents, and the orchestrator too unless `orchestrator` is given."""
     fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
@@ -195,7 +212,12 @@ async def run_episode(
                 tools=gateway.openai_tools(list(agents.orchestrator_tools)),
                 finish_tools=frozenset({"finish"}),
             )
-            trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
+            if orchestrator is None:
+                trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
+            else:
+                trace = await orchestrator.run(
+                    spec, world.task, gateway=gateway, episode_dir=episode_dir
+                )
 
     subagents = delegation.subagents
     _write_json(
