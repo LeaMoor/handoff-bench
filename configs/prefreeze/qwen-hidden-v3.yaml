@@ -19,4 +19,3 @@ seeds:
 - 7
 parallel: 4
 budget_usd: 0.05
-allow_dirty: true

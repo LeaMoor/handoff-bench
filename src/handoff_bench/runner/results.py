@@ -60,18 +60,23 @@ class ResultRow(BaseModel):
     error: str | None
 
 
-def git_commit() -> str:
+_PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+def git_commit(repo: Path = _PACKAGE_DIR) -> str:
     def git(*args: str) -> str:
         return subprocess.run(
             ["git", *args],
-            cwd=Path(__file__).resolve().parent,
+            cwd=repo,
             capture_output=True,
             text=True,
             check=True,
         ).stdout.strip()
 
     try:
-        sha, dirty = git("rev-parse", "HEAD"), git("status", "--porcelain")
+        # Untracked files (local configs, .DS_Store) do not change the code that runs.
+        sha = git("rev-parse", "HEAD")
+        dirty = git("status", "--porcelain", "--untracked-files=no")
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
     return f"{sha}-dirty" if dirty else sha

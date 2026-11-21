@@ -12,17 +12,13 @@ import pandas as pd
 sys.path.insert(0, "src")
 from handoff_bench.analysis import report as r  # noqa: E402
 
-# A transient provider 403 made most of this run invalid; its rerun replaces it.
-BROKEN = {"prefreeze-4omini-keys-hidden"}
-
 runs = [Path(p) for p in (sys.argv[1:] or sorted(glob("runs/prefreeze-*")))]
 frames = []
 for run in runs:
-    if run.name in BROKEN or not (run / "results.csv").exists():
+    if not (run / "results.csv").exists():
         continue
     df = r.load_results(run)
-    # Hedged runs recorded the cells as 64-67 before M3 took those numbers: pick by channel.
-    frames.append(df[df["cell"].between(6, 31) | (df["channel"] == "code_hedged")])
+    frames.append(df[df["cell"].between(6, 31) | df["cell"].between(70, 73)])
 df = pd.concat(frames, ignore_index=True)
 df["model"] = df["model"].str.split("/").str[-1]
 # Cells 28-29 were also run next to code_key: the same episode twice, keep one valid copy.

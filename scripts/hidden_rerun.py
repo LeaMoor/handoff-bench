@@ -32,8 +32,8 @@ frames = []
 PRE, POST = [32, 34, 60], [33, 35, 61]
 for version, runs, cells in (
     ("old", OLD, PRE + POST),
-    ("new", [Path(p).name for p in glob("runs/prefreeze-*-hidden-v2")], PRE),
-    ("new", [Path(p).name for p in glob("runs/prefreeze-*-hidden-v3")], POST),
+    ("new", [Path(p).name for p in glob("runs/prefreeze-*-hidden-v2") if "-keys-" not in p], PRE),
+    ("new", [Path(p).name for p in glob("runs/prefreeze-*-hidden-v3") if "-keys-" not in p], POST),
 ):
     for run in runs:
         df = r.load_results(Path("runs") / run)

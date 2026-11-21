@@ -12,8 +12,6 @@ import pandas as pd
 sys.path.insert(0, "src")
 from handoff_bench.analysis import report as r  # noqa: E402
 
-# A transient provider 403 made most of this run invalid; its rerun replaces it.
-BROKEN = {"prefreeze-4omini-keys-hidden"}
 KEYS = ["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 
 
@@ -21,7 +19,7 @@ def load(runs: list[str]) -> pd.DataFrame:
     """Valid M4 episodes (48-59) of these runs, one row per model and episode."""
     frames = []
     for run in runs:
-        if Path(run).name in BROKEN or not Path(run, "results.csv").exists():
+        if not Path(run, "results.csv").exists():
             continue
         df = r.load_results(Path(run))
         frames.append(df[df["cell"].between(48, 59)])

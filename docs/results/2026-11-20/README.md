@@ -25,15 +25,26 @@ GLM-5.3-Flash, DeepSeek V4.1 Flash, GPT-4o-mini) по 21 эпизоду в яч�
 | `4omini-grid-*` | GPT-4o-mini | 12–31 | 340 |
 | `qwen-grid-*`, `qwen-keys-hidden` | Qwen 3.7 Flash | 12–31; 48–59 | 592 |
 | `luna-cal`, `luna-grid`, `luna-keys-hidden` | GPT-6 Luna | 1–5; 12–31; 48–59 | 777 |
-| `*-hedged` | все шесть | 70–73 (записаны как 64–67) | 504 |
+| `*-hedged` | все шесть | 70–73 (сначала были 64–67, см. DECISIONS) | 504 |
 | `*-hidden-v2` (32, 34, 60), `*-hidden-v3` (33, 35, 61) | все шесть | 32–35; 60–61 у Haiku, DeepSeek, GLM | 630 |
 | `*-keys-hidden-v3` | все шесть | 48–59 | 1512 |
 | `opus-cal-keys` | Claude Opus 5.5 | 32–35; 48, 49, 50, 52, 54, 55, 56, 58 (по 9) | 108 |
 
 Новые эпизоды дополняют старые: шаблон 3 со всеми сидами и шаблоны 1–2 с сидами 3–7; старые 4 —
 шаблоны 1–2 с сидами 1–2. `*-fill` — 3 эпизода, пропущенных по бюджету, и 1, упавший на сетевой
-ошибке (`httpx ReadError`). Для M4 у GPT-4o-mini берётся `4omini-keys-hidden-rerun`, не
-`4omini-keys-hidden`.
+ошибке (`httpx ReadError`). Для M4 у GPT-4o-mini берётся `4omini-keys-hidden-rerun`; сломанный
+лимитом ключа `4omini-keys-hidden` лежит в `runs/_broken-403/`.
+
+**Код прогонов.** В `results.csv` записан коммит. `-dirty` до 2026-11-21 ставился и за
+неотслеживаемые файлы (DECISIONS). Прогоны на `947858c` и `cea0986`: этих коммитов нет в истории
+`main`, они под тегами `runs/prefreeze-947858c` и `runs/prefreeze-cea0986`.
+
+| Коммит | Прогоны |
+|---|---|
+| `5e9b6a7` (в `main`) | `*-grid-t3`, `*-grid-s3to7`, `*-fill`, `glm-grid12to23-*`, `luna-cal`, `luna-grid`, `glm-`, `luna-`, `qwen-keys-hidden`, `ds-keys-hidden-topup*` |
+| `947858c` (тег) | `*-hedged`, `*-hidden-v2`, `*-hidden-v3`, `opus-cal-keys` — на незакоммиченном коде, итог в `cea0986` |
+| `cea0986` (тег) | `*-keys-hidden-v3`, кроме DeepSeek |
+| `32d1d40` (в этом PR) | `ds-keys-hidden-v3` |
 
 ## Главное
 

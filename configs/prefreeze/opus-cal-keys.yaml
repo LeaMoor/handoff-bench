@@ -10,4 +10,3 @@ templates: [1, 2, 3]
 seeds: [1, 2, 3]
 parallel: 4
 budget_usd: 22
-allow_dirty: true
