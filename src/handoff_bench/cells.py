@@ -134,6 +134,7 @@ for fault, channel in [
         )
     )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
+assert len(CELLS) == len(_cells), "two cells share a number"
 
 
 class UnsupportedCell(ValueError):
