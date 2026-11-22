@@ -2,10 +2,9 @@ model:
   model: anthropic/claude-haiku-5.5
   provider: anthropic
   max_tokens: 1024
-run_id: prefreeze-haiku-ownership
-cells: [77, 78, 79]
+run_id: prefreeze-haiku-ownership-v2
+cells: [74, 75, 76]
 templates: [2]
 seeds: [1, 2, 3, 4]
-parallel: 1
-budget_usd: 2
-allow_dirty: true
+parallel: 2
+budget_usd: 0.25

@@ -11,18 +11,17 @@ from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
     ORCHESTRATOR_SYSTEM_PROMPT,
-    PARALLEL_SYSTEM_PROMPT,
-    PARALLEL_TOOLS,
     SINGLE_SYSTEM_PROMPT,
     SINGLE_TOOLS,
     AgentsConfig,
     Delegation,
     register_finish,
 )
-from handoff_bench.agents.gateway import CallHook, ToolGateway
+from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
 from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
+from handoff_bench.agents.parallel import PARALLEL_SYSTEM_PROMPT, PARALLEL_TOOLS, ParallelDelegation
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
@@ -42,7 +41,7 @@ from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
-from handoff_bench.ownership import WORK_A, OwnershipHook, goals_for, worklists_for
+from handoff_bench.ownership import prepare_ownership
 from handoff_bench.worlds import World
 from handoff_bench.worlds.generator import OWNERSHIP_TEMPLATE
 
@@ -178,20 +177,16 @@ async def run_episode(
     fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
-    settings = {
-        "episode": config.model_dump(mode="json"),
-        "bank": fault.bank.model_dump(mode="json"),
-    }
-    worklists = None
-    owners = None
-    if config.ownership is not None:
-        worklists = worklists_for(world, config.ownership)
-        if config.ownership == "d12":
-            # In a shared assignment A owns the write. Both assignments still appear intact.
-            owners = {inv: task for task, invoices in worklists.items() for inv in invoices}
-            owners.update(dict.fromkeys(worklists[WORK_A], WORK_A))
-        settings.update(worklists=worklists, owners=owners)
-    _write_json(episode_dir / "config.json", settings)
+    tasks: dict[str, str] = {}
+    ownership = prepare_ownership(world, CELLS[config.cell], tasks)
+    _write_json(
+        episode_dir / "config.json",
+        {
+            "episode": config.model_dump(mode="json"),
+            "bank": fault.bank.model_dump(mode="json"),
+            **ownership.settings,
+        },
+    )
     service = BillingService(
         episode_id=config.episode_id,
         config=fault.bank,
@@ -201,33 +196,37 @@ async def run_episode(
     )
     service.add_invoices(world.invoices)
 
-    tasks: dict[str, str] = {}
-    hooks: list[CallHook] = [KeyHook(config.key, tasks), fault.injector]
-    if owners is not None:
-        hooks.insert(0, OwnershipHook(owners, tasks))
+    parallel: ParallelDelegation | None = None
     with service, running_server(service) as url:
         async with McpBackend(url) as bank:
             gateway = ToolGateway(
                 episode_id=config.episode_id,
                 journal=CallJournal(episode_dir / "calls.jsonl"),
                 backends=[bank],
-                hooks=hooks,
+                hooks=[*ownership.hooks, KeyHook(config.key, tasks), fault.injector],
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
-            delegation = Delegation(
-                gateway,
+            delegate_options = dict(
                 model=model,
                 log=log,
                 report_lost=fault.injector.report_lost,
                 config=agents,
                 render=RENDERERS[config.channel],
-                deliveries=fault.deliveries,
-                respawn_on_lost=fault.respawn_on_lost,
                 tasks=tasks,
                 hide_key=config.key == "none",
-                parallel_goals=goals_for(world, worklists) if worklists else None,
             )
-            await bank.prepare_actors(delegation.parallel_actors)
+            delegation: Delegation
+            if ownership.goals:
+                parallel = ParallelDelegation(gateway, goals=ownership.goals, **delegate_options)
+                await bank.prepare_actors(parallel.actors)
+                delegation = parallel
+            else:
+                delegation = Delegation(
+                    gateway,
+                    **delegate_options,
+                    deliveries=fault.deliveries,
+                    respawn_on_lost=fault.respawn_on_lost,
+                )
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,
@@ -243,8 +242,8 @@ async def run_episode(
         "orchestrator": trace.model_dump(mode="json"),
         "subagents": [s.model_dump(mode="json") for s in subagents],
     }
-    if worklists is not None:
-        trace_data.update(tasks=tasks, parallel_overlap=delegation.parallel_overlap)
+    if parallel is not None:
+        trace_data.update(tasks=tasks, parallel_overlap=parallel.overlap)
     _write_json(episode_dir / "trace.json", trace_data)
     traces = [trace, *subagents]
     usage = sum((t.usage for t in traces), Usage())
@@ -270,8 +269,8 @@ async def run_episode(
         cached_tokens=usage.cached_tokens,
         retries=sum(t.retries for t in traces),
         error=broken.error if broken else trace.error,
-        parallel_overlap=delegation.parallel_overlap,
-        parallel_tasks=tasks if worklists is not None else None,
+        parallel_overlap=parallel.overlap if parallel else False,
+        parallel_tasks=tasks if parallel else None,
     )
 
 

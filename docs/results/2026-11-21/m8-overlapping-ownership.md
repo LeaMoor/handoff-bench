@@ -1,12 +1,12 @@
 # M8 paired Haiku pilot
 
-The pilot used world 1, template 2, seeds 1–4, and historical cell IDs 70–72. The results tables retain those historical IDs. Raw episode directories and IDs retain their `c70-`, `c71-`, and `c72-` prefixes. The current [Haiku batch config](../../../configs/prefreeze/haiku-ownership.yaml) uses the corresponding cells 77–79. For a given seed, all three conditions used the same three target invoices, amounts, and distractors. The user asked for exactly one payment per invoice. Both children ran through the same text reporting channel with normal bank visibility, bank and report faults off, and K0. K0 hides the idempotency key field and strips any key sent by a model.
+The pilot used world 1, template 2, seeds 1–4, and historical cell IDs 70–72. The results tables retain those historical IDs. Raw episode directories and IDs retain their `c70-`, `c71-`, and `c72-` prefixes. The current [Haiku batch config](../../../configs/prefreeze/haiku-ownership.yaml) uses the corresponding cells 74–76. For a given seed, all three conditions used the same three target invoices, amounts, and distractors. The user asked for exactly one payment per invoice. Both children ran through the same text reporting channel with normal bank visibility, bank and report faults off, and K0. K0 hides the idempotency key field and strips any key sent by a model.
 
 | Historical pilot cell | Current M8 cell | Condition | Worklist A | Worklist B |
 | --- | --- | --- | --- | --- |
-| 70 | 77 | Disjoint control | 1, 2 | 3 |
-| 71 | 78 | Overlap | 1, 2 | 2, 3 |
-| 72 | 79 | Overlap with D12 | 1, 2 | 2, 3 |
+| 70 | 74 | Disjoint control | 1, 2 | 3 |
+| 71 | 75 | Overlap | 1, 2 | 2, 3 |
+| 72 | 76 | Overlap with D12 | 1, 2 | 2, 3 |
 
 D12 gives A write permission for invoices 1 and 2 and B write permission for invoice 3. The harness reserves both task and actor IDs before starting either child. The gateway rejects any charge without a manifest entry or from a different task, including charges for distractors. Both children can read bank records. The two overlap conditions use identical prompts and worklists. In the D12 condition the model learns about the restriction when its tool call is denied.
 
@@ -49,4 +49,4 @@ The pilot covers four paired seeds for one model and one report channel. D12 enf
 
 ## Scripted verification
 
-The runner tests used an event barrier to prove that both children entered the model loop before either could continue. They checked distinct actor and task IDs across model, call, and bank journals, and assignment-order reports when B finished first. Both children charged the shared invoice in current cell 78. In current cell 79 only A committed, including when B attempted the write first. Both exclusive invoices committed in either order. When A skipped the shared invoice, the grader recorded an omission and flagged the parent's claim of completion. The tests also exercised off-target denial, available reads, single dispatch, and sibling cancellation after an unexpected child failure.
+The runner tests used an event barrier to prove that both children entered the model loop before either could continue. They checked distinct actor and task IDs across model, call, and bank journals, and assignment-order reports when B finished first. Both children charged the shared invoice in current cell 75. In current cell 76 only A committed, including when B attempted the write first. Both exclusive invoices committed in either order. When A skipped the shared invoice, the grader recorded an omission and flagged the parent's claim of completion. The tests also exercised off-target denial, available reads, single dispatch, and sibling cancellation after an unexpected child failure.

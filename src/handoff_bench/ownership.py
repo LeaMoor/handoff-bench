@@ -1,22 +1,24 @@
 """M8 worklists and the episode-local D12 write policy."""
 
 from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
 from handoff_bench.agents.gateway import CallHook, PendingCall
 from handoff_bench.agents.tools import ToolResult
-from handoff_bench.cells import Ownership
+from handoff_bench.cells import Cell, Ownership
 from handoff_bench.worlds import World
 
 WORK_A, WORK_B = "work-a", "work-b"
 
 
-def worklists_for(world: World, condition: Ownership) -> dict[str, tuple[str, ...]]:
+def _worklists_for(world: World, condition: Ownership) -> dict[str, tuple[str, ...]]:
     """Assign two payments to A and one or two to B, with the focal invoice shared."""
     first, shared, last = world.targets
     return {WORK_A: (first, shared), WORK_B: (last,) if condition == "disjoint" else (shared, last)}
 
 
-def goals_for(world: World, worklists: Mapping[str, tuple[str, ...]]) -> dict[str, str]:
+def _goals_for(world: World, worklists: Mapping[str, tuple[str, ...]]) -> dict[str, str]:
     """Give each worker its invoice IDs and the same customer information."""
     return {
         task: (
@@ -46,3 +48,31 @@ class OwnershipHook(CallHook):
             error_code="ownership_denied",
             error_message=f"Your task is not authorized to charge invoice {invoice!r}.",
         )
+
+
+@dataclass(frozen=True)
+class OwnershipSetup:
+    """Episode inputs specific to M8."""
+
+    goals: dict[str, str] = field(default_factory=dict)
+    settings: dict[str, Any] = field(default_factory=dict)
+    hooks: tuple[CallHook, ...] = ()
+
+
+def prepare_ownership(world: World, cell: Cell, tasks: Mapping[str, str]) -> OwnershipSetup:
+    """Prepare the fixed worklists, manifest and gateway hook for an M8 cell."""
+    if cell.ownership is None:
+        return OwnershipSetup()
+
+    worklists = _worklists_for(world, cell.ownership)
+    owners = None
+    hooks = ()
+    if cell.ownership == "d12":
+        # A owns the shared invoice in both possible execution orders.
+        owners = {inv: task for task, invoices in reversed(worklists.items()) for inv in invoices}
+        hooks = (OwnershipHook(owners, tasks),)
+    return OwnershipSetup(
+        goals=_goals_for(world, worklists),
+        settings={"worklists": worklists, "owners": owners},
+        hooks=hooks,
+    )

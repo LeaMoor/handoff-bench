@@ -47,7 +47,7 @@ def test_grid_ignores_ownership_rows_with_hedged_cell_ids(tmp_path: Path) -> Non
     assert result.stdout == expected.stdout
 
 
-@pytest.mark.parametrize("cell", [70, 77])
+@pytest.mark.parametrize("cell", [70, 74])
 def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
     tmp_path: Path, cell: int
 ) -> None:

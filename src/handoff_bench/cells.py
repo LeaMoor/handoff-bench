@@ -150,7 +150,7 @@ for rules in (True, False):
                 rules=rules,
             )
         )
-# M8 uses explicit IDs 77-79. Cells 74-76 are reserved for M3 partial execution.
+# M8 uses explicit IDs 74-76. Cells 77-79 are reserved for M3 partial execution.
 _cells.extend(
     Cell(
         number=number,
@@ -160,7 +160,7 @@ _cells.extend(
         key="none",
         ownership=condition,
     )
-    for number, condition in ((77, "disjoint"), (78, "overlap"), (79, "d12"))
+    for number, condition in ((74, "disjoint"), (75, "overlap"), (76, "d12"))
 )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"

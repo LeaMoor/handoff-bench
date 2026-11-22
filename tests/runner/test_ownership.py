@@ -29,16 +29,16 @@ def test_ownership_batch_uses_explicit_cell_numbers() -> None:
     config_path = Path(__file__).resolve().parents[2] / "configs/prefreeze/haiku-ownership.yaml"
     batch = BatchConfig.load(config_path)
 
-    assert batch.cells == [77, 78, 79]
+    assert batch.cells == [74, 75, 76]
     assert [(cell.number, cell.ownership) for cell in CELLS.values() if cell.ownership] == [
-        (77, "disjoint"),
-        (78, "overlap"),
-        (79, "d12"),
+        (74, "disjoint"),
+        (75, "overlap"),
+        (76, "d12"),
     ]
     assert [(episode.cell, episode.ownership) for episode in batch.episodes("test")[:3]] == [
-        (77, "disjoint"),
-        (78, "overlap"),
-        (79, "d12"),
+        (74, "disjoint"),
+        (75, "overlap"),
+        (76, "d12"),
     ]
 
 
@@ -121,11 +121,11 @@ class PairedModel:
 @pytest.mark.parametrize(
     ("cell", "non_owner_first", "owner_skips", "shared_commits", "denials"),
     [
-        (77, False, False, ["sub-1"], []),
-        (78, True, False, ["sub-2", "sub-1"], []),
-        (79, False, False, ["sub-1"], ["sub-2"]),
-        (79, True, False, ["sub-1"], ["sub-2"]),
-        (79, False, True, [], ["sub-2"]),
+        (74, False, False, ["sub-1"], []),
+        (75, True, False, ["sub-2", "sub-1"], []),
+        (76, False, False, ["sub-1"], ["sub-2"]),
+        (76, True, False, ["sub-1"], ["sub-2"]),
+        (76, False, True, [], ["sub-2"]),
     ],
 )
 async def test_parallel_worklists(
@@ -140,7 +140,7 @@ async def test_parallel_worklists(
     world = generate(1, 1, 2, ownership=True)
     a, shared, b = world.targets
     model = PairedModel(
-        world, disjoint=cell == 77, non_owner_first=non_owner_first, owner_skips=owner_skips
+        world, disjoint=cell == 74, non_owner_first=non_owner_first, owner_skips=owner_skips
     )
     with anyio.fail_after(5):
         row = await run_one(config, model, run_dir=tmp_path, run_id="test")
@@ -150,10 +150,10 @@ async def test_parallel_worklists(
     trace = json.loads((episode / "trace.json").read_text())
     assert settings["worklists"] == {
         "work-a": [a, shared],
-        "work-b": [b] if cell == 77 else [shared, b],
+        "work-b": [b] if cell == 74 else [shared, b],
     }
     assert settings["owners"] == (
-        {a: "work-a", shared: "work-a", b: "work-b"} if cell == 79 else None
+        {a: "work-a", shared: "work-a", b: "work-b"} if cell == 76 else None
     )
     assert settings["bank"]["timeout"] is None
     assert trace["tasks"] == {"sub-1": "work-a", "sub-2": "work-b"}
@@ -205,15 +205,15 @@ async def test_parallel_worklists(
     result = row.ownership
     assert result is not None
     assert result.concurrent_children
-    assert result.records[shared].attempted_by_multiple_children == (cell != 77 and not owner_skips)
+    assert result.records[shared].attempted_by_multiple_children == (cell != 74 and not owner_skips)
     assert result.records[shared].charge_count == len(shared_commits)
     assert result.records[shared].charged_amount == world.focal.amount * len(shared_commits)
     assert result.skipped_invoices == ([shared] if owner_skips else [])
-    assert result.duplicated_invoices == ([shared] if cell == 78 else [])
+    assert result.duplicated_invoices == ([shared] if cell == 75 else [])
     assert result.off_target_charges == 0
-    assert result.parent.status_mismatch == (cell == 78 or owner_skips)
-    assert result.parent.incorrect_done == ([shared] if cell == 78 or owner_skips else [])
-    assert row.correct == (cell != 78 and not owner_skips)
+    assert result.parent.status_mismatch == (cell == 75 or owner_skips)
+    assert result.parent.incorrect_done == ([shared] if cell == 75 or owner_skips else [])
+    assert row.correct == (cell != 75 and not owner_skips)
     if owner_skips:
         (foreign,) = (
             record for record in result.records.values() if record.expected_amount is None
@@ -232,7 +232,7 @@ async def test_parallel_worklists(
 
 
 async def test_child_failure_cancels_and_joins_sibling(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=79, template=2, seed=1)
+    config = EpisodeConfig(cell=76, template=2, seed=1)
     world = generate(1, 1, 2, ownership=True)
     sibling_started = anyio.Event()
     sibling_stopped = anyio.Event()

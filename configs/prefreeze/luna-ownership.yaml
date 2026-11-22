@@ -1,0 +1,10 @@
+model:
+  model: openai/gpt-6-luna
+  provider: openai
+  max_tokens: 1024
+run_id: prefreeze-luna-ownership-v2
+cells: [74, 75, 76]
+templates: [2]
+seeds: [1, 2, 3, 4]
+parallel: 2
+budget_usd: 0.25

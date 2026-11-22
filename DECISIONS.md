@@ -6,6 +6,25 @@
 
 Что запланировано, но ещё не сделано, — в [BACKLOG.md](BACKLOG.md).
 
+## 2026-11-23 · M8 worklist overlap and D12 ownership
+
+**Decision.** The harness supplies fixed worklists. The orchestrator starts them with
+`delegate_parallel`. M8 measures how two concurrent workers handle an assigned overlap and
+whether D12 prevents a duplicate write. It leaves the orchestrator's assignment choices outside
+the experiment. The control, overlap and overlap with D12 use cells 74–76. The historical pilot
+recorded them as 70–72.
+
+**Pilot result.** In the Haiku pilot, the shared invoice was charged twice in four of four
+overlap episodes. D12 prevented all four duplicates without skipping a payment. With the text
+channel, the orchestrator left the shared invoice unresolved in all four D12 episodes. A
+reported a successful charge and B reported an authorization denial for its own attempt.
+[Haiku pilot](docs/results/2026-11-21/m8-overlapping-ownership.md).
+
+**Comparison scope.** M8 uses the same orchestrator prompt across its three conditions. The
+prompt explicitly requires exactly one successful payment per requested invoice for a `done`
+report. Other blocks use their own prompts, so differences in final report rates cannot be
+attributed to worklist overlap or D12 across blocks.
+
 ## 2026-11-21 · «-dirty» только от изменённых файлов в git
 
 **Что увидели.** Стенд помечал коммит прогона `-dirty` по `git status --porcelain`, а он видит и
