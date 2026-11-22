@@ -100,3 +100,47 @@ async def test_tools_outside_the_cell_are_refused(tmp_path, monkeypatch) -> None
     rows = CallJournal.read(tmp_path / "ep" / "calls.jsonl")
     assert [(r.tool, r.error_code) for r in rows][0] == ("create_charge", "unknown_tool")
     assert effects(tmp_path) == []
+
+
+async def test_limit_stops_the_batch_and_resume_finishes_it(tmp_path, monkeypatch) -> None:
+    from handoff_bench.agents.model_client import ModelSettings
+    from handoff_bench.runner.batch import BatchConfig, run_batch
+    from handoff_bench.runner.results import ResultsCsv
+
+    monkeypatch.setenv("FAKE_CLAUDE_PLAN", json.dumps([[DELEGATE], [FINISH]]))
+    monkeypatch.setenv("FAKE_CLAUDE_COUNTER", str(tmp_path / "runs.txt"))
+    monkeypatch.setenv("FAKE_CLAUDE_RUNS", "2")
+    settings = HarnessSettings(model="fake", binary=fake_binary(tmp_path), finish_grace_s=5)
+    config = BatchConfig(
+        run_id="cc",
+        model=ModelSettings(model="fake/model", provider="fake"),
+        orchestrator=settings,
+        cells=[1],
+        templates=[1],
+        seeds=[1, 2, 3, 4],
+        parallel=1,
+        budget_usd=10,
+        allow_dirty=True,
+    )
+
+    async def batch(resume: bool):
+        return await run_batch(
+            config,
+            lambda _: FakeModel([report(), report()]),
+            run_dir=tmp_path / "cc",
+            run_id="cc",
+            commit="abc",
+            resume=resume,
+        )
+
+    first = await batch(resume=False)
+    assert (first.finished, first.skipped) == (2, 2)
+    assert first.limit_reached and "resets at" in first.limit_reached
+    episodes = sorted(p.name for p in (tmp_path / "cc").iterdir() if p.is_dir())
+    assert len(episodes) == 2  # the episode the limit cut is gone
+
+    monkeypatch.setenv("FAKE_CLAUDE_RUNS", "100")
+    second = await batch(resume=True)
+    assert (second.done_before, second.finished, second.limit_reached) == (2, 2, None)
+    rows = ResultsCsv(tmp_path / "cc" / "results.csv", resume=True).kept
+    assert sorted(r["seed"] for r in rows) == ["1", "2", "3", "4"]

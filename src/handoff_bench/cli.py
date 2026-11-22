@@ -25,7 +25,9 @@ def main() -> None:
     load_dotenv()
 
 
-def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary":
+def _run_batch(
+    cfg: "BatchConfig", label: str, runs_dir: Path, *, resume: bool = False
+) -> "BatchSummary":
     import anyio
 
     from handoff_bench.agents.model_client import OpenRouterClient
@@ -42,6 +44,7 @@ def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary"
                 run_dir=runs_dir / run_id,
                 run_id=run_id,
                 commit=git_commit(),
+                resume=resume,
             )
         )
     except DirtyCheckout as e:
@@ -127,12 +130,25 @@ def run(
 def batch(
     config: Annotated[Path, typer.Argument(help="YAML-конфиг пачки, например configs/debug.yaml")],
     runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
+    resume: Annotated[
+        bool,
+        typer.Option(help="Продолжить прогон с тем же run_id: готовые эпизоды не перезапускать"),
+    ] = False,
 ) -> None:
     """Пачка эпизодов параллельно, с остановкой по бюджету. Нужен OPENROUTER_API_KEY в .env."""
     from handoff_bench.runner.batch import BatchConfig
 
-    summary = _run_batch(BatchConfig.load(config), config.stem, runs_dir)
+    cfg = BatchConfig.load(config)
+    if resume and cfg.run_id is None:
+        raise typer.BadParameter("--resume needs run_id in the config")
+    summary = _run_batch(cfg, config.stem, runs_dir, resume=resume)
     typer.echo(summary.model_dump_json(indent=2))
+    if summary.limit_reached:
+        typer.echo(
+            f"\nОстановлено по лимиту подписки ({summary.limit_reached}). После сброса:\n"
+            f"  uv run stand batch {config} --resume",
+            err=True,
+        )
 
 
 @app.command()

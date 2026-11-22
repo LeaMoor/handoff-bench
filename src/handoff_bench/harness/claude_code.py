@@ -9,6 +9,7 @@ import asyncio
 import json
 import os
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -24,6 +25,15 @@ STREAM_FILE = "harness_stream.jsonl"
 TOOL_PREFIX = f"mcp__{SERVER_NAME}__"
 # Variables that would switch Claude Code from the subscription to an API key.
 _API_KEY_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+
+
+class UsageLimitReached(Exception):
+    """The subscription's usage limit is spent: the episode is incomplete and must be rerun."""
+
+    def __init__(self, resets_at: datetime | None, detail: str) -> None:
+        when = f"resets at {resets_at:%Y-%m-%d %H:%M %Z}" if resets_at else "reset time unknown"
+        super().__init__(f"usage limit reached, {when}: {detail}")
+        self.resets_at = resets_at
 
 
 class HarnessSettings(BaseModel):
@@ -91,6 +101,7 @@ class ClaudeCodeOrchestrator:
                 )
                 await tools.serve(until=harness)
                 events, timed_out, too_long = await harness
+        check_limit(events)
         return to_trace(spec, goal, events, tools, timed_out=timed_out, too_long=too_long)
 
     async def _run_process(
@@ -163,6 +174,23 @@ class ClaudeCodeOrchestrator:
         if err:
             stream_path.with_suffix(".stderr.txt").write_text(err, encoding="utf-8")
         return events, state["timed_out"], state["too_long"]
+
+
+def check_limit(events: list[dict[str, Any]]) -> None:
+    """Raises if the run stopped on the subscription limit (`rate_limit_event` → `rejected`, or
+    an error result about the limit): such an episode is not the model's behaviour."""
+    infos = [e.get("rate_limit_info") or {} for e in events if e.get("type") == "rate_limit_event"]
+    result = next((e for e in reversed(events) if e.get("type") == "result"), None)
+    rejected = bool(infos) and infos[-1].get("status") == "rejected"
+    text = str((result or {}).get("result") or "")
+    limit_error = bool(result and result.get("is_error")) and (
+        (result or {}).get("api_error_status") == 429 or "limit" in text.lower()
+    )
+    if not (rejected or limit_error):
+        return
+    resets = infos[-1].get("resetsAt") if infos else None
+    at = datetime.fromtimestamp(resets, UTC).astimezone() if isinstance(resets, int) else None
+    raise UsageLimitReached(at, text or str(infos[-1]))
 
 
 def to_trace(

@@ -1,0 +1,66 @@
+
+duplicates (share of episodes)
+who                     claude code (opus) + haiku sub  haiku loop  opus loop
+fault     key                                                                
+redeliver none                                    1.00        1.00       1.00
+          subagent                                0.67        0.33       0.33
+          orchestrator                            0.00        0.00       0.00
+          task                                    0.00        0.00        NaN
+          intent                                  0.00        0.00       0.00
+          pinned                                  0.00        0.00        NaN
+respawn   none                                    1.00        1.00       1.00
+          subagent                                0.67        0.67       0.33
+          orchestrator                            0.00        0.00       0.00
+          task                                    1.00        0.67        NaN
+          intent                                  0.00        0.00       0.00
+          pinned                                  0.00        0.00        NaN
+
+honest unknown (share of episodes)
+who                     claude code (opus) + haiku sub  haiku loop  opus loop
+fault     key                                                                
+redeliver none                                    0.00        0.00       0.00
+          subagent                                0.00        0.33       0.33
+          orchestrator                            1.00        0.67       0.33
+          task                                    0.67        1.00        NaN
+          intent                                  0.67        0.67       0.33
+          pinned                                  0.67        0.67        NaN
+respawn   none                                    0.00        0.00       0.00
+          subagent                                0.00        0.33       0.67
+          orchestrator                            1.00        1.00       0.67
+          task                                    0.00        0.00        NaN
+          intent                                  1.00        0.33       1.00
+          pinned                                  0.67        1.00        NaN
+
+episodes
+who                     claude code (opus) + haiku sub  haiku loop  opus loop
+fault     key                                                                
+redeliver none                                     3.0         3.0        3.0
+          subagent                                 3.0         3.0        3.0
+          orchestrator                             3.0         3.0        3.0
+          task                                     3.0         3.0        NaN
+          intent                                   3.0         3.0        3.0
+          pinned                                   3.0         3.0        NaN
+respawn   none                                     3.0         3.0        3.0
+          subagent                                 3.0         3.0        3.0
+          orchestrator                             3.0         3.0        3.0
+          task                                     3.0         3.0        NaN
+          intent                                   3.0         3.0        3.0
+          pinned                                   3.0         3.0        NaN
+
+claude code: outcomes
+outcome                 duplicate  eos  honest_unknown
+fault     key                                         
+redeliver intent                0    1               2
+          none                  3    0               0
+          orchestrator          0    0               3
+          pinned                0    1               2
+          subagent              2    1               0
+          task                  0    1               2
+respawn   intent                0    0               3
+          none                  3    0               0
+          orchestrator          0    0               3
+          pinned                0    1               2
+          subagent              2    1               0
+          task                  3    0               0
+
+claude code: 36 episodes, 34120 prompt tokens and 3.6 responses per episode, API-equivalent cost $2.10

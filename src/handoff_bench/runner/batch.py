@@ -1,3 +1,4 @@
+import shutil
 import traceback
 from collections.abc import Callable
 from pathlib import Path
@@ -9,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from handoff_bench.agents.loop import ModelCallLog
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
-from handoff_bench.harness.claude_code import HarnessSettings
+from handoff_bench.harness.claude_code import HarnessSettings, UsageLimitReached
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
@@ -80,6 +81,20 @@ def _spent_before_crash(episode_dir: Path) -> float:
     return sum(r.usage.cost for r in read_rows(log, ModelCallLog)) if log.exists() else 0.0
 
 
+def _usage_limit(e: BaseException) -> UsageLimitReached | None:
+    """The limit error, also when the episode's task groups wrapped it."""
+    if isinstance(e, UsageLimitReached):
+        return e
+    if isinstance(e, BaseExceptionGroup):
+        return next((h for x in e.exceptions if (h := _usage_limit(x))), None)
+    return None
+
+
+def _write_crash(episode_dir: Path) -> None:
+    episode_dir.mkdir(parents=True, exist_ok=True)
+    (episode_dir / "crash.txt").write_text(traceback.format_exc(), encoding="utf-8")
+
+
 class BatchSummary(BaseModel):
     run_dir: Path
     finished: int
@@ -87,6 +102,8 @@ class BatchSummary(BaseModel):
     skipped: int
     cost: float
     cost_missing: bool
+    done_before: int = 0  # valid rows a resumed batch kept
+    limit_reached: str | None = None  # the harness's usage limit stopped the batch
 
 
 async def run_batch(
@@ -96,29 +113,43 @@ async def run_batch(
     run_dir: Path,
     run_id: str,
     commit: str,
+    resume: bool = False,
 ) -> BatchSummary:
     """Running episodes finish after the budget is spent: overshoot is up to `parallel` episodes.
-    Tokens without a reported cost also stop the batch, or the budget would not hold."""
+    Tokens without a reported cost also stop the batch, or the budget would not hold.
+
+    The harness's usage limit stops the batch: the episodes it cut are discarded, the rest are
+    skipped, and `resume` runs both later (episodes with a valid row are kept, their cost counts
+    towards the budget)."""
     if commit.endswith("-dirty") and not config.allow_dirty:
         raise DirtyCheckout("uncommitted changes: commit them or set allow_dirty for a debug run")
-    results = ResultsCsv(run_dir / "results.csv")
+    results = ResultsCsv(run_dir / "results.csv", resume=resume)
+    done = {r["episode_id"] for r in results.kept}
+    episodes = [e for e in config.episodes(commit) if e.episode_id not in done]
+    for episode in episodes:  # logs of an unfinished run would mix with the new ones
+        shutil.rmtree(run_dir / episode.episode_id, ignore_errors=True)
     limiter = anyio.CapacityLimiter(config.parallel)
-    finished, crashed, skipped, spent, cost_missing = 0, 0, 0, 0.0, False
+    finished, crashed, skipped, cost_missing = 0, 0, 0, False
+    spent = sum(float(r["cost"] or 0) for r in results.kept)
+    limit: UsageLimitReached | None = None
 
     async def one(episode: EpisodeConfig) -> None:
-        nonlocal finished, crashed, skipped, spent, cost_missing
+        nonlocal finished, crashed, skipped, spent, cost_missing, limit
         async with limiter:
-            if cost_missing or spent >= config.budget_usd:
+            if limit is not None or cost_missing or spent >= config.budget_usd:
                 skipped += 1
                 return
             try:
                 row = await run_one(episode, make_model(episode), run_dir=run_dir, run_id=run_id)
-            except Exception:
-                crashed += 1
-                episode_dir = run_dir / episode.episode_id
-                episode_dir.mkdir(parents=True, exist_ok=True)
-                (episode_dir / "crash.txt").write_text(traceback.format_exc(), encoding="utf-8")
-                spent += _spent_before_crash(episode_dir)
+            except Exception as e:
+                if (hit := _usage_limit(e)) is None:
+                    crashed += 1
+                    _write_crash(run_dir / episode.episode_id)
+                    spent += _spent_before_crash(run_dir / episode.episode_id)
+                    return
+                limit = limit or hit
+                skipped += 1
+                shutil.rmtree(run_dir / episode.episode_id, ignore_errors=True)
                 return
             spent += row.cost
             cost_missing = cost_missing or (row.cost == 0 and row.prompt_tokens > 0)
@@ -126,7 +157,7 @@ async def run_batch(
             results.append(row)
 
     async with anyio.create_task_group() as tg:
-        for episode in config.episodes(commit):
+        for episode in episodes:
             tg.start_soon(one, episode)
     return BatchSummary(
         run_dir=run_dir,
@@ -135,4 +166,6 @@ async def run_batch(
         skipped=skipped,
         cost=spent,
         cost_missing=cost_missing,
+        done_before=len(done),
+        limit_reached=str(limit) if limit else None,
     )

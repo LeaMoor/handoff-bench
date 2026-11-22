@@ -84,12 +84,20 @@ def git_commit(repo: Path = _PACKAGE_DIR) -> str:
 
 
 class ResultsCsv:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, resume: bool = False) -> None:
+        """A new file; with `resume`, the existing one keeps its valid rows (`kept`) and drops
+        the invalid ones, so their episodes run again."""
         self.path = path
         self.fields = list(ResultRow.model_fields)
+        self.kept: list[dict[str, str]] = []
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("x", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, self.fields).writeheader()
+        if resume and path.exists():
+            with path.open(newline="", encoding="utf-8") as f:
+                self.kept = [r for r in csv.DictReader(f) if r.get("outcome") != "invalid"]
+        with path.open("w" if resume else "x", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, self.fields, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(self.kept)
 
     def append(self, row: ResultRow) -> None:
         with self.path.open("a", newline="", encoding="utf-8") as f:
