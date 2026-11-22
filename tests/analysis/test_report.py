@@ -66,6 +66,20 @@ def test_calibration_pair_error_and_unknown_pairs() -> None:
     assert summary["unknown_share"] == pytest.approx(1 / 3)
 
 
+def test_sub_done_only_where_the_orchestrator_saw_the_faulted_report() -> None:
+    # Cell 3 (post): the faulted subagent's honest "done" was lost, so it says nothing.
+    df = frame(
+        *(
+            ep(c, "eos", seed=s, block=CELLS[c].block, sub_claim=claim)
+            for c, s, claim in ((64, 1, "done"), (64, 2, "unknown"), (3, 1, "done"))
+        )
+    )
+    sub_done = report.cell_table(df)["sub_done"]
+
+    assert sub_done.loc[64] == pytest.approx(0.5)
+    assert pd.isna(sub_done.loc[3])
+
+
 def test_synthetic_data_recovers_the_effects_put_in() -> None:
     df = synthetic_results(repeats=2)
     not_fired = report.cell_table(df)["fault_not_fired"]

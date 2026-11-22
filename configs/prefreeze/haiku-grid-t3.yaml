@@ -1,0 +1,35 @@
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+run_id: prefreeze-haiku-grid-t3
+cells:
+- 12
+- 13
+- 14
+- 15
+- 16
+- 17
+- 18
+- 19
+- 20
+- 21
+- 22
+- 23
+- 24
+- 25
+- 26
+- 27
+- 30
+- 31
+templates:
+- 3
+seeds:
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+parallel: 4
+budget_usd: 0.33

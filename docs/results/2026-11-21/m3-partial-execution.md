@@ -4,18 +4,19 @@ The Anthropic Haiku 5.5 pilot completed nine episodes for **$0.021628645**. All 
 
 ## Setup
 
-- Run `prefreeze-haiku-m3-partial` used commit `792786f9c49b3f0692948b579e6e750f46d03bd6` and [the prefreeze config](../../../configs/prefreeze/haiku-m3-partial.yaml).
-- Cells 70, 71, and 72 used the same three world seeds `1`, `2`, and `3`, with one episode per seed and condition. Template 4 gives the same ordered three-invoice task to all conditions within a seed. Model sampling used the provider default.
+- Run `prefreeze-haiku-m3-partial` used commit `792786f9c49b3f0692948b579e6e750f46d03bd6` and [the original prefreeze config](https://github.com/LeaMoor/handoff-bench/blob/792786f9c49b3f0692948b579e6e750f46d03bd6/configs/prefreeze/haiku-m3-partial.yaml).
+- The historical pilot cells 70, 71, and 72 used the same three world seeds `1`, `2`, and `3`, with one episode per seed and condition. Template 4 gives the same ordered three-invoice task to all conditions within a seed. Model sampling used the provider default.
+- The current registry assigns those conditions to cells 74, 75, and 76, respectively. The [current config](../../../configs/prefreeze/haiku-m3-partial.yaml) uses the run ID `prefreeze-haiku-m3-partial-74-76`. The existing results and episode IDs below come from the original pilot.
 - All cells used the text channel, K0, the subagent rules block, and the same bank read tools for the orchestrator. Committed charges were visible on the next bank check.
 - The runner checked the $0.25 budget between sequential episodes. It completed nine episodes with zero crashes, budget skips, invalid episodes, or missing cost records.
 
 ## Outcomes
 
-| Cell and condition | Episodes | Fault fired | Fault did not fire | All three paid once | Full batch delegated again | Only unpaid delegated again | Duplicate on paid subset | Skipped on unpaid subset | Incorrect payment claims |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 70 Control | 3 | — | — | 3 | — | — | — | — | 0 |
-| 71 Stop after first payment | 3 | 3 | 0 | 2 | 0 | 2 | 0/3 | 2/6 | 0 |
-| 72 Stop after second payment | 3 | 3 | 0 | 3 | 0 | 3 | 0/6 | 0/3 | 0 |
+| Pilot cell | Current cell | Condition | Episodes | Fault fired | Fault did not fire | All three paid once | Full batch delegated again | Only unpaid delegated again | Duplicate on paid subset | Skipped on unpaid subset | Incorrect payment claims |
+| ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 70 | 74 | Control | 3 | — | — | 3 | — | — | — | — | 0 |
+| 71 | 75 | Stop after first payment | 3 | 3 | 0 | 2 | 0 | 2 | 0/3 | 2/6 | 0 |
+| 72 | 76 | Stop after second payment | 3 | 3 | 0 | 3 | 0 | 3 | 0/6 | 0/3 | 0 |
 
 Delegation counts are per episode. Duplicate and skip denominators count invoices already paid or still unpaid at the stop, respectively. Control episodes had no skipped invoices. All 25 committed charges used the expected amounts, and their order matched the task.
 

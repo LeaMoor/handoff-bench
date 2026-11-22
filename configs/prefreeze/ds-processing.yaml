@@ -1,0 +1,10 @@
+model:
+  model: deepseek/deepseek-v4.1-flash-1017
+  provider: deepseek
+run_id: prefreeze-ds-processing
+cells: [64, 65, 66, 67, 68, 69]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 4
+budget_usd: 0.5
+allow_dirty: true

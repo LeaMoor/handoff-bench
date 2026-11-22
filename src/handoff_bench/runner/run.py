@@ -90,6 +90,7 @@ async def run_one(
         served_model=served_model,
         served_provider=served_provider,
         fault_fired=result.fault_fired,
+        sub_claim=result.sub_claim,
         **g.model_dump(),
         **b.model_dump(),
         delegations=result.delegations,

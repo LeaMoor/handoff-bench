@@ -1,8 +1,8 @@
-run_id: prefreeze-haiku-m3-partial
+run_id: prefreeze-haiku-m3-partial-74-76
 model:
   model: anthropic/claude-haiku-5.5
   provider: anthropic
-cells: [70, 71, 72]
+cells: [74, 75, 76]
 templates: [4]
 seeds: [1, 2, 3]
 parallel: 1

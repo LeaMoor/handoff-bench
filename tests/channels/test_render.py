@@ -6,7 +6,7 @@ from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.loop import AgentTrace, StopReason
 from handoff_bench.agents.model_client import Usage
 from handoff_bench.agents.tools import Outcome
-from handoff_bench.channels.render import HEADER, render
+from handoff_bench.channels.render import HEADER, TIMEOUT_NOTE, render
 
 REPORT = {"status": "done", "done": ["charged INV-12"], "uncertain": [], "text": "Paid INV-12."}
 
@@ -99,6 +99,18 @@ def test_timeout_error_and_empty_list() -> None:
             "- step 3: list_charges INV-12: no charges",
         ]
     )
+
+
+def test_hedged_statement_warns_only_after_a_timed_out_charge() -> None:
+    timed_out = [
+        row(3, "create_charge", "timeout", code="timeout"),
+        row(4, "list_charges", result=[]),
+    ]
+
+    assert render("code_hedged", trace(), timed_out) == "\n".join(
+        [render("code", trace(), timed_out), TIMEOUT_NOTE]
+    )
+    assert render("code_hedged", trace(), POST_CALLS) == render("code", trace(), POST_CALLS)
 
 
 @pytest.mark.parametrize(

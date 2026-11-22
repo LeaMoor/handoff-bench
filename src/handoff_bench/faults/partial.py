@@ -29,6 +29,10 @@ class PartialExecution(CallHook):
     def fired(self) -> bool:
         return self.stop is not None
 
+    @property
+    def fired_on(self) -> str | None:
+        return self.stop.actor if self.stop is not None else None
+
     def report_lost(self, actor: str) -> bool:
         return self.stop is not None and self.stop.actor == actor
 

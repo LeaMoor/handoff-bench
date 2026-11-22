@@ -34,11 +34,11 @@ def delegate(goal: str) -> Step:
 @pytest.mark.parametrize(
     ("cell", "threshold", "repeat_all"),
     [
-        (70, 0, False),
-        (71, 1, False),
-        (72, 2, False),
-        (71, 1, True),
-        (72, 2, True),
+        (74, 0, False),
+        (75, 1, False),
+        (76, 2, False),
+        (75, 1, True),
+        (76, 2, True),
     ],
 )
 async def test_stops_after_commit_and_allows_later_delegation(
@@ -61,6 +61,7 @@ async def test_stops_after_commit_and_allows_later_delegation(
     assert not model.script
     assert result.stop_reason == "finish"
     assert result.fault_fired == bool(threshold)
+    assert result.sub_claim == "none"
     assert result.outcome == ("duplicate" if repeat_all else "eos")
     counts = [2 if repeat_all and i < threshold else 1 for i in range(3)]
     assert [t.charge_count for t in detail.targets] == counts
@@ -109,7 +110,7 @@ async def test_stops_after_commit_and_allows_later_delegation(
 
 
 async def test_fault_not_fired_when_no_single_child_reaches_threshold(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=72, template=4, seed=1)
+    config = EpisodeConfig(cell=76, template=4, seed=1)
     script = [
         delegate(WORLD.task),
         [pay(TARGETS[0])],
@@ -138,7 +139,7 @@ async def test_api_failure_after_commit_is_invalid(tmp_path: Path) -> None:
                 raise ModelCallFailed(0, RuntimeError("test API failure"))
             return await super().complete(messages, tools)
 
-    config = EpisodeConfig(cell=71, template=4, seed=1)
+    config = EpisodeConfig(cell=75, template=4, seed=1)
     model = FailingModel([delegate(WORLD.task), [pay(TARGETS[0])]])
     result = await run_one(config, model, run_dir=tmp_path, run_id="test")
     detail = PartialGrade.model_validate_json(
@@ -150,7 +151,7 @@ async def test_api_failure_after_commit_is_invalid(tmp_path: Path) -> None:
 
 
 async def test_grades_wrong_amounts_and_off_target_effects(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=71, template=4, seed=1)
+    config = EpisodeConfig(cell=75, template=4, seed=1)
     other = next(inv for inv in WORLD.invoices if inv.invoice_id not in WORLD.targets)
     script = [
         delegate(WORLD.task),
@@ -174,7 +175,7 @@ async def test_grades_wrong_amounts_and_off_target_effects(tmp_path: Path) -> No
 
 
 async def test_failed_batch_can_report_known_skips(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=71, template=4, seed=1)
+    config = EpisodeConfig(cell=75, template=4, seed=1)
     model = FakeModel(
         [
             delegate(WORLD.task),

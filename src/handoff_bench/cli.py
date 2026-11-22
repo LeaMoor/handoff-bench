@@ -55,7 +55,11 @@ def run(
     template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
     seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 1,
     fault: Annotated[
-        str, typer.Option(help="none | pre | post | timeout_lost | timeout_committed")
+        str,
+        typer.Option(
+            help="none | pre | post | timeout_lost | timeout_committed | respawn | redeliver"
+            " | processing_settles | processing_fails (processing: with --no-rules)"
+        ),
     ] = "none",
     channel: Annotated[
         str, typer.Option(help="text | struct | code; none for --agent single")

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "partial_execution"]
+Block = Literal["control", "calibration", "main", "keys", "processing", "partial_execution"]
 Fault = Literal[
     "none",
     "pre",
@@ -11,12 +11,15 @@ Fault = Literal[
     "timeout_committed",
     "respawn",
     "redeliver",
+    "processing_settles",
+    "processing_fails",
     "partial_after_one",
     "partial_after_two",
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
-# code_key: the statement plus the idempotency key of each charge; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "none"]
+# code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
+# a note that a timed-out charge may have gone through unseen; none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
@@ -118,27 +121,42 @@ for block, fault, rules in (
             rules=rules,
         )
     )
-# M3 partial execution. Cells 64-69 are reserved by the processing arm of M3.
-_cells.extend(
-    [
-        Cell(number=70, block="partial_execution", fault="none", channel="text", key="none"),
+# M3, cells 64-69: the bank answers the first focal charge with `processing` (as real payment
+# APIs do); it settles or fails only after the episode. No rules block, so nothing hints at
+# "processing is not paid"; the orchestrator can check the bank itself.
+for fault, channel in [
+    (f, ch) for ch in ("text", "struct", "code") for f in ("processing_settles", "processing_fails")
+]:
+    _cells.append(
         Cell(
-            number=71,
-            block="partial_execution",
-            fault="partial_after_one",
-            channel="text",
-            key="none",
-        ),
-        Cell(
-            number=72,
-            block="partial_execution",
-            fault="partial_after_two",
-            channel="text",
-            key="none",
-        ),
-    ]
-)
+            number=len(_cells) + 1,
+            block="processing",
+            fault=fault,
+            channel=channel,
+            rules=False,
+        )
+    )
+# Cells 70-73: like 22-23 and 28-29, but the statement warns that checks can lag a timed-out
+# charge — does a warning bring back the caution the subagent's words carry?
+for rules in (True, False):
+    for fault in _TIMEOUTS:
+        _cells.append(
+            Cell(
+                number=len(_cells) + 1,
+                block="main",
+                fault=fault,
+                channel="code_hedged",
+                delay="long",
+                rules=rules,
+            )
+        )
+# M3 partial execution, cells 74-76: control and a stop after one or two target payments.
+for number, fault in ((74, "none"), (75, "partial_after_one"), (76, "partial_after_two")):
+    _cells.append(
+        Cell(number=number, block="partial_execution", fault=fault, channel="text", key="none")
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
+assert len(CELLS) == len(_cells), "two cells share a number"
 
 
 class UnsupportedCell(ValueError):
