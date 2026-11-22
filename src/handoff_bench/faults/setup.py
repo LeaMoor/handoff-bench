@@ -71,13 +71,16 @@ def with_delay(setup: FaultSetup, delay: Delay, world: World) -> FaultSetup:
     """Long delay: a check reads "no charges" in both worlds.
 
     Timeout: the timed-out charge, if it went through, stays invisible (a late commit).
-    Pre / post: every charge on the focal invoice stays invisible, so a check delegated to
-    a new subagent cannot tell the worlds apart (calibration without the loophole)."""
+    Post (and M4): the first charge on the focal invoice, the one before the lost report, stays
+    invisible, so a check delegated to a new subagent cannot tell it from pre, where that
+    charge never happened (calibration without the loophole). A repayment shows as usual."""
     if delay == "short":
         return setup
     rule = setup.bank.timeout
     if rule is not None:
         update = {"timeout": rule.model_copy(update={"hidden": True})}
+    elif setup.injector.mode == "pre":
+        return setup  # nothing was charged before the fault: nothing to hide
     else:
         update = {"hidden_invoice": world.focal_invoice}
     return replace(setup, bank=setup.bank.model_copy(update=update))

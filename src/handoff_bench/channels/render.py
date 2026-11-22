@@ -17,6 +17,12 @@ from handoff_bench.billing.protocol import READ_TOOLS
 from handoff_bench.cells import Channel
 
 HEADER = "Subagent's bank calls, from the call log:"
+# code_hedged: the same in both timeout worlds, so it says nothing about which one this is.
+TIMEOUT_NOTE = (
+    "Note: a create_charge that timed out may still have gone through. Checks (get_invoice, "
+    'list_charges) can lag behind a charge, so "no charges" after a timeout does not mean '
+    "nothing was charged."
+)
 _INVOICE_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 _KEY = re.compile(r"[A-Za-z0-9_.:\-]{1,80}")
 
@@ -56,7 +62,7 @@ def _items(name: str, items: list[str]) -> str:
     return f"{name}: none" if not items else "\n".join([f"{name}:", *(f"- {i}" for i in items)])
 
 
-def statement(calls: list[CallRow], *, show_key: bool = False) -> str:
+def statement(calls: list[CallRow], *, show_key: bool = False, hedge: bool = False) -> str:
     """One line per bank call of this subagent (`create_charge` and the checks), numbered by the
     subagent's own calls. Calls that never reached the bank are left out: dropped by the injector
     (it reads as "no call") or rejected by the stand for malformed arguments."""
@@ -72,6 +78,8 @@ def statement(calls: list[CallRow], *, show_key: bool = False) -> str:
         lines.append(f"- step {step}: {r.tool} {_invoice(r)}{_key(r, show_key)}: {_outcome(r)}")
     if charges == 0:
         lines.append("- no create_charge calls")
+    if hedge and any(r.tool == "create_charge" and r.outcome == "timeout" for r in shown):
+        lines.append(TIMEOUT_NOTE)
     return "\n".join(lines)
 
 
@@ -123,6 +131,7 @@ RENDERERS: dict[Channel, Renderer] = {
     "struct": lambda child, calls, report_lost: "" if report_lost else form(child),
     "code": lambda child, calls, report_lost: statement(calls),
     "code_key": lambda child, calls, report_lost: statement(calls, show_key=True),
+    "code_hedged": lambda child, calls, report_lost: statement(calls, hedge=True),
     # A single agent never delegates; the entry only keeps the episode wiring uniform.
     "none": lambda child, calls, report_lost: subagent_words(child),
 }

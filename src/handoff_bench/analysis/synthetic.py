@@ -54,7 +54,7 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
         }
     # Main block and M3 processing: the charge went through in one world of the pair.
     paid = c.fault in ("timeout_committed", "processing_settles")
-    channel = {"none": "text", "code_key": "code"}.get(c.channel, c.channel)
+    channel = {"none": "text", "code_key": "code", "code_hedged": "code"}.get(c.channel, c.channel)
     checked = rng.random() < MAIN_SELF_CHECK[channel]
     if c.agent == "single":
         p_correct = SINGLE_CORRECT
@@ -139,13 +139,15 @@ def synthetic_results(
 ) -> pd.DataFrame:
     """All 11 cells x templates x seeds x repeats. Both halves of a pre/post pair share the
     orchestrator's reaction, as equivalence demands."""
-    rng = random.Random(seed)
     rows = []
     for t in range(1, templates + 1):
         for s in range(1, seeds + 1):
             for r in range(repeats):
-                text_reaction = _pick(rng, TEXT_REACTION)
+                variant = f"{seed}-{t}-{s}-{r}"
+                text_reaction = _pick(random.Random(variant), TEXT_REACTION)
                 for cell in CELLS.values():
+                    # One stream per episode: a new cell does not shift the draws of the others.
+                    rng = random.Random(f"{variant}-{cell.number}")
                     if cell.block != "calibration":
                         reaction = ""
                     elif cell.channel == "text":
