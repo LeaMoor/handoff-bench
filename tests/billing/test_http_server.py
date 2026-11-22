@@ -103,3 +103,13 @@ async def test_timeout_identical_over_http_in_both_worlds(serve_bank: ServeBank)
 
     assert texts[0] == texts[1]
     assert rows == [1, 0]
+
+
+@pytest.mark.anyio
+async def test_server_with_only_the_read_tools(bank: BillingService) -> None:
+    # Native cells: the orchestrator's bank has no create_charge at all.
+    with running_server(bank, tools=("get_invoice", "list_charges")) as url:
+        async with httpx2.AsyncClient() as http:
+            async with Client(streamable_http_client(url, http_client=http)) as client:
+                names = {t.name for t in (await client.list_tools()).tools}
+    assert names == {"get_invoice", "list_charges"}

@@ -60,9 +60,11 @@ class HarnessSettings(BaseModel):
 @dataclass(frozen=True)
 class NativeSetup:
     """Claude Code's own subagents (native cells): they reach the bank directly over MCP; hooks
-    log every call and set the policy (see `harness/hook.py`)."""
+    log every call and set the policy (see `harness/hook.py`). The subagents' bank server is in
+    their own definition (`agents`), so the orchestrator never sees its tools; `bank_url` is the
+    orchestrator's server with only the tools its cell gives it (None: no bank at all)."""
 
-    bank_url: str
+    bank_url: str | None
     agents: dict[str, Any]  # `--agents`: the subagent types the orchestrator may start
     settings: dict[str, Any]  # `--settings`: the hooks
     allowed: list[str] = field(default_factory=list)  # bank tools, for the parent and children
@@ -79,7 +81,8 @@ class ClaudeCodeOrchestrator:
         # No built-in tools: no shell or files, so the episode's logs stay out of reach.
         builtin, extra = "", []
         if self.native:
-            servers["bank"] = {"type": "http", "url": self.native.bank_url}
+            if self.native.bank_url:
+                servers["bank"] = {"type": "http", "url": self.native.bank_url}
             allowed += ["Task", *self.native.allowed]
             builtin = "Task"
             extra = [

@@ -1,7 +1,7 @@
 import socket
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from contextlib import contextmanager
 from typing import Literal
 
@@ -36,7 +36,13 @@ def _actor(ctx: Context) -> str:
     return headers.get(ACTOR_HEADER) or UNKNOWN_ACTOR
 
 
-def make_server(service: BillingService, *, log_level: LogLevel = "WARNING") -> MCPServer:
+def make_server(
+    service: BillingService,
+    *,
+    log_level: LogLevel = "WARNING",
+    tools: Collection[str] | None = None,
+) -> MCPServer:
+    """`tools`: only these (e.g. the read tools for an orchestrator that must not pay)."""
     # The SDK sets up root logging on the first server; at INFO a batch would print every request.
     server = MCPServer(name="billing", instructions=_INSTRUCTIONS, log_level=log_level)
 
@@ -71,6 +77,9 @@ def make_server(service: BillingService, *, log_level: LogLevel = "WARNING") -> 
     def list_charges(invoice_id: str) -> list[ChargeView]:
         return _call(service.list_charges, invoice_id)
 
+    for name in {"get_invoice", "create_charge", "list_charges"} - set(tools or ()):
+        if tools is not None:
+            server.remove_tool(name)
     return server
 
 
@@ -80,12 +89,14 @@ def serve(service: BillingService, *, host: str = "127.0.0.1", port: int = 8765)
 
 
 @contextmanager
-def running_server(service: BillingService, *, host: str = "127.0.0.1") -> Iterator[str]:
+def running_server(
+    service: BillingService, *, host: str = "127.0.0.1", tools: Collection[str] | None = None
+) -> Iterator[str]:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, 0))
     port = sock.getsockname()[1]
-    app = make_server(service).streamable_http_app(streamable_http_path=MCP_PATH)
+    app = make_server(service, tools=tools).streamable_http_app(streamable_http_path=MCP_PATH)
     server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
     thread = threading.Thread(
         target=server.run, kwargs={"sockets": [sock]}, name=f"bank-{port}", daemon=True

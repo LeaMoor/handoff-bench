@@ -3,7 +3,8 @@
 Claude Code runs it before every tool call and when a subagent starts or stops, with the event as
 JSON on stdin. The hook appends the event to the episode's `hooks.jsonl` and, before a bank call:
 - refuses the orchestrator the bank tools its cell does not give it (calls without `agent_id`
-  come from the orchestrator, calls with it from one of its subagents);
+  come from the orchestrator, calls with it from one of its subagents). The orchestrator's bank
+  server has only those tools anyway; this is the second lock;
 - sets the idempotency key of a subagent's charge as the cell says, the way a harness would.
 """
 
@@ -17,7 +18,10 @@ from pydantic import BaseModel, ConfigDict
 from handoff_bench.cells import KeySource
 from handoff_bench.keys import KEY_FIELD, intent_key
 
+# The orchestrator's bank server (only the tools its cell gives it) and the subagent's own one.
 BANK_PREFIX = "mcp__bank__"
+SUBAGENT_BANK = "billing"
+BANK_PREFIXES = (BANK_PREFIX, f"mcp__{SUBAGENT_BANK}__")
 POLICY_FILE = "hook_policy.json"
 HOOKS_FILE = "hooks.jsonl"
 
@@ -47,9 +51,10 @@ def key_args(key: KeySource, args: dict[str, Any], agent_id: str) -> dict[str, A
 def decide(event: dict[str, Any], policy: HookPolicy) -> dict[str, Any]:
     """Claude Code's hook output for this event: empty means no change."""
     tool = str(event.get("tool_name", ""))
-    if event.get("hook_event_name") != "PreToolUse" or not tool.startswith(BANK_PREFIX):
+    prefix = next((p for p in BANK_PREFIXES if tool.startswith(p)), None)
+    if event.get("hook_event_name") != "PreToolUse" or prefix is None:
         return {}
-    name = tool.removeprefix(BANK_PREFIX)
+    name = tool.removeprefix(prefix)
     agent = event.get("agent_id")
     args = event.get("tool_input") or {}
     if agent is None and name not in policy.parent_bank_tools:

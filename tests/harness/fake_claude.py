@@ -8,7 +8,8 @@ printed in Claude Code's format.
 With `--agents` (native cells) the fake also plays Claude Code's own subagents: a call
 `["Agent", {"prompt": ..., "turns": [...], "report": ...}]` starts one, whose turns call the bank
 with the `PreToolUse` hook from `--settings` applied (deny, or new arguments), and whose events
-carry `parent_tool_use_id`. `finish` goes to the `stand` server, other tools to `bank`.
+carry `parent_tool_use_id`. Subagents call the `billing` server from their definition; the
+orchestrator sends `finish` to `stand` and other tools to `bank`.
 """
 
 import asyncio
@@ -71,8 +72,9 @@ class Fake:
 
     async def call(self, tool: str, args: dict, use_id: str, agent: str | None) -> dict:
         """One MCP call; returns its `tool_result` block."""
-        name = f"mcp__{self.server(tool)}__{tool}"
-        if self.native and self.server(tool) == "bank":
+        server = "billing" if agent else self.server(tool)
+        name = f"mcp__{server}__{tool}"
+        if self.native and server in ("bank", "billing"):
             event = {"hook_event_name": "PreToolUse", "tool_name": name, "tool_input": args}
             event["tool_use_id"] = use_id
             if agent:
@@ -87,7 +89,14 @@ class Fake:
                     "content": reason,
                 }
             args = decision.get("updatedInput", args)
-        r = await self.clients[self.server(tool)].call_tool(tool, args)
+        if server not in self.clients:
+            return {
+                "type": "tool_result",
+                "tool_use_id": use_id,
+                "is_error": True,
+                "content": f"No such tool available: {name}",
+            }
+        r = await self.clients[server].call_tool(tool, args)
         text = [{"type": "text", "text": c.text} for c in r.content if isinstance(c, TextContent)]
         return {
             "type": "tool_result",
@@ -107,7 +116,12 @@ class Fake:
         )
         for k, turn in enumerate(spec.get("turns", []), 1):
             uses = [
-                {"type": "tool_use", "id": self.new_id(), "name": f"mcp__bank__{tool}", "input": a}
+                {
+                    "type": "tool_use",
+                    "id": self.new_id(),
+                    "name": f"mcp__billing__{tool}",
+                    "input": a,
+                }
                 for tool, a in turn
             ]
             emit(
@@ -163,7 +177,10 @@ class Fake:
 
 async def main() -> None:
     args = sys.argv[1:]
-    servers = json.loads(flag(args, "--mcp-config"))["mcpServers"]
+    servers = dict(json.loads(flag(args, "--mcp-config"))["mcpServers"])
+    for spec in json.loads(flag(args, "--agents") or "{}").values():
+        for entry in spec.get("mcpServers", []):
+            servers.update(entry)
     goal = sys.stdin.read()
     plan = json.loads(os.environ["FAKE_CLAUDE_PLAN"])
     emit({"type": "system", "subtype": "init", "model": "fake", "tools": [], "cwd": os.getcwd()})

@@ -10,6 +10,7 @@ the same format as our loop's, so the grader, the coder and `show.py` read it un
 import json
 import shlex
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +33,13 @@ from handoff_bench.harness.claude_code import (
     to_messages,
     tool_call,
 )
-from handoff_bench.harness.hook import BANK_PREFIX, HOOKS_FILE, POLICY_FILE, HookPolicy
+from handoff_bench.harness.hook import (
+    BANK_PREFIX,
+    HOOKS_FILE,
+    POLICY_FILE,
+    SUBAGENT_BANK,
+    HookPolicy,
+)
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, EpisodeResult
 from handoff_bench.worlds import World
@@ -83,15 +90,7 @@ async def run_native_episode(
             for ev in HOOK_EVENTS
         }
     }
-    sub_tools = [BANK_PREFIX + t for t in agents.subagent_tools]
-    subagent = {
-        NATIVE_SUBAGENT_TYPE: {
-            "description": SUBAGENT_DESCRIPTION,
-            "prompt": agents.subagent_prompt,
-            "tools": sub_tools,
-            "model": settings.subagent_model,
-        }
-    }
+    sub_tools = [f"mcp__{SUBAGENT_BANK}__{t}" for t in agents.subagent_tools]
     # Only `finish` goes through our gateway; its journal stays apart from the rebuilt one.
     gateway = ToolGateway(
         episode_id=config.episode_id, journal=CallJournal(episode_dir / "stand_calls.jsonl")
@@ -104,7 +103,21 @@ async def run_native_episode(
         tools=gateway.openai_tools(["finish"]),
         finish_tools=frozenset({"finish"}),
     )
-    with service, running_server(service) as bank_url:
+    with ExitStack() as stack:
+        stack.enter_context(service)
+        sub_url = stack.enter_context(running_server(service, tools=agents.subagent_tools))
+        bank_url = (
+            stack.enter_context(running_server(service, tools=bank_tools)) if bank_tools else None
+        )
+        subagent = {
+            NATIVE_SUBAGENT_TYPE: {
+                "description": SUBAGENT_DESCRIPTION,
+                "prompt": agents.subagent_prompt,
+                "tools": sub_tools,
+                "model": settings.subagent_model,
+                "mcpServers": [{SUBAGENT_BANK: {"type": "http", "url": sub_url}}],
+            }
+        }
         native = NativeSetup(
             bank_url=bank_url,
             agents=subagent,
