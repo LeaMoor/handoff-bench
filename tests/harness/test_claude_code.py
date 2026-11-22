@@ -1,12 +1,11 @@
 """Claude Code as the orchestrator, with a scripted fake `claude`: the stand's side of it."""
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 from helpers.episode import DEMO_WORLD, GOAL, effects, report
 from helpers.fake_model import FakeModel
+from helpers.harness import FINISH, fake_binary
 
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.cells import find_cell
@@ -19,17 +18,8 @@ from handoff_bench.runner.episode import EpisodeConfig, run_episode
 
 pytestmark = pytest.mark.anyio
 
-FAKE = Path(__file__).with_name("fake_claude.py")
-FINISH = ["finish", {"status": "done", "done": [], "uncertain": [], "message": "Paid."}]
 DELEGATE = ["delegate", {"goal": GOAL}]
 CHARGE = [("create_charge", {"invoice_id": "INV-12", "customer_id": "cus_ann", "amount": 12000})]
-
-
-def fake_binary(tmp_path: Path) -> str:
-    path = tmp_path / "claude"
-    path.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" "$@"\n')
-    path.chmod(0o755)
-    return str(path)
 
 
 async def run(tmp_path, monkeypatch, plan, subagent, *, fault="none", key="subagent"):

@@ -8,6 +8,10 @@ from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 from handoff_bench.agents.call_journal import CallJournal, CallRow, is_processing
 from handoff_bench.agents.delegation import (
+    NATIVE_ORCH_TOOLS,
+    NATIVE_ORCHESTRATOR_PROMPT,
+    NATIVE_SUB_TOOLS,
+    NATIVE_SUBAGENT_PROMPT,
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
     ORCHESTRATOR_SYSTEM_PROMPT,
@@ -119,6 +123,14 @@ class EpisodeConfig(BaseModel):
 
 
 def _agents_for(cell: Cell) -> AgentsConfig:
+    if cell.block == "native":
+        return AgentsConfig(
+            orchestrator_tools=NATIVE_ORCH_TOOLS,
+            orchestrator_prompt=NATIVE_ORCHESTRATOR_PROMPT,
+            subagent_tools=NATIVE_SUB_TOOLS,
+            subagent_prompt=NATIVE_SUBAGENT_PROMPT,
+            subagent_rules="",
+        )
     if cell.agent == "single":
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT

@@ -8,7 +8,9 @@ Claude Code's. Its raw stream is kept in `harness_stream.jsonl` next to the epis
 import asyncio
 import json
 import os
+import re
 import tempfile
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -23,6 +25,9 @@ from handoff_bench.harness.stand_mcp import SERVER_NAME, StandTools, serving
 
 STREAM_FILE = "harness_stream.jsonl"
 TOOL_PREFIX = f"mcp__{SERVER_NAME}__"
+_MCP_PREFIX = re.compile(r"^mcp__[A-Za-z0-9-]+__")
+# Claude Code's tool for its own subagents; in our logs it is `delegate`.
+SUBAGENT_TOOLS = ("Agent", "Task")
 # Variables that would switch Claude Code from the subscription to an API key.
 _API_KEY_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 
@@ -45,19 +50,44 @@ class HarnessSettings(BaseModel):
     auth: Literal["subscription", "api_key"] = "subscription"
     timeout_s: float = 900
     finish_grace_s: float = 60  # after `finish`, time to end the turn before we stop it
+    subagent_model: str = "haiku"  # Claude Code's own subagents (native cells)
 
     @property
     def label(self) -> str:
         return f"{self.harness}:{self.model}"
 
 
+@dataclass(frozen=True)
+class NativeSetup:
+    """Claude Code's own subagents (native cells): they reach the bank directly over MCP; hooks
+    log every call and set the policy (see `harness/hook.py`)."""
+
+    bank_url: str
+    agents: dict[str, Any]  # `--agents`: the subagent types the orchestrator may start
+    settings: dict[str, Any]  # `--settings`: the hooks
+    allowed: list[str] = field(default_factory=list)  # bank tools, for the parent and children
+
+
 class ClaudeCodeOrchestrator:
-    def __init__(self, settings: HarnessSettings) -> None:
+    def __init__(self, settings: HarnessSettings, native: NativeSetup | None = None) -> None:
         self.settings = settings
+        self.native = native
 
     def command(self, spec: AgentSpec, mcp_url: str) -> list[str]:
-        mcp = {"mcpServers": {SERVER_NAME: {"type": "http", "url": mcp_url}}}
-        tools = [t["function"]["name"] for t in spec.tools]
+        servers: dict[str, Any] = {SERVER_NAME: {"type": "http", "url": mcp_url}}
+        allowed = [TOOL_PREFIX + t["function"]["name"] for t in spec.tools]
+        # No built-in tools: no shell or files, so the episode's logs stay out of reach.
+        builtin, extra = "", []
+        if self.native:
+            servers["bank"] = {"type": "http", "url": self.native.bank_url}
+            allowed += ["Task", *self.native.allowed]
+            builtin = "Task"
+            extra = [
+                "--agents",
+                json.dumps(self.native.agents),
+                "--settings",
+                json.dumps(self.native.settings),
+            ]
         return [
             self.settings.binary,
             "-p",
@@ -72,12 +102,12 @@ class ClaudeCodeOrchestrator:
             "--disable-slash-commands",
             "--strict-mcp-config",
             "--mcp-config",
-            json.dumps(mcp),
+            json.dumps({"mcpServers": servers}),
+            *extra,
             "--allowedTools",
-            ",".join(TOOL_PREFIX + t for t in tools),
-            # No built-in tools: no shell or files, so the episode's logs stay out of reach.
+            ",".join(allowed),
             "--tools",
-            "",
+            builtin,
         ]
 
     def env(self) -> dict[str, str]:
@@ -161,7 +191,7 @@ class ClaudeCodeOrchestrator:
                     except json.JSONDecodeError:
                         continue
                     events.append(event)
-                    if event.get("type") == "assistant":
+                    if event.get("type") == "assistant" and not event.get("parent_tool_use_id"):
                         turns.add(event.get("message", {}).get("id", ""))
                         if len(turns) > spec.max_steps and tools.stop is None:
                             state["too_long"] = True
@@ -248,10 +278,12 @@ def _usage(result: dict[str, Any] | None) -> Usage:
 
 
 def to_messages(
-    system_prompt: str, goal: str, events: list[dict[str, Any]]
+    system_prompt: str, goal: str, events: list[dict[str, Any]], *, parent: str | None = None
 ) -> list[dict[str, Any]]:
-    """The stream as chat messages in our loop's format, so `show.py` and the coder read it.
-    The system message is only our part of the prompt: Claude Code appends it to its own.
+    """The orchestrator's part of the stream as chat messages in our loop's format, so `show.py`
+    and the coder read it. The system message is only our part of the prompt: Claude Code appends
+    it to its own. Events of Claude Code's own subagents (`parent_tool_use_id`) are left out;
+    with `parent`, only that subagent's events (the id of the subagent call that started it).
 
     One model response may arrive as several `assistant` events with the same message id.
     """
@@ -262,6 +294,8 @@ def to_messages(
     by_id: dict[str, dict[str, Any]] = {}
     for event in events:
         kind, msg = event.get("type"), event.get("message") or {}
+        if (event.get("parent_tool_use_id") or None) != parent:
+            continue
         if kind == "assistant":
             mid = msg.get("id", "")
             if mid not in by_id:
@@ -272,15 +306,12 @@ def to_messages(
                 if block.get("type") == "text":
                     target["content"] = (target["content"] or "") + block.get("text", "")
                 elif block.get("type") == "tool_use":
-                    name = block.get("name", "")
+                    name, args = tool_call(block.get("name", ""), block.get("input") or {})
                     target["tool_calls"].append(
                         {
                             "id": block.get("id"),
                             "type": "function",
-                            "function": {
-                                "name": name.removeprefix(TOOL_PREFIX),
-                                "arguments": json.dumps(block.get("input") or {}),
-                            },
+                            "function": {"name": name, "arguments": json.dumps(args)},
                         }
                     )
         elif kind == "user":
@@ -297,6 +328,14 @@ def to_messages(
         if not m["tool_calls"]:
             del m["tool_calls"]
     return messages
+
+
+def tool_call(name: str, args: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """A harness tool call in our names: `mcp__bank__create_charge` → `create_charge`, its own
+    subagent tool → `delegate(goal)`."""
+    if name in SUBAGENT_TOOLS:
+        return "delegate", {"goal": args.get("prompt", "")}
+    return _MCP_PREFIX.sub("", name), args
 
 
 def _text(content: Any) -> str:

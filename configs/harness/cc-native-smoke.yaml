@@ -1,0 +1,17 @@
+# Claude Code's own subagents (native cells): Opus orchestrator, Haiku subagents, both on the
+# Pro subscription. Timeout with the charge invisible; the hook sets the key: none / the
+# subagent's own / per payment. `model` is unused here (no subagent of ours).
+run_id: harness-cc-native-smoke
+orchestrator:
+  harness: claude_code
+  model: opus
+  subagent_model: haiku
+  binary: /opt/homebrew/bin/claude
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [80, 84, 85, 87]
+templates: [1]
+seeds: [1]
+parallel: 1
+budget_usd: 2

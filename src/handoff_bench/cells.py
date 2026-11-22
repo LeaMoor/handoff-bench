@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing"]
+Block = Literal["control", "calibration", "main", "keys", "processing", "native"]
 Fault = Literal[
     "none",
     "pre",
@@ -16,8 +16,9 @@ Fault = Literal[
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
-# a note that a timed-out charge may have gone through unseen; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
+# a note that a timed-out charge may have gone through unseen; none: a single agent; native: what
+# a harness's own subagent returns (Claude Code), not ours.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none", "native"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
@@ -146,6 +147,23 @@ for rules in (True, False):
                 channel="code_hedged",
                 delay="long",
                 rules=rules,
+            )
+        )
+# Cells 80-87: the harness's own subagents (Claude Code). Only the bank fails (a timeout, the
+# charge invisible to checks); nothing repeats the work but the orchestrator itself, and the
+# harness's hook sets the key: none (stripped), the subagent's own, one per subagent (task), or
+# one per payment (intent). 74-79 are kept for M8 and M3 partial execution.
+for fault in _TIMEOUTS:
+    for key in ("none", "subagent", "task", "intent"):
+        _cells.append(
+            Cell(
+                number=80 + len([c for c in _cells if c.block == "native"]),
+                block="native",
+                fault=fault,
+                channel="native",
+                delay="long",
+                rules=False,
+                key=key,
             )
         )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
