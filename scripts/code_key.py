@@ -3,6 +3,7 @@
 Does the orchestrator pass on a key it can see? Old: every charge on the focal invoice was hidden
 in 34, 35, 60, 61. New: only the first one is (DECISIONS, 2026-11-21); the pre world (34, 60) from
 the v2 rerun, the post world (35, 61) from v3. 28, 29, 62, 63 are the same in both.
+`claude_code`: Claude Code (Opus) as the orchestrator with a Haiku subagent, 60-63 only, new rule.
 
 Usage: uv run python scripts/code_key.py
 """
@@ -18,13 +19,15 @@ from handoff_bench.analysis import report as r  # noqa: E402
 
 PAIRS = {34: 60, 35: 61, 28: 62, 29: 63}  # plain statement → statement with the key
 CALIBRATION = {"haiku": "07", "glm": "glm", "deepseek": "ds"}  # old calibration-hidden prefix
-SHORT = {"haiku": "haiku", "glm": "glm", "deepseek": "ds"}
+SHORT = {"haiku": "haiku", "glm": "glm", "deepseek": "ds", "claude_code": "cc"}
 MAIN = [28, 29, 62, 63]
 
 
 def sources(model: str, version: str) -> list[tuple[str, list[int]]]:
     """(run, cells) the table takes for this model in this version."""
     s = SHORT[model]
+    if model == "claude_code":
+        return [] if version == "old" else [("harness-cc-code-key", [60, 61, 62, 63])]
     if version == "old":
         return [
             (f"prefreeze-{CALIBRATION[model]}-calibration-hidden", [34, 35]),
