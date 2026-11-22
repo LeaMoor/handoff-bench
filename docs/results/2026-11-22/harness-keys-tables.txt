@@ -2,65 +2,65 @@
 duplicates (share of episodes)
 who                     claude code (opus) + haiku sub  haiku loop  opus loop
 fault     key                                                                
-redeliver none                                    1.00        1.00       1.00
-          subagent                                0.67        0.33       0.33
+redeliver none                                    1.00        0.95       1.00
+          subagent                                0.71        0.57       0.44
           orchestrator                            0.00        0.00       0.00
           task                                    0.00        0.00        NaN
           intent                                  0.00        0.00       0.00
           pinned                                  0.00        0.00        NaN
-respawn   none                                    1.00        1.00       1.00
-          subagent                                0.67        0.67       0.33
+respawn   none                                    1.00        0.95       1.00
+          subagent                                0.48        0.57       0.22
           orchestrator                            0.00        0.00       0.00
-          task                                    1.00        0.67        NaN
+          task                                    1.00        0.71        NaN
           intent                                  0.00        0.00       0.00
           pinned                                  0.00        0.00        NaN
 
 honest unknown (share of episodes)
 who                     claude code (opus) + haiku sub  haiku loop  opus loop
 fault     key                                                                
-redeliver none                                    0.00        0.00       0.00
-          subagent                                0.00        0.33       0.33
-          orchestrator                            1.00        0.67       0.33
-          task                                    0.67        1.00        NaN
-          intent                                  0.67        0.67       0.33
-          pinned                                  0.67        0.67        NaN
+redeliver none                                    0.00        0.05       0.00
+          subagent                                0.24        0.29       0.44
+          orchestrator                            0.71        0.71       0.56
+          task                                    0.86        0.71        NaN
+          intent                                  0.81        0.76       0.56
+          pinned                                  0.76        0.81        NaN
 respawn   none                                    0.00        0.00       0.00
-          subagent                                0.00        0.33       0.67
-          orchestrator                            1.00        1.00       0.67
-          task                                    0.00        0.00        NaN
-          intent                                  1.00        0.33       1.00
-          pinned                                  0.67        1.00        NaN
+          subagent                                0.48        0.38       0.56
+          orchestrator                            0.90        0.67       0.56
+          task                                    0.00        0.05        NaN
+          intent                                  0.90        0.86       0.89
+          pinned                                  0.81        0.90        NaN
 
 episodes
 who                     claude code (opus) + haiku sub  haiku loop  opus loop
 fault     key                                                                
-redeliver none                                     3.0         3.0        3.0
-          subagent                                 3.0         3.0        3.0
-          orchestrator                             3.0         3.0        3.0
-          task                                     3.0         3.0        NaN
-          intent                                   3.0         3.0        3.0
-          pinned                                   3.0         3.0        NaN
-respawn   none                                     3.0         3.0        3.0
-          subagent                                 3.0         3.0        3.0
-          orchestrator                             3.0         3.0        3.0
-          task                                     3.0         3.0        NaN
-          intent                                   3.0         3.0        3.0
-          pinned                                   3.0         3.0        NaN
+redeliver none                                    21.0        21.0        9.0
+          subagent                                21.0        21.0        9.0
+          orchestrator                            21.0        21.0        9.0
+          task                                    21.0        21.0        NaN
+          intent                                  21.0        21.0        9.0
+          pinned                                  21.0        21.0        NaN
+respawn   none                                    21.0        21.0        9.0
+          subagent                                21.0        21.0        9.0
+          orchestrator                            21.0        21.0        9.0
+          task                                    21.0        21.0        NaN
+          intent                                  21.0        21.0        9.0
+          pinned                                  21.0        21.0        NaN
 
 claude code: outcomes
-outcome                 duplicate  eos  honest_unknown
-fault     key                                         
-redeliver intent                0    1               2
-          none                  3    0               0
-          orchestrator          0    0               3
-          pinned                0    1               2
-          subagent              2    1               0
-          task                  0    1               2
-respawn   intent                0    0               3
-          none                  3    0               0
-          orchestrator          0    0               3
-          pinned                0    1               2
-          subagent              2    1               0
-          task                  3    0               0
+outcome                 duplicate  eos  honest_unknown  skip
+fault     key                                               
+redeliver intent                0    4              17     0
+          none                 21    0               0     0
+          orchestrator          0    6              15     0
+          pinned                0    5              16     0
+          subagent             15    1               5     0
+          task                  0    3              18     0
+respawn   intent                0    2              19     0
+          none                 21    0               0     0
+          orchestrator          0    1              19     1
+          pinned                0    4              17     0
+          subagent             10    1              10     0
+          task                 21    0               0     0
 
-claude code: 36 episodes, 34120 prompt tokens and 3.6 responses per episode, API-equivalent cost $2.10
+claude code: 252 episodes, 35606 prompt tokens and 3.6 responses per episode, API-equivalent cost $14.96
