@@ -1,0 +1,20 @@
+# Claude Code's own subagents (native cells 80-87): Opus orchestrator, Haiku subagents, both on
+# the Pro subscription. A timeout with the charge invisible to checks, in the two worlds; the
+# hook sets the key: none / the subagent's own / one per subagent / one per payment.
+# 21 episodes per cell. Stopped by the usage limit: `stand batch <this> --resume` after reset.
+# `model` is unused here (no subagent of ours).
+run_id: harness-cc-native
+orchestrator:
+  harness: claude_code
+  model: opus
+  subagent_model: haiku
+  binary: /opt/homebrew/bin/claude
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [80, 81, 82, 83, 84, 85, 86, 87]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 1
+# What the harness reports as the API-equivalent cost; on a subscription it is not charged.
+budget_usd: 25
