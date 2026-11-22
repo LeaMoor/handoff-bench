@@ -82,3 +82,12 @@ def test_blind_retry_gets_the_same_charge_id_in_both_worlds(make_bank: MakeBank)
         first_response(bank)
     retry = [b.create_charge("INV-12", "cus_ann", 12000, actor="sub") for b in (committed, lost)]
     assert retry[0].charge_id == retry[1].charge_id
+
+
+def test_hidden_invoice_hides_only_the_first_charge(make_bank: MakeBank) -> None:
+    bank = make_bank(BankConfig(hidden_invoice="INV-12"))
+    bank.create_charge("INV-12", "cus_ann", 12000, "k1", actor="sub-3")
+    assert bank.list_charges("INV-12") == []
+
+    repeat = bank.create_charge("INV-12", "cus_ann", 12000, "k2", actor="sub-4")
+    assert [c.charge_id for c in bank.list_charges("INV-12")] == [repeat.charge_id]

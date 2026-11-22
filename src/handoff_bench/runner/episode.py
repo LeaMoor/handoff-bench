@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
-from handoff_bench.agents.call_journal import CallJournal
+from handoff_bench.agents.call_journal import CallJournal, CallRow, is_processing
 from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
@@ -20,7 +20,7 @@ from handoff_bench.agents.delegation import (
     register_finish,
 )
 from handoff_bench.agents.gateway import CallHook, ToolGateway
-from handoff_bench.agents.loop import AgentSpec, ModelCallLog, StopReason, run_agent
+from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
 from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
 from handoff_bench.agents.tools import INVALID_STOPS
@@ -39,6 +39,7 @@ from handoff_bench.cells import (
 )
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS, with_delay
+from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
 from handoff_bench.ownership import WORK_A, OwnershipHook, goals_for, worklists_for
@@ -136,7 +137,7 @@ def _agents_for(cell: Cell) -> AgentsConfig:
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
-    tools = ORCH_TOOLS_MAIN if cell.block == "main" else ORCH_TOOLS_CALIBRATION
+    tools = ORCH_TOOLS_MAIN if cell.block in ("main", "processing") else ORCH_TOOLS_CALIBRATION
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
@@ -153,6 +154,7 @@ class EpisodeResult(BaseModel):
     orchestrator_responses: list[int]
     fault_fired: bool
     finish_args: dict[str, Any] | None
+    sub_claim: Claim = "none"  # what the subagent the fault hit reported
     final_text: str | None
     cost: float
     prompt_tokens: int
@@ -256,10 +258,10 @@ async def run_episode(
         orchestrator_responses=[
             len(m["tool_calls"]) for m in trace.messages if m.get("tool_calls")
         ],
-        # Timeout faults live in the bank: they fired if a call came back as a timeout.
-        fault_fired=fault.injector.fired
-        or any(r.outcome == "timeout" for r in gateway.journal.rows),
+        # Bank faults fired if a call came back as a timeout or as a processing charge.
+        fault_fired=fault.injector.fired or any(_bank_fault(r) for r in gateway.journal.rows),
         finish_args=trace.finish_args,
+        sub_claim=_faulted_claim(subagents, gateway.journal.rows, fault.injector.fired_on),
         final_text=trace.messages[-1].get("content") if trace.stop_reason == "text_only" else None,
         cost=usage.cost,
         prompt_tokens=usage.prompt_tokens,
@@ -271,3 +273,18 @@ async def run_episode(
         parallel_overlap=delegation.parallel_overlap,
         parallel_tasks=tasks if worklists is not None else None,
     )
+
+
+def _bank_fault(r: CallRow) -> bool:
+    return r.outcome == "timeout" or is_processing(r)
+
+
+def _faulted_claim(subagents: list[AgentTrace], rows: list[CallRow], fired_on: str | None) -> Claim:
+    """What the subagent the fault hit reported: where a false claim was born."""
+    actor = fired_on or next(
+        (r.actor for r in sorted(rows, key=lambda r: r.seq) if _bank_fault(r)), None
+    )
+    child = next((s for s in subagents if s.actor == actor), None)
+    if child is None or child.finish_tool != "finish_report" or child.finish_args is None:
+        return "none"
+    return child.finish_args["status"]

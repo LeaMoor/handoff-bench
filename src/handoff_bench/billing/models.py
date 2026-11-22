@@ -28,7 +28,8 @@ class ChargeView(_Frozen):
     invoice_id: str
     customer_id: str
     amount: int
-    status: Literal["succeeded"] = "succeeded"
+    # processing: accepted, final outcome not known yet (Stripe `processing`, Adyen `Pending`).
+    status: Literal["succeeded", "processing"] = "succeeded"
 
 
 class TimeoutRule(_Frozen):
@@ -40,11 +41,24 @@ class TimeoutRule(_Frozen):
     hidden: bool = False
 
 
+class ProcessingRule(_Frozen):
+    """The first charge on the invoice is accepted as `processing` in both worlds and settles
+    (True) or fails (False) only after the episode: same id, same listing, same key replay."""
+
+    invoice_id: str
+    settles: bool
+
+
 class BankConfig(_Frozen):
     visibility_delay: int = Field(default=0, ge=0)
     timeout: TimeoutRule | None = None
-    # Charges on this invoice never show to checks: calibration without the check loophole.
+    processing: ProcessingRule | None = None
+    # The first charge on this invoice never shows to checks — the one the fault hit
+    # (calibration without the loophole, M4). Later charges, a repayment too, show as usual.
     hidden_invoice: str | None = None
+
+
+ReportedAs = Literal["succeeded", "timeout", "processing"]
 
 
 class EffectRow(_Frozen):
@@ -56,4 +70,4 @@ class EffectRow(_Frozen):
     charge_id: str
     idempotency_key: str | None
     actor: str
-    reported_as: Literal["succeeded", "timeout"]
+    reported_as: ReportedAs

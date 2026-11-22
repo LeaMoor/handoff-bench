@@ -14,12 +14,36 @@ import pandas as pd
 sys.path.insert(0, "src")
 from handoff_bench.agents.call_journal import CallJournal  # noqa: E402
 
+PRE, POST = {32, 34, 60}, {33, 35, 61}
+
+
+def current(run: str, cell: int) -> bool:
+    """Is this run the one the tables take for this cell after the hiding fix?
+
+    Cells where the focal charge is hidden were rerun (DECISIONS, 2026-11-21): the pre world
+    from v2, the post world from v3, M4 from keys-hidden-v3; Opus ran on the final rule.
+    """
+    if run == "prefreeze-opus-cal-keys":
+        return True
+    if cell in PRE:
+        return run.endswith("-hidden-v2")
+    if cell in POST:
+        return run.endswith("-hidden-v3") and "-keys-" not in run
+    if 48 <= cell <= 59:
+        return run.endswith("-keys-hidden-v3")
+    return True
+
+
 rows = []
 for run in sorted(Path("runs").glob("prefreeze-*")):
     for ep in sorted(p for p in run.iterdir() if (p / "result.json").exists()):
         cfg = json.loads((ep / "config.json").read_text())["episode"]
         if cfg.get("key", "subagent") != "subagent":
             continue  # the harness set the key there; here only the models carry it
+        if not current(run.name, cfg["cell"]):
+            continue
+        if json.loads((ep / "result.json").read_text())["outcome"] == "invalid":
+            continue
         trace = json.loads((ep / "trace.json").read_text())
         calls = sorted(CallJournal.read(ep / "calls.jsonl"), key=lambda c: c.seq)
         delegates = [c for c in calls if c.actor == "orchestrator" and c.tool == "delegate"]

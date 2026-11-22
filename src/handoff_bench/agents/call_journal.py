@@ -23,6 +23,16 @@ class CallRow(BaseModel):
     error_message: str | None = None
 
 
+def is_processing(r: CallRow) -> bool:
+    """The bank accepted the charge but has no final outcome yet (the M3 fault)."""
+    return (
+        r.tool == "create_charge"
+        and r.outcome == "ok"
+        and isinstance(r.result, dict)
+        and r.result.get("status") == "processing"
+    )
+
+
 class CallJournal(JsonlWriter[CallRow]):
     @staticmethod
     def read(path: Path) -> list[CallRow]:

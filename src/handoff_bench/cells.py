@@ -2,11 +2,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "ownership"]
-Fault = Literal["none", "pre", "post", "timeout_lost", "timeout_committed", "respawn", "redeliver"]
+Block = Literal["control", "calibration", "main", "keys", "processing", "ownership"]
+Fault = Literal[
+    "none",
+    "pre",
+    "post",
+    "timeout_lost",
+    "timeout_committed",
+    "respawn",
+    "redeliver",
+    "processing_settles",
+    "processing_fails",
+]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
-# code_key: the statement plus the idempotency key of each charge; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "none"]
+# code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
+# a note that a timed-out charge may have gone through unseen; none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 Ownership = Literal["disjoint", "overlap", "d12"]
@@ -110,7 +121,36 @@ for block, fault, rules in (
             rules=rules,
         )
     )
-# M8 uses 70-72 to leave 64-69 available for M3.
+# M3, cells 64-69: the bank answers the first focal charge with `processing` (as real payment
+# APIs do); it settles or fails only after the episode. No rules block, so nothing hints at
+# "processing is not paid"; the orchestrator can check the bank itself.
+for fault, channel in [
+    (f, ch) for ch in ("text", "struct", "code") for f in ("processing_settles", "processing_fails")
+]:
+    _cells.append(
+        Cell(
+            number=len(_cells) + 1,
+            block="processing",
+            fault=fault,
+            channel=channel,
+            rules=False,
+        )
+    )
+# Cells 70-73: like 22-23 and 28-29, but the statement warns that checks can lag a timed-out
+# charge — does a warning bring back the caution the subagent's words carry?
+for rules in (True, False):
+    for fault in _TIMEOUTS:
+        _cells.append(
+            Cell(
+                number=len(_cells) + 1,
+                block="main",
+                fault=fault,
+                channel="code_hedged",
+                delay="long",
+                rules=rules,
+            )
+        )
+# M8 uses explicit IDs 77-79. Cells 74-76 are reserved for M3 partial execution.
 _cells.extend(
     Cell(
         number=number,
@@ -120,9 +160,10 @@ _cells.extend(
         key="none",
         ownership=condition,
     )
-    for number, condition in ((70, "disjoint"), (71, "overlap"), (72, "d12"))
+    for number, condition in ((77, "disjoint"), (78, "overlap"), (79, "d12"))
 )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
+assert len(CELLS) == len(_cells), "two cells share a number"
 
 
 class UnsupportedCell(ValueError):

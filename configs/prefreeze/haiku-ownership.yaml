@@ -3,7 +3,7 @@ model:
   provider: anthropic
   max_tokens: 1024
 run_id: prefreeze-haiku-ownership
-cells: [70, 71, 72]
+cells: [77, 78, 79]
 templates: [2]
 seeds: [1, 2, 3, 4]
 parallel: 1

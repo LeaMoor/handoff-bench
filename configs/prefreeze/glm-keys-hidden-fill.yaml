@@ -1,0 +1,12 @@
+model:
+  model: z-ai/glm-5.3-flash
+  provider: z-ai
+run_id: prefreeze-glm-keys-hidden-fill
+cells:
+- 56
+templates:
+- 2
+seeds:
+- 7
+parallel: 4
+budget_usd: 0.1

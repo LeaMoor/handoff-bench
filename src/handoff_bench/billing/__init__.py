@@ -13,6 +13,7 @@ from handoff_bench.billing.models import (
     EffectRow,
     Invoice,
     InvoiceView,
+    ProcessingRule,
     TimeoutRule,
 )
 from handoff_bench.billing.service import BillingService
@@ -31,5 +32,6 @@ __all__ = [
     "Invoice",
     "InvoiceNotFound",
     "InvoiceView",
+    "ProcessingRule",
     "TimeoutRule",
 ]

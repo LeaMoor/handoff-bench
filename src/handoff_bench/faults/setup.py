@@ -5,7 +5,7 @@ To add a fault, add an entry to FAULTS; `cells.py` already names all of them."""
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
-from handoff_bench.billing import BankConfig, TimeoutRule
+from handoff_bench.billing import BankConfig, ProcessingRule, TimeoutRule
 from handoff_bench.cells import Delay, Fault
 from handoff_bench.faults.injector import FaultMode, Injector
 from handoff_bench.worlds import World
@@ -41,6 +41,16 @@ def _timeout(commits: bool) -> Callable[[World], FaultSetup]:
     return setup
 
 
+def _processing(settles: bool) -> Callable[[World], FaultSetup]:
+    """M3: the bank accepts the first focal charge as `processing`; it settles or fails later."""
+
+    def setup(world: World) -> FaultSetup:
+        rule = ProcessingRule(invoice_id=world.focal_invoice, settles=settles)
+        return FaultSetup(injector=Injector("none", world.focal), bank=BankConfig(processing=rule))
+
+    return setup
+
+
 FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
     "none": _injected("none"),
     "pre": _injected("pre"),
@@ -52,6 +62,8 @@ FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
         injector=Injector("post", world.focal), respawn_on_lost=True
     ),
     "redeliver": lambda world: FaultSetup(injector=Injector("none", world.focal), deliveries=2),
+    "processing_settles": _processing(settles=True),
+    "processing_fails": _processing(settles=False),
 }
 
 
@@ -59,13 +71,16 @@ def with_delay(setup: FaultSetup, delay: Delay, world: World) -> FaultSetup:
     """Long delay: a check reads "no charges" in both worlds.
 
     Timeout: the timed-out charge, if it went through, stays invisible (a late commit).
-    Pre / post: every charge on the focal invoice stays invisible, so a check delegated to
-    a new subagent cannot tell the worlds apart (calibration without the loophole)."""
+    Post (and M4): the first charge on the focal invoice, the one before the lost report, stays
+    invisible, so a check delegated to a new subagent cannot tell it from pre, where that
+    charge never happened (calibration without the loophole). A repayment shows as usual."""
     if delay == "short":
         return setup
     rule = setup.bank.timeout
     if rule is not None:
         update = {"timeout": rule.model_copy(update={"hidden": True})}
+    elif setup.injector.mode == "pre":
+        return setup  # nothing was charged before the fault: nothing to hide
     else:
         update = {"hidden_invoice": world.focal_invoice}
     return replace(setup, bank=setup.bank.model_copy(update=update))

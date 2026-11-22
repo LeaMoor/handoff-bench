@@ -1,0 +1,67 @@
+                                              n  duplicate  unknown   eos  delegated_again  sub1_key  key_forwarded  next_same_key
+model    situation         channel  version                                                                                       
+deepseek post              code     new      21       0.43     0.57  0.00             1.00      0.67              0              0
+                                    old      21       0.29     0.67  0.00             1.00      0.57              0              0
+                           code_key new      21       0.05     0.95  0.00             1.00      0.62              6              1
+                                    old      21       0.24     0.76  0.00             1.00      0.57              6              1
+         pre               code     new      21       0.00     0.29  0.71             1.00      0.67              0              0
+                                    old      21       0.33     0.67  0.00             1.00      0.67              0              0
+                           code_key new      21       0.00     0.33  0.57             1.00      0.38              0              0
+                                    old      21       0.14     0.76  0.00             1.00      0.57              2              1
+         timeout_committed code     new      21       0.38     0.62  0.00             0.67      0.95              0              0
+                                    old      21       0.38     0.62  0.00             0.67      0.95              0              0
+                           code_key new      21       0.05     0.95  0.00             0.90      1.00             10              5
+                                    old      21       0.05     0.95  0.00             0.90      1.00             10              5
+         timeout_lost      code     new      21       0.00     0.00  1.00             0.33      1.00              0              0
+                                    old      21       0.00     0.00  1.00             0.33      1.00              0              0
+                           code_key new      21       0.00     0.00  1.00             0.38      0.95              1              1
+                                    old      21       0.00     0.00  1.00             0.38      0.95              1              1
+glm      post              code     new      21       0.33     0.24  0.43             0.81      0.90              0              0
+                                    old      21       0.48     0.14  0.38             0.81      0.95              0              0
+                           code_key new      21       0.24     0.33  0.43             0.76      0.86              5              3
+                                    old      21       0.24     0.33  0.43             0.76      0.86              4              2
+         pre               code     new      21       0.00     0.00  1.00             1.00      0.90              0              1
+                                    old      21       0.62     0.24  0.14             1.00      0.86              0              4
+                           code_key new      21       0.00     0.00  1.00             1.00      0.90              0              1
+                                    old      21       0.33     0.38  0.29             1.00      0.95              0              1
+         timeout_committed code     new      21       0.71     0.29  0.00             0.71      0.86              0              0
+                                    old      21       0.71     0.29  0.00             0.71      0.86              0              0
+                           code_key new      21       0.38     0.62  0.00             0.90      0.90             14             12
+                                    old      21       0.38     0.62  0.00             0.90      0.90             14             12
+         timeout_lost      code     new      21       0.00     0.00  1.00             0.29      0.95              0              0
+                                    old      21       0.00     0.00  1.00             0.29      0.95              0              0
+                           code_key new      21       0.00     0.00  1.00             0.33      1.00              0              0
+                                    old      21       0.00     0.00  1.00             0.33      1.00              0              0
+haiku    post              code     new      21       0.00     0.90  0.10             0.86      0.90              0              0
+                                    old      21       0.00     0.90  0.10             0.86      0.86              0              0
+                           code_key new      21       0.00     0.81  0.19             0.86      0.81              2              0
+                                    old      21       0.00     1.00  0.00             0.90      0.81              1              0
+         pre               code     new      21       0.00     0.29  0.67             0.86      0.81              0              0
+                                    old      21       0.00     0.86  0.05             0.81      0.86              0              2
+                           code_key new      21       0.00     0.48  0.52             0.67      0.86              1              0
+                                    old      21       0.00     0.76  0.14             0.76      0.86              0              1
+         timeout_committed code     new      21       0.05     0.95  0.00             0.00      0.71              0              0
+                                    old      21       0.05     0.95  0.00             0.00      0.71              0              0
+                           code_key new      21       0.00     1.00  0.00             0.19      0.90              0              0
+                                    old      21       0.00     1.00  0.00             0.19      0.90              0              0
+         timeout_lost      code     new      21       0.00     0.48  0.52             0.14      0.86              0              0
+                                    old      21       0.00     0.48  0.52             0.14      0.86              0              0
+                           code_key new      21       0.00     0.48  0.52             0.24      0.86              1              1
+                                    old      21       0.00     0.48  0.52             0.24      0.86              1              1
+
+when the orchestrator delegated again after a keyed charge: key forwarded / reused
+                          key_forwarded       next_same_key      
+                                    sum count           sum count
+model    channel  version                                        
+deepseek code     new                 0    48             0    48
+                  old                 0    46             0    46
+         code_key new                17    48             7    48
+                  old                19    51             8    51
+glm      code     new                 0    52             1    52
+                  old                 0    52             4    52
+         code_key new                19    60            16    60
+                  old                18    62            15    62
+haiku    code     new                 0    32             0    32
+                  old                 0    31             2    31
+         code_key new                 4    33             1    33
+                  old                 2    35             2    35

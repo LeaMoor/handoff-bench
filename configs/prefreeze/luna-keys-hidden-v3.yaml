@@ -1,0 +1,10 @@
+# M4 with the charge invisible (48-59) rerun on the final hiding rule (DECISIONS, 2026-11-21).
+model:
+  model: openai/gpt-6-luna
+  provider: openai
+run_id: prefreeze-luna-keys-hidden-v3
+cells: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 4
+budget_usd: 0.4
