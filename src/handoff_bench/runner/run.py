@@ -49,6 +49,7 @@ async def run_one(
         finish_args=result.finish_args,
         stop_reason=result.stop_reason,
         whole_batch=whole_batch,
+        final_text=result.final_text,
     )
     if whole_batch:
         partial = grade_partial(

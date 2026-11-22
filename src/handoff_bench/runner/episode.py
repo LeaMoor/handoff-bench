@@ -36,6 +36,14 @@ from handoff_bench.worlds import BATCH_TEMPLATE, World
 ORCHESTRATOR = "orchestrator"
 
 
+def validate_cell_template(cell: Cell, template: int) -> None:
+    """Keep the three-invoice task paired with its batch grader."""
+    if cell.block == "partial_execution" and template != BATCH_TEMPLATE:
+        raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
+    if cell.block != "partial_execution" and template == BATCH_TEMPLATE:
+        raise ValueError(f"template {BATCH_TEMPLATE} requires a partial-execution cell")
+
+
 class EpisodeConfig(BaseModel):
     """Everything that sets an episode apart; written to `config.json` next to its logs.
     Fault, channel, delay, rules, agent and the orchestrator's tools follow from the cell."""
@@ -57,8 +65,6 @@ class EpisodeConfig(BaseModel):
         if data.get("cell") not in CELLS:
             raise ValueError(f"unknown cell {data.get('cell')}")
         cell = CELLS[data["cell"]]
-        if cell.block == "partial_execution" and data.get("template") != BATCH_TEMPLATE:
-            raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
         for name in ("block", "fault", "channel", "delay", "rules", "agent", "key"):
@@ -68,6 +74,11 @@ class EpisodeConfig(BaseModel):
         if "agents" not in data:
             data["agents"] = _agents_for(cell)
         return data
+
+    @model_validator(mode="after")
+    def _check_template(self) -> "EpisodeConfig":
+        validate_cell_template(CELLS[self.cell], self.template)
+        return self
 
     @computed_field
     @property

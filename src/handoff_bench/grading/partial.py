@@ -3,13 +3,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.tools import INVALID_STOPS, StopReason
 from handoff_bench.billing import EffectRow
 from handoff_bench.faults.partial import PartialStop
-from handoff_bench.grading.grader import mentions
+from handoff_bench.grading.coder import calls_by_response
+from handoff_bench.grading.invoice_text import explicit_payment_targets, mentions
 from handoff_bench.worlds import World
 
 
@@ -30,6 +31,7 @@ class RetryGoal(BaseModel):
     goal: str
     named_targets: list[str]
     attempted_targets: list[str]
+    explicit_payment_targets: list[str] | None = None  # absent in the original pilot artifacts
 
 
 class PartialGrade(BaseModel):
@@ -42,6 +44,7 @@ class PartialGrade(BaseModel):
     wrong_amount_charges: int
     off_target_charges: int
     retry_goals: list[RetryGoal]
+    same_response_goals: list[RetryGoal] = Field(default_factory=list)
     successful_checks: list[CallRow]
     finish_args: dict[str, Any] | None
     user_message: str | None
@@ -72,8 +75,18 @@ def grade_partial(
     invoices = {inv.invoice_id: inv for inv in world.invoices}
     later_calls = sorted((r for r in calls if stop and r.seq > stop.call_seq), key=lambda r: r.seq)
     attempts = [r for r in later_calls if r.actor in children and r.tool == "create_charge"]
-    retry_goals = []
+    retry_goals: list[RetryGoal] = []
+    same_response_goals: list[RetryGoal] = []
     delegates = [r for r in later_calls if r.actor == parent["actor"] and r.tool == "delegate"]
+    retry_seqs: set[int] = set()
+    if stop:
+        own = sorted((r for r in calls if r.actor == parent["actor"]), key=lambda r: r.seq)
+        responses = [len(m["tool_calls"]) for m in parent["messages"] if m.get("tool_calls")]
+        batches = calls_by_response(own, responses)
+        # The child runs synchronously inside its delegate call. Its report can only
+        # affect model responses after the batch that issued that call.
+        anchor = max(i for i, batch in enumerate(batches) if batch and batch[0].seq < stop.call_seq)
+        retry_seqs = {r.seq for batch in batches[anchor + 1 :] for r in batch}
     for index, row in enumerate(delegates):
         if row.outcome not in ("ok", "infra_error") or not isinstance(
             goal := row.args.get("goal"), str
@@ -85,12 +98,14 @@ def grade_partial(
             for r in attempts
             if row.seq < r.seq < next_seq and isinstance(r.args.get("invoice_id"), str)
         }
-        retry_goals.append(
+        destination = retry_goals if row.seq in retry_seqs else same_response_goals
+        destination.append(
             RetryGoal(
                 call_seq=row.seq,
                 goal=goal,
                 named_targets=[t for t in world.targets if mentions(goal, t)],
                 attempted_targets=[t for t in world.targets if t in attempted],
+                explicit_payment_targets=explicit_payment_targets(goal, world.targets),
             )
         )
 
@@ -127,6 +142,7 @@ def grade_partial(
             len(rows) for i, rows in by_invoice.items() if i not in world.targets
         ),
         retry_goals=retry_goals,
+        same_response_goals=same_response_goals,
         successful_checks=[
             r
             for r in sorted(calls, key=lambda r: r.seq)
