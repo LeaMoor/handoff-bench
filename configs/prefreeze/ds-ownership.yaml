@@ -1,8 +1,8 @@
 model:
   model: deepseek/deepseek-v4.1-flash-1017
-  provider: deepseek
+  provider: deepinfra/fp8
   max_tokens: 1024
-run_id: prefreeze-ds-ownership-v2
+run_id: prefreeze-ds-deepinfra-ownership-v2
 cells: [74, 75, 76]
 templates: [2]
 seeds: [1, 2, 3, 4]

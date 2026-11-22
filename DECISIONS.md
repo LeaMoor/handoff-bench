@@ -20,6 +20,12 @@ channel, the orchestrator left the shared invoice unresolved in all four D12 epi
 reported a successful charge and B reported an authorization denial for its own attempt.
 [Haiku pilot](docs/results/2026-11-21/m8-overlapping-ownership.md).
 
+**Six-model follow-up.** On 24 overlap episodes, 23 duplicated the shared payment. D12
+prevented all duplicates. Both conditions recorded zero omitted payments. With D12, 12 of 24
+parents returned
+`unknown` and one ended without a structured report.
+[Six-model pilot](docs/results/2026-11-23/m8-six-model-pilot.md).
+
 **Comparison scope.** M8 uses the same orchestrator prompt across its three conditions. The
 prompt explicitly requires exactly one successful payment per requested invoice for a `done`
 report. Other blocks use their own prompts, so differences in final report rates cannot be

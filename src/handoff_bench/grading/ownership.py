@@ -18,7 +18,7 @@ _DIRECT_CLAIM = re.compile(
     r"(?:(?:is|was|has|have|been)\s+)*"
     r"(?:(?P<unpaid>(?:not|never)\s+(?:(?:yet|been)\s+)*(?:paid|settled|charged)|unpaid|still open"
     r"|не\s+(?:был[аио]?\s+)?оплачен[аои]?)"
-    r"|(?:fully\s+)?(?:paid|settled|оплачен[аои]?))\b",
+    r"|(?:fully\s+)?(?:paid|settled|оплачен[аои]?))\b(?P<once>\s+(?:exactly\s+)?once\b)?",
     re.I,
 )
 _QUALIFIER = re.compile(
@@ -82,12 +82,14 @@ def _message_conflicts(message: str, records: dict[str, RecordGrade]) -> list[st
         for match in _DIRECT_CLAIM.finditer(sentence):
             invoice = f"INV-{match['invoice'][3:].lstrip('- ')}"
             record = records.get(invoice)
-            claims_paid = match["unpaid"] is None
-            if (
-                record
-                and record.expected_amount is not None
-                and claims_paid != (invoice in settled)
-            ):
+            if record is None or record.expected_amount is None:
+                continue
+            actual = invoice in settled
+            if match["once"]:
+                actual = (
+                    record.charge_count == 1 and record.charged_amount == record.expected_amount
+                )
+            if (match["unpaid"] is None) != actual:
                 conflicts.add(invoice)
         if retry := _RETRY_PAYMENT.search(sentence):
             target = retry["retry"] or retry["again"]

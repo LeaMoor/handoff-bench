@@ -34,6 +34,7 @@ def effects_for(*, amount: int | None = None, stray: bool = False) -> list[Effec
     ("message", "conflicts"),
     [
         (f"{SHARED} was not paid. Please try again.", [SHARED]),
+        (f"{SHARED} was not paid exactly once.", [SHARED]),
         (f"{SHARED} не оплачен, попробуйте снова.", [SHARED]),
         (f"Please retry the payment for {SHARED}.", [SHARED]),
         (f"{SHARED} was paid. Do not retry {SHARED}.", []),
@@ -58,6 +59,23 @@ def test_m8_audits_the_parent_message(message: str, conflicts: list[str]) -> Non
     assert not detail.parent.status_mismatch
     assert detail.parent.incorrect_done == []
     assert detail.parent.message_conflicts == conflicts
+
+
+def test_m8_accepts_a_correct_report_that_an_invoice_was_not_paid_exactly_once() -> None:
+    effects = effects_for()
+    charge = next(row for row in effects if row.invoice_id == SHARED)
+    effects.append(charge.model_copy(update={"step": 4, "charge_id": "charge-4"}))
+    summary, detail = grade_m8(
+        effects,
+        [],
+        world=WORLD,
+        finish_args={"status": "failed", "message": f"{SHARED} was not paid exactly once."},
+        stop_reason="finish",
+        concurrent=True,
+        child_actors={"sub-1", "sub-2"},
+    )
+    assert summary.outcome == "duplicate"
+    assert detail.parent.message_conflicts == []
 
 
 def test_m8_flags_a_free_text_success_claim_for_an_unpaid_invoice() -> None:
