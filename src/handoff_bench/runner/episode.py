@@ -182,6 +182,8 @@ async def run_episode(
         id_seed=config.seed,
     )
     service.add_invoices(world.invoices)
+    if config.delay == "long" and isinstance(fault.injector, PartialExecution):
+        fault.injector.hide_committed = service.hide_charges
 
     tasks: dict[str, str] = {}
     keys = KeyHook(config.key, tasks)

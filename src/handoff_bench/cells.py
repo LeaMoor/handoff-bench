@@ -150,10 +150,23 @@ for rules in (True, False):
                 rules=rules,
             )
         )
-# M3 partial execution, cells 74-76: control and a stop after one or two target payments.
-for number, fault in ((74, "none"), (75, "partial_after_one"), (76, "partial_after_two")):
+# M8 uses 74-76. M3 partial keeps one control and varies the stop threshold and visibility.
+for number, fault, delay in (
+    (77, "none", "short"),
+    (78, "partial_after_one", "short"),
+    (79, "partial_after_two", "short"),
+    (80, "partial_after_one", "long"),
+    (81, "partial_after_two", "long"),
+):
     _cells.append(
-        Cell(number=number, block="partial_execution", fault=fault, channel="text", key="none")
+        Cell(
+            number=number,
+            block="partial_execution",
+            fault=fault,
+            channel="text",
+            delay=delay,
+            key="none",
+        )
     )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"

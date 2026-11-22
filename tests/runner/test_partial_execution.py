@@ -36,11 +36,11 @@ def delegate(goal: str) -> Step:
 @pytest.mark.parametrize(
     ("cell", "threshold", "repeat_all"),
     [
-        (74, 0, False),
-        (75, 1, False),
-        (76, 2, False),
-        (75, 1, True),
-        (76, 2, True),
+        (77, 0, False),
+        (78, 1, False),
+        (79, 2, False),
+        (78, 1, True),
+        (79, 2, True),
     ],
 )
 async def test_stops_after_commit_and_allows_later_delegation(
@@ -112,8 +112,12 @@ async def test_stops_after_commit_and_allows_later_delegation(
     )
 
 
-async def test_fault_not_fired_when_no_single_child_reaches_threshold(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=76, template=4, seed=1)
+@pytest.mark.parametrize("cell", [79, 81])
+async def test_fault_not_fired_when_no_single_child_reaches_threshold(
+    tmp_path: Path, cell: int
+) -> None:
+    config = EpisodeConfig(cell=cell, template=4, seed=1)
+    check = [("get_invoice", {"invoice_id": WORLD.targets[0]})]
     script = [
         delegate(WORLD.task),
         [pay(TARGETS[0])],
@@ -121,6 +125,7 @@ async def test_fault_not_fired_when_no_single_child_reaches_threshold(tmp_path: 
         delegate(WORLD.task),
         [pay(TARGETS[1])],
         report(),
+        check,
         finish(),
     ]
     result = await run_one(config, FakeModel(script), run_dir=tmp_path, run_id="test")
@@ -133,6 +138,63 @@ async def test_fault_not_fired_when_no_single_child_reaches_threshold(tmp_path: 
     assert detail.fault_status == "not_fired"
     assert detail.skipped_targets == 1
     assert all(t.paid_at_stop is None for t in detail.targets)
+    assert detail.successful_checks[0].result["status"] == "paid"
+
+
+@pytest.mark.parametrize(
+    ("cell", "threshold", "hidden"),
+    [
+        (78, 1, False),
+        (79, 2, False),
+        (80, 1, True),
+        (81, 2, True),
+    ],
+)
+async def test_stop_visibility_for_parent_and_new_child(
+    tmp_path: Path, cell: int, threshold: int, hidden: bool
+) -> None:
+    config = EpisodeConfig(cell=cell, template=4, seed=1)
+    reads = [
+        (tool, {"invoice_id": invoice_id})
+        for invoice_id in WORLD.targets
+        for tool in ("get_invoice", "list_charges")
+    ]
+    retry_targets = TARGETS if hidden else TARGETS[threshold:]
+    model = FakeModel(
+        [
+            delegate(WORLD.task),
+            [pay(t) for t in TARGETS],
+            reads,
+            delegate("Pay only the invoices that appear open."),
+            reads,
+            [pay(t) for t in retry_targets],
+            reads,
+            report(),
+            finish(),
+        ]
+    )
+    result = await run_one(config, model, run_dir=tmp_path, run_id="test")
+    episode_dir = tmp_path / result.episode_id
+    detail = PartialGrade.model_validate_json((episode_dir / "partial_execution.json").read_text())
+    effects = EffectJournal.read(episode_dir / "effects.jsonl")
+    assert result.fault_fired and not model.script
+    assert [e.invoice_id for e in effects if e.actor == "sub-1"] == WORLD.targets[:threshold]
+    assert [e.invoice_id for e in effects if e.actor == "sub-2"] == [
+        t.invoice_id for t in retry_targets
+    ]
+    for actor in ("orchestrator", "sub-2"):
+        checks = [r for r in detail.successful_checks if r.actor == actor]
+        assert [r.result["status"] for r in checks[:6:2]] == [
+            "paid" if not hidden and i < threshold else "open" for i in range(3)
+        ]
+        assert [len(r.result) for r in checks[1:6:2]] == [
+            int(not hidden and i < threshold) for i in range(3)
+        ]
+    final = [r for r in detail.successful_checks if r.actor == "sub-2"][6:]
+    assert [r.result["status"] for r in final[::2]] == ["paid"] * 3
+    visible_ids = [r.result[0]["charge_id"] for r in final[1::2]]
+    assert visible_ids == [e.charge_id for e in (effects[threshold:] if hidden else effects)]
+    assert detail.duplicate_targets == (threshold if hidden else 0)
 
 
 async def test_api_failure_after_commit_is_invalid(tmp_path: Path) -> None:
@@ -142,7 +204,7 @@ async def test_api_failure_after_commit_is_invalid(tmp_path: Path) -> None:
                 raise ModelCallFailed(0, RuntimeError("test API failure"))
             return await super().complete(messages, tools)
 
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     model = FailingModel([delegate(WORLD.task), [pay(TARGETS[0])]])
     result = await run_one(config, model, run_dir=tmp_path, run_id="test")
     detail = PartialGrade.model_validate_json(
@@ -154,7 +216,7 @@ async def test_api_failure_after_commit_is_invalid(tmp_path: Path) -> None:
 
 
 async def test_grades_wrong_amounts_and_off_target_effects(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     other = next(inv for inv in WORLD.invoices if inv.invoice_id not in WORLD.targets)
     script = [
         delegate(WORLD.task),
@@ -178,7 +240,7 @@ async def test_grades_wrong_amounts_and_off_target_effects(tmp_path: Path) -> No
 
 
 async def test_failed_batch_can_report_known_skips(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     model = FakeModel(
         [
             delegate(WORLD.task),
@@ -244,7 +306,7 @@ async def test_failed_batch_can_report_known_skips(tmp_path: Path) -> None:
 async def test_payment_reports_are_checked_against_batch_effects(
     tmp_path: Path, status: str, done: list[str], uncertain: list[str], message: str, expected: str
 ) -> None:
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     finish_args = {"status": status, "done": done, "uncertain": uncertain, "message": message}
     model = FakeModel([delegate(WORLD.task), [pay(TARGETS[0])], [("finish", finish_args)]])
     result = await run_one(config, model, run_dir=tmp_path, run_id="test")
@@ -255,7 +317,7 @@ async def test_payment_reports_are_checked_against_batch_effects(
 
 
 async def test_false_payment_claim_in_plain_text_is_counted(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     model = FakeModel([delegate(WORLD.task), [pay(TARGETS[0])], "All three invoices were settled."])
     result = await run_one(config, model, run_dir=tmp_path, run_id="test")
     assert (result.outcome, result.stop_reason, result.false_done) == (
@@ -269,7 +331,7 @@ async def test_false_payment_claim_in_plain_text_is_counted(tmp_path: Path) -> N
 async def test_retry_goals_use_the_model_response_and_payment_directive(
     tmp_path: Path, same_response: bool
 ) -> None:
-    config = EpisodeConfig(cell=75, template=4, seed=1)
+    config = EpisodeConfig(cell=78, template=4, seed=1)
     a, b, c = WORLD.targets
     first = delegate(WORLD.task)
     followup = delegate(
@@ -297,7 +359,7 @@ async def test_retry_goals_use_the_model_response_and_payment_directive(
     assert [t.attempted_after_stop for t in detail.targets] == [False, True, True]
 
 
-@pytest.mark.parametrize(("cell", "template"), [(1, 4), (74, 1)])
+@pytest.mark.parametrize(("cell", "template"), [(1, 4), (77, 1)])
 def test_three_invoice_template_and_batch_grader_must_be_used_together(
     cell: int, template: int
 ) -> None:

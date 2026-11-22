@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from pydantic import BaseModel
 
 from handoff_bench.agents.gateway import CallHook, PendingCall
@@ -24,6 +26,7 @@ class PartialExecution(CallHook):
         self._payer: str | None = None
         self._charged: set[str] = set()
         self.stop: PartialStop | None = None
+        self.hide_committed: Callable[[list[str]], None] | None = None
 
     @property
     def fired(self) -> bool:
@@ -56,6 +59,14 @@ class PartialExecution(CallHook):
         self._charged.add(effect.invoice_id)
         if len(self._charged) < self._threshold:
             return result
+        if self.hide_committed is not None:
+            self.hide_committed(
+                [
+                    e.charge_id
+                    for e in rows
+                    if e.actor == call.actor and e.invoice_id in self._targets
+                ]
+            )
         self.stop = PartialStop(
             actor=call.actor,
             call_seq=call.seq,

@@ -88,13 +88,14 @@ def with_delay(setup: FaultSetup, delay: Delay, world: World) -> FaultSetup:
     Timeout: the timed-out charge, if it went through, stays invisible (a late commit).
     Post (and M4): the first charge on the focal invoice, the one before the lost report, stays
     invisible, so a check delegated to a new subagent cannot tell it from pre, where that
-    charge never happened (calibration without the loophole). A repayment shows as usual."""
-    if delay == "short":
+    charge never happened (calibration without the loophole). A repayment shows as usual.
+    Partial execution hides the interrupted child's target charges when the stop fires."""
+    if delay == "short" or isinstance(setup.injector, PartialExecution):
         return setup
     rule = setup.bank.timeout
     if rule is not None:
         update = {"timeout": rule.model_copy(update={"hidden": True})}
-    elif isinstance(setup.injector, Injector) and setup.injector.mode == "pre":
+    elif setup.injector.mode == "pre":
         return setup  # nothing was charged before the fault: nothing to hide
     else:
         update = {"hidden_invoice": world.focal_invoice}
