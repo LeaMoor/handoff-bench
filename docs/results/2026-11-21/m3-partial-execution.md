@@ -41,6 +41,8 @@ In `c71-w1-t4-s3-r0`, the orchestrator verified that INV-532 and INV-208 were op
 
 This smoke run measured recovery with visible charges and direct bank reads. It did not estimate failure rates when those checks are unavailable. Scripted tests separately confirmed that a full-batch retry under K0 duplicates already-paid invoices.
 
+The [six-model visibility comparison](../2026-11-23/m3-partial-visibility.md) adds the paired conditions with hidden charges.
+
 ## Artifacts
 
 The raw run is under the ignored directory `runs/prefreeze-haiku-m3-partial/`. Each episode contains `effects.jsonl`, `calls.jsonl`, `trace.json`, and `partial_execution.json`. The original `results.csv` records the live run. `results-regraded.csv` contains the offline grades from the same traces.
