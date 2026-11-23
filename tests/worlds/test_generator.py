@@ -66,7 +66,7 @@ def test_golden_world() -> None:
 
 def test_grid_fingerprint() -> None:
     # Changes only on purpose: worlds are frozen before the main runs (task 14).
-    dump = json.dumps([generate(1, s, t).model_dump() for t, s in GRID], sort_keys=True)
+    dump = json.dumps([generate(1, s, t).model_dump() for t, s in GRID if t <= 3], sort_keys=True)
     assert hashlib.sha256(dump.encode()).hexdigest()[:16] == "263c7303fac6d033"
 
 
@@ -84,7 +84,7 @@ def test_templates_differ_for_same_seed(seed: int) -> None:
     worlds = [generate(1, seed, t) for t in TEMPLATES]
 
     assert len({w.task for w in worlds}) == len(TEMPLATES)
-    assert [len(w.targets) for w in worlds] == [1, 2, 1]
+    assert [len(w.targets) for w in worlds] == [1, 2, 1, 3]
 
 
 @pytest.mark.parametrize(("template", "seed"), GRID)
@@ -145,7 +145,16 @@ def test_bank_takes_world_invoices(template: int) -> None:
     assert (focal.status, focal.customer_id) == ("open", w.customer_id)
 
 
-@pytest.mark.parametrize(("world", "template"), [(2, 1), (1, 0), (1, 4)])
+@pytest.mark.parametrize("seed", SEEDS)
+def test_template_4_three_distinct_amounts_and_an_ordered_task(seed: int) -> None:
+    w = generate(1, seed, 4)
+    assert len({by_id(w)[t].amount for t in w.targets}) == 3
+    positions = [w.task.index(t) for t in w.targets]
+    assert positions == sorted(positions)
+    assert "in that order" in w.task or w.task.count("then") == 2
+
+
+@pytest.mark.parametrize(("world", "template"), [(2, 1), (1, 0), (1, 5)])
 def test_unknown_world_or_template(world: int, template: int) -> None:
     with pytest.raises(ValueError):
         generate(world, 1, template)
