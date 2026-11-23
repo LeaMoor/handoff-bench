@@ -38,6 +38,12 @@ SUBAGENT_SYSTEM_PROMPT = (
     "You are an assistant with access to a billing system. Use the tools to complete the task. "
     "When you are done, call `finish_report` with the outcome."
 )
+# M2: the retell model gets the subagent's run (`render.transcript`) and writes what the
+# orchestrator sees, like a harness that summarises a subagent's work.
+RETELL_SYSTEM_PROMPT = (
+    "You summarise a subagent's work for the agent that delegated the task to it. "
+    "In 2-4 sentences, say what the subagent did and how it ended."
+)
 # Appended to every goal by the stand, not by the orchestrator.
 SUBAGENT_RULES = (
     "Rules: do every action exactly once. If the result of an action is unknown, "
@@ -139,6 +145,7 @@ class Delegation:
         respawn_on_lost: bool = False,
         tasks: dict[str, str] | None = None,
         hide_key: bool = False,
+        retell: bool = False,
     ) -> None:
         self.gateway = gateway
         self.model = model
@@ -150,7 +157,9 @@ class Delegation:
         self.respawn_on_lost = respawn_on_lost
         self.tasks = tasks if tasks is not None else {}  # subagent → the task it runs
         self.hide_key = hide_key
+        self.retell = retell
         self.subagents: list[AgentTrace] = []
+        self.retells: list[AgentTrace] = []
         self._task_count = 0
         gateway.register(
             "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
@@ -208,4 +217,21 @@ class Delegation:
         if lost and self.respawn_on_lost:
             child, lost = await self._run_subagent(goal, self._new_task())
         calls = self.gateway.journal.by_actor(child.actor)
-        return {"status": "completed", "result": self.render(child, calls, lost)}
+        result = self.render(child, calls, lost)
+        if self.retell and result:
+            result = await self._retell(child.actor, result)
+        return {"status": "completed", "result": result}
+
+    async def _retell(self, actor: str, run: str) -> str:
+        spec = AgentSpec(
+            actor=f"retell-{actor}",
+            system_prompt=RETELL_SYSTEM_PROMPT,
+            max_steps=1,
+            tools=[],
+            finish_tools=frozenset(),
+        )
+        trace = await run_agent(spec, run, model=self.model, gateway=self.gateway, log=self.log)
+        self.retells.append(trace)
+        if trace.stop_reason != "text_only":
+            raise InfraError(trace.stop_reason, trace.error or "")
+        return trace.messages[-1].get("content") or ""

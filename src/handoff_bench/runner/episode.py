@@ -186,6 +186,7 @@ async def run_episode(
                 respawn_on_lost=fault.respawn_on_lost,
                 tasks=tasks,
                 hide_key=config.key == "none",
+                retell=config.channel == "retell",
             )
             register_finish(gateway)
             spec = AgentSpec(
@@ -203,12 +204,13 @@ async def run_episode(
         {
             "orchestrator": trace.model_dump(mode="json"),
             "subagents": [s.model_dump(mode="json") for s in subagents],
+            "retells": [r.model_dump(mode="json") for r in delegation.retells],
         },
     )
-    traces = [trace, *subagents]
-    usage = sum((t.usage for t in traces), Usage())
-    # A subagent's API / stand failure invalidates the whole episode.
-    broken = next((s for s in subagents if s.stop_reason in INVALID_STOPS), None)
+    helpers = [*subagents, *delegation.retells]
+    usage = sum((t.usage for t in [trace, *helpers]), Usage())
+    # A subagent's (or retell's) API / stand failure invalidates the whole episode.
+    broken = next((s for s in helpers if s.stop_reason in INVALID_STOPS), None)
     return EpisodeResult(
         episode_dir=episode_dir,
         stop_reason=broken.stop_reason if broken else trace.stop_reason,
@@ -227,7 +229,7 @@ async def run_episode(
         completion_tokens=usage.completion_tokens,
         reasoning_tokens=usage.reasoning_tokens,
         cached_tokens=usage.cached_tokens,
-        retries=sum(t.retries for t in traces),
+        retries=sum(t.retries for t in [trace, *helpers]),
         error=broken.error if broken else trace.error,
     )
 
