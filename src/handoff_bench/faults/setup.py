@@ -5,7 +5,7 @@ To add a fault, add an entry to FAULTS; `cells.py` already names all of them."""
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
-from handoff_bench.billing import BankConfig, ProcessingRule, TimeoutRule
+from handoff_bench.billing import BankConfig, CaptureRule, ProcessingRule, TimeoutRule
 from handoff_bench.cells import Delay, Fault
 from handoff_bench.faults.injector import FaultMode, Injector
 from handoff_bench.worlds import World
@@ -51,6 +51,17 @@ def _processing(settles: bool) -> Callable[[World], FaultSetup]:
     return setup
 
 
+def _capture(declined: bool) -> Callable[[World], FaultSetup]:
+    """M3: the first focal charge comes back as a `completed` order; its capture is declined or
+    not."""
+
+    def setup(world: World) -> FaultSetup:
+        rule = CaptureRule(invoice_id=world.focal_invoice, declined=declined)
+        return FaultSetup(injector=Injector("none", world.focal), bank=BankConfig(capture=rule))
+
+    return setup
+
+
 FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
     "none": _injected("none"),
     "pre": _injected("pre"),
@@ -64,6 +75,8 @@ FAULTS: dict[Fault, Callable[[World], FaultSetup]] = {
     "redeliver": lambda world: FaultSetup(injector=Injector("none", world.focal), deliveries=2),
     "processing_settles": _processing(settles=True),
     "processing_fails": _processing(settles=False),
+    "capture_completed": _capture(declined=False),
+    "capture_declined": _capture(declined=True),
 }
 
 

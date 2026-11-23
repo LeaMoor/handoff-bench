@@ -52,8 +52,8 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
             "first_action": reaction,
             "false_done": outcome != "eos",
         }
-    # Main block and M3 processing: the charge went through in one world of the pair.
-    paid = c.fault in ("timeout_committed", "processing_settles")
+    # Main block and M3: the charge went through in one world of the pair.
+    paid = c.fault in ("timeout_committed", "processing_settles", "capture_completed")
     channel = {"none": "text", "code_key": "code", "code_hedged": "code"}.get(c.channel, c.channel)
     checked = rng.random() < MAIN_SELF_CHECK[channel]
     if c.agent == "single":

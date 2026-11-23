@@ -33,6 +33,14 @@ def is_processing(r: CallRow) -> bool:
     )
 
 
+def capture_status(r: CallRow) -> str | None:
+    """The capture status under a `completed` order (the M3 nested-status fault), else None."""
+    if r.tool != "create_charge" or r.outcome != "ok" or not isinstance(r.result, dict):
+        return None
+    captures = r.result.get("captures")
+    return captures[0]["status"] if captures else None
+
+
 class CallJournal(JsonlWriter[CallRow]):
     @staticmethod
     def read(path: Path) -> list[CallRow]:

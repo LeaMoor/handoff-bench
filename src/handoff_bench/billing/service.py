@@ -14,6 +14,8 @@ from handoff_bench.billing.errors import (
 from handoff_bench.billing.journal import EffectJournal
 from handoff_bench.billing.models import (
     BankConfig,
+    Capture,
+    CaptureRule,
     ChargeView,
     EffectRow,
     Invoice,
@@ -40,7 +42,8 @@ CREATE TABLE charges (
     actor           TEXT NOT NULL,
     step            INTEGER NOT NULL,
     visible_from    INTEGER NOT NULL,
-    status          TEXT NOT NULL
+    status          TEXT NOT NULL,
+    capture         TEXT
 );
 CREATE TABLE idempotency_keys (
     key         TEXT PRIMARY KEY,
@@ -69,6 +72,7 @@ class BillingService:
         self._step = 0
         self._timeouts_fired = 0
         self._processing_fired = False
+        self._capture_fired = False
         self._lock = threading.Lock()
         if str(db_path) != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +157,7 @@ class BillingService:
             # Drawn in both worlds: otherwise a later charge gets a different id in each.
             charge_id = self._new_charge_id()
             processing = self._take_processing(invoice_id)
+            capture = self._take_capture(invoice_id)
             if timed_out and not self._timeout_commits():
                 raise BankTimeout()
 
@@ -163,7 +168,7 @@ class BillingService:
                 visible_from = NEVER_VISIBLE
             with self._db:
                 self._db.execute(
-                    "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO charges VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         charge_id,
                         invoice_id,
@@ -173,7 +178,8 @@ class BillingService:
                         actor,
                         step,
                         visible_from,
-                        "succeeded" if processing is None else "processing",
+                        _stored_status(processing, capture),
+                        _capture_status(capture),
                     ),
                 )
                 if idempotency_key is not None:
@@ -181,12 +187,17 @@ class BillingService:
                         "INSERT INTO idempotency_keys VALUES (?, ?, ?, ?, ?)",
                         (idempotency_key, invoice_id, customer_id, amount, charge_id),
                     )
-            if processing is not None and not processing.settles:
-                # Both worlds show and key the same processing charge; only the effect differs.
+            if (processing is not None and not processing.settles) or (
+                capture is not None and capture.declined
+            ):
+                # Both worlds key the same charge id; only the effect (and, for a capture, its
+                # status) differs.
                 return self._charge_view(charge_id)
             reported_as: ReportedAs = "succeeded"
             if processing is not None:
                 reported_as = "processing"
+            elif capture is not None:
+                reported_as = "completed"
             elif timed_out:
                 reported_as = "timeout"
             self.journal.write(
@@ -238,12 +249,20 @@ class BillingService:
         return total
 
     def _charge_view(self, charge_id: str) -> ChargeView:
-        row = self._db.execute(
-            "SELECT charge_id, invoice_id, customer_id, amount, status FROM charges "
-            "WHERE charge_id = ?",
-            (charge_id,),
-        ).fetchone()
-        return ChargeView(**dict(row))
+        row = dict(
+            self._db.execute(
+                "SELECT charge_id, invoice_id, customer_id, amount, status, capture FROM charges "
+                "WHERE charge_id = ?",
+                (charge_id,),
+            ).fetchone()
+        )
+        capture = row.pop("capture")
+        if capture is None:
+            return ChargeView(**row)
+        # A PayPal-style order: `completed` on top, the money's fate in the capture.
+        row["status"] = "completed"
+        cap = Capture(capture_id=f"cap_{charge_id.removeprefix('ch_')}", status=capture)
+        return ChargeView(**row, captures=[cap])
 
     def _take_timeout(self, invoice_id: str) -> bool:
         rule = self.config.timeout
@@ -262,6 +281,13 @@ class BillingService:
         self._processing_fired = True
         return rule
 
+    def _take_capture(self, invoice_id: str) -> CaptureRule | None:
+        rule = self.config.capture
+        if rule is None or rule.invoice_id != invoice_id or self._capture_fired:
+            return None
+        self._capture_fired = True
+        return rule
+
     def _new_charge_id(self) -> str:
         while True:
             charge_id = f"ch_{self._rng.getrandbits(32):08x}"
@@ -270,3 +296,18 @@ class BillingService:
             ).fetchone()
             if exists is None:
                 return charge_id
+
+
+def _stored_status(processing: ProcessingRule | None, capture: CaptureRule | None) -> str:
+    """Only `succeeded` counts towards an invoice being paid."""
+    if processing is not None:
+        return "processing"
+    if capture is not None and capture.declined:
+        return "declined"
+    return "succeeded"
+
+
+def _capture_status(capture: CaptureRule | None) -> str | None:
+    if capture is None:
+        return None
+    return "declined" if capture.declined else "completed"

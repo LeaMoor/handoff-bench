@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
-from handoff_bench.agents.call_journal import CallJournal, CallRow, is_processing
+from handoff_bench.agents.call_journal import CallJournal, CallRow, capture_status, is_processing
 from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
@@ -112,7 +112,11 @@ def _agents_for(cell: Cell) -> AgentsConfig:
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
-    tools = ORCH_TOOLS_MAIN if cell.block in ("main", "processing") else ORCH_TOOLS_CALIBRATION
+    tools = (
+        ORCH_TOOLS_MAIN
+        if cell.block in ("main", "processing", "capture")
+        else ORCH_TOOLS_CALIBRATION
+    )
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
@@ -217,7 +221,7 @@ async def run_episode(
         orchestrator_responses=[
             len(m["tool_calls"]) for m in trace.messages if m.get("tool_calls")
         ],
-        # Bank faults fired if a call came back as a timeout or as a processing charge.
+        # Bank faults fired if a call came back as a timeout, a processing charge or an order.
         fault_fired=fault.injector.fired or any(_bank_fault(r) for r in gateway.journal.rows),
         finish_args=trace.finish_args,
         sub_claim=_faulted_claim(subagents, gateway.journal.rows, fault.injector.fired_on),
@@ -233,7 +237,7 @@ async def run_episode(
 
 
 def _bank_fault(r: CallRow) -> bool:
-    return r.outcome == "timeout" or is_processing(r)
+    return r.outcome == "timeout" or is_processing(r) or capture_status(r) is not None
 
 
 def _faulted_claim(subagents: list[AgentTrace], rows: list[CallRow], fired_on: str | None) -> Claim:
