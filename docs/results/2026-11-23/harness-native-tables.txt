@@ -1,0 +1,28 @@
+168 episodes
+
+outcome                     duplicate  eos  honest_unknown  All
+fault             key                                          
+timeout_committed none              6    0              15   21
+                  subagent          1    0              20   21
+                  task              0    0              21   21
+                  intent            0    0              21   21
+timeout_lost      none              0    6              15   21
+                  subagent          0    7              14   21
+                  task              0    7              14   21
+                  intent            0    7              14   21
+All                                 7   27             134  168
+
+share of episodes: the same subagent charged again / a second subagent charged
+                            same_subagent_retry  new_subagent_charged
+fault             key                                                
+timeout_committed none                     0.29                  0.00
+                  subagent                 0.33                  0.00
+                  task                     0.33                  0.05
+                  intent                   0.24                  0.00
+timeout_lost      none                     0.33                  0.00
+                  subagent                 0.33                  0.00
+                  task                     0.33                  0.05
+                  intent                   0.33                  0.00
+
+duplicates: 7; by the same subagent: 7, by a second one: 0
+subagents per episode 1.29; 42652 prompt tokens, 5.6 orchestrator responses; API-equivalent $14.70
