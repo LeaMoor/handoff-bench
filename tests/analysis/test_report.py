@@ -93,31 +93,6 @@ def test_synthetic_data_recovers_the_effects_put_in() -> None:
     assert list(df.columns) == list(ResultRow.model_fields)
 
 
-def test_historical_m3_cell_does_not_count_as_main(tmp_path: Path) -> None:
-    path = tmp_path / "combined.csv"
-    frame(
-        ep(71, "eos", block="main", agent="delegated", delay="long", rules=True),
-        ep(
-            71,
-            "skip",
-            block="partial_execution",
-            agent="delegated",
-            delay="short",
-            rules=True,
-            channel="text",
-            fault="partial_after_one",
-            template=4,
-        ),
-    ).to_csv(path, index=False)
-    df = report.load_results(path)
-
-    grid = report.main_grid(df)
-    assert len(grid) == 1
-    assert grid["n"].sum() == 1
-    assert grid["correct"].iloc[0] == 1
-    assert report.main_by_channel(df).loc["text", "n"] == 0
-
-
 def test_notebook_runs_on_synthetic_data() -> None:
     runpy.run_path(str(NOTEBOOK))
 

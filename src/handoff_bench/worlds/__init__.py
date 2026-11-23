@@ -1,3 +1,3 @@
-from handoff_bench.worlds.generator import BATCH_TEMPLATE, TEMPLATES, WORLDS, World, generate
+from handoff_bench.worlds.generator import TEMPLATES, WORLDS, World, generate
 
-__all__ = ["BATCH_TEMPLATE", "TEMPLATES", "WORLDS", "World", "generate"]
+__all__ = ["TEMPLATES", "WORLDS", "World", "generate"]

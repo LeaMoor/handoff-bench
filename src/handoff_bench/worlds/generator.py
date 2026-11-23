@@ -8,10 +8,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from handoff_bench.billing.models import Invoice
 
 WORLDS = (1,)
-BATCH_TEMPLATE = 4
-_TARGET_COUNTS = {1: 1, 2: 2, 3: 1, BATCH_TEMPLATE: 3}
-TEMPLATES = tuple(_TARGET_COUNTS)
-_AMOUNTS = range(2_000, 95_000, 50)  # cents: $20.00-$949.50
+TEMPLATES = (1, 2, 3)
 
 CUSTOMERS = (
     ("cus_ann", "Ann Lee"),
@@ -73,14 +70,6 @@ PHRASINGS: dict[int, tuple[str, ...]] = {
         'Please settle invoice {inv} ("{desc}") for {name} ({cid}), not the other similar ones. '
         "Once done, verify the invoice status and tell me how it went.",
     ),
-    BATCH_TEMPLATE: (
-        "Pay invoices {a}, {b}, and {c} of customer {name} ({cid}), in that order, "
-        "and report the result to me.",
-        "Customer {name} ({cid}) has three open invoices: {a}, {b}, and {c}. "
-        "Please pay them in that order and let me know the outcome.",
-        "Please settle invoice {a} for {name} ({cid}), then {b}, then {c}, "
-        "and tell me how it went.",
-    ),
 }
 
 
@@ -127,14 +116,8 @@ def generate(world: int, seed: int, template: int) -> World:
         invoices, focal = _similar_invoices(rng, cid, numbers)
         targets = [focal.invoice_id]
     else:
-        n_targets = _TARGET_COUNTS[template]
-        amounts = (
-            rng.sample(_AMOUNTS, n_targets) if template == BATCH_TEMPLATE else [None] * n_targets
-        )
-        own = [
-            _invoice(rng, num, cid, amount=amount)
-            for num, amount in zip(numbers[:n_targets], amounts, strict=True)
-        ]
+        n_targets = 1 if template == 1 else 2
+        own = [_invoice(rng, num, cid) for num in numbers[:n_targets]]
         others = [c for c, _ in CUSTOMERS if c != cid]
         foreign = [_invoice(rng, num, rng.choice(others)) for num in numbers[n_targets:]]
         invoices = own + foreign
@@ -146,8 +129,7 @@ def generate(world: int, seed: int, template: int) -> World:
     task = PHRASINGS[template][phrasing].format(
         inv=focal.invoice_id,
         a=targets[0],
-        b=targets[1] if len(targets) > 1 else targets[0],
-        c=targets[-1],
+        b=targets[-1],
         desc=focal.description,
         name=name,
         cid=cid,
@@ -167,7 +149,8 @@ def generate(world: int, seed: int, template: int) -> World:
 
 
 def _invoice_numbers(rng: random.Random, template: int) -> list[int]:
-    n_total = _TARGET_COUNTS[template] + rng.choice((2, 3))
+    n_targets = 2 if template == 2 else 1
+    n_total = n_targets + rng.choice((2, 3))
     if template == 3:
         # Similar invoices are numbered in a row, as if issued month after month.
         start = rng.randrange(100, 990)
@@ -176,16 +159,13 @@ def _invoice_numbers(rng: random.Random, template: int) -> list[int]:
 
 
 def _amount(rng: random.Random) -> int:
-    return rng.choice(_AMOUNTS)
+    return rng.randrange(2_000, 95_000, 50)  # cents: $20.00-$949.50
 
 
-def _invoice(rng: random.Random, number: int, cid: str, *, amount: int | None = None) -> Invoice:
+def _invoice(rng: random.Random, number: int, cid: str) -> Invoice:
     desc = f"{rng.choice(SERVICES)}, {rng.choice(MONTHS)}"
     return Invoice(
-        invoice_id=f"INV-{number}",
-        customer_id=cid,
-        amount=_amount(rng) if amount is None else amount,
-        description=desc,
+        invoice_id=f"INV-{number}", customer_id=cid, amount=_amount(rng), description=desc
     )
 
 

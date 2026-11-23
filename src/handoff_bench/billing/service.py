@@ -210,14 +210,6 @@ class BillingService:
         row = self._db.execute("SELECT 1 FROM charges WHERE invoice_id = ? LIMIT 1", (invoice_id,))
         return row.fetchone() is not None
 
-    def hide_charges(self, charge_ids: list[str]) -> None:
-        """Keep the charges committed while excluding them from bank reads."""
-        with self._lock, self._db:
-            self._db.executemany(
-                "UPDATE charges SET visible_from = ? WHERE charge_id = ?",
-                [(NEVER_VISIBLE, charge_id) for charge_id in charge_ids],
-            )
-
     def list_charges(self, invoice_id: str) -> list[ChargeView]:
         with self._lock:
             step = self._tick()

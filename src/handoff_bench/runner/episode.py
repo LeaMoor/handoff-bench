@@ -26,22 +26,13 @@ from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
 from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault, KeySource
 from handoff_bench.channels.render import RENDERERS
-from handoff_bench.faults.partial import PartialExecution
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
-from handoff_bench.worlds import BATCH_TEMPLATE, World
+from handoff_bench.worlds import World
 
 ORCHESTRATOR = "orchestrator"
-
-
-def validate_cell_template(cell: Cell, template: int) -> None:
-    """Keep the three-invoice task paired with its batch grader."""
-    if cell.block == "partial_execution" and template != BATCH_TEMPLATE:
-        raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
-    if cell.block != "partial_execution" and template == BATCH_TEMPLATE:
-        raise ValueError(f"template {BATCH_TEMPLATE} requires a partial-execution cell")
 
 
 class EpisodeConfig(BaseModel):
@@ -74,11 +65,6 @@ class EpisodeConfig(BaseModel):
         if "agents" not in data:
             data["agents"] = _agents_for(cell)
         return data
-
-    @model_validator(mode="after")
-    def _check_template(self) -> "EpisodeConfig":
-        validate_cell_template(CELLS[self.cell], self.template)
-        return self
 
     @computed_field
     @property
@@ -126,11 +112,7 @@ def _agents_for(cell: Cell) -> AgentsConfig:
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
-    tools = (
-        ORCH_TOOLS_MAIN
-        if cell.block in ("main", "processing", "partial_execution")
-        else ORCH_TOOLS_CALIBRATION
-    )
+    tools = ORCH_TOOLS_MAIN if cell.block in ("main", "processing") else ORCH_TOOLS_CALIBRATION
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
@@ -166,10 +148,9 @@ async def run_episode(
     model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
+    fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
-    effects = EffectJournal(episode_dir / "effects.jsonl")
-    fault = with_delay(FAULTS[config.fault](world, effects), config.delay, world)
     _write_json(
         episode_dir / "config.json",
         {"episode": config.model_dump(mode="json"), "bank": fault.bank.model_dump(mode="json")},
@@ -177,13 +158,11 @@ async def run_episode(
     service = BillingService(
         episode_id=config.episode_id,
         config=fault.bank,
-        journal=effects,
+        journal=EffectJournal(episode_dir / "effects.jsonl"),
         db_path=episode_dir / "bank.sqlite",
         id_seed=config.seed,
     )
     service.add_invoices(world.invoices)
-    if config.delay == "long" and isinstance(fault.injector, PartialExecution):
-        fault.injector.hide_committed = service.hide_charges
 
     tasks: dict[str, str] = {}
     keys = KeyHook(config.key, tasks)
@@ -219,15 +198,11 @@ async def run_episode(
             trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
 
     subagents = delegation.subagents
-    fault_trace = {}
-    if isinstance(fault.injector, PartialExecution) and fault.injector.stop is not None:
-        fault_trace["partial_stop"] = fault.injector.stop.model_dump(mode="json")
     _write_json(
         episode_dir / "trace.json",
         {
             "orchestrator": trace.model_dump(mode="json"),
             "subagents": [s.model_dump(mode="json") for s in subagents],
-            **fault_trace,
         },
     )
     traces = [trace, *subagents]

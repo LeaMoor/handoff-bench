@@ -18,7 +18,7 @@ from helpers.episode import (
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.loop import ModelCallLog, rebuild_requests
 from handoff_bench.jsonl import read_rows
-from handoff_bench.worlds import BATCH_TEMPLATE, TEMPLATES, generate
+from handoff_bench.worlds import TEMPLATES, generate
 
 pytestmark = pytest.mark.anyio
 
@@ -58,7 +58,7 @@ async def test_pre_and_post_give_the_orchestrator_byte_identical_input(tmp_path)
     assert seen[0] == seen[1] == {"result": "", "status": "completed"}
 
 
-@pytest.mark.parametrize("template", [t for t in TEMPLATES if t != BATCH_TEMPLATE])
+@pytest.mark.parametrize("template", TEMPLATES)
 async def test_equivalence_holds_on_generated_worlds(tmp_path, template) -> None:
     world = generate(1, 1, template)
     invoices = {inv.invoice_id: inv for inv in world.invoices}
