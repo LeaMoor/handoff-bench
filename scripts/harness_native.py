@@ -1,4 +1,4 @@
-"""Native cells (80-87): Claude Code's own subagents. Outcomes by world and key, and who made the
+"""Native cells (86-93): Claude Code's own subagents. Outcomes by world and key, and who made the
 second charge: the same subagent retrying after the timeout, or a new one the orchestrator sent.
 
 Usage: uv run python scripts/harness_native.py [runs/harness-cc-native]

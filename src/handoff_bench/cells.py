@@ -149,15 +149,16 @@ for rules in (True, False):
                 rules=rules,
             )
         )
-# Cells 80-87: the harness's own subagents (Claude Code). Only the bank fails (a timeout, the
+# Cells 86-93: the harness's own subagents (Claude Code). Only the bank fails (a timeout, the
 # charge invisible to checks); nothing repeats the work but the orchestrator itself, and the
 # harness's hook sets the key: none (stripped), the subagent's own, one per subagent (task), or
-# one per payment (intent). 74-79 are kept for M8 and M3 partial execution.
+# one per payment (intent). 74-85 are taken by M8, M3 partial execution and M2 retell (open
+# PRs).
 for fault in _TIMEOUTS:
     for key in ("none", "subagent", "task", "intent"):
         _cells.append(
             Cell(
-                number=80 + len([c for c in _cells if c.block == "native"]),
+                number=86 + len([c for c in _cells if c.block == "native"]),
                 block="native",
                 fault=fault,
                 channel="native",

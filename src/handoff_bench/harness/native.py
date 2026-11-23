@@ -1,4 +1,4 @@
-"""An episode with Claude Code's own subagents (native cells, 80-87): the boundary is the harness's.
+"""An episode with Claude Code's own subagents (native cells, 86-93): the boundary is the harness's.
 
 Claude Code starts its subagents with its Task tool; they reach our bank directly over MCP. Only
 the bank fails (a timeout, the charge invisible to checks), and nothing repeats the work but the

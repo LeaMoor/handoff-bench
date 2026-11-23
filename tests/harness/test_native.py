@@ -114,7 +114,7 @@ async def test_orchestrator_cannot_pay_itself(tmp_path, monkeypatch) -> None:
 
 def test_native_cells() -> None:
     native = [c for c in CELLS.values() if c.block == "native"]
-    assert [c.number for c in native] == list(range(80, 88))
+    assert [c.number for c in native] == list(range(86, 94))
     assert {(c.fault, c.key) for c in native} == {
         (f, k)
         for f in ("timeout_lost", "timeout_committed")

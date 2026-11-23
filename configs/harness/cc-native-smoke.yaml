@@ -10,7 +10,7 @@ orchestrator:
 model:
   model: anthropic/claude-haiku-5.5
   provider: anthropic
-cells: [80, 84, 85, 87]
+cells: [86, 90, 91, 93]
 templates: [1]
 seeds: [1]
 parallel: 1
