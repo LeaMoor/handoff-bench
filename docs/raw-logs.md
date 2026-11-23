@@ -34,37 +34,52 @@
 
 ## Залить прогон
 
-Из корня репозитория, имя папки на диске — `run_id` прогона:
+Прогон заливаем **одним архивом** `<run_id>.tar.gz`. Google Drive принимает около 30 файлов в
+минуту, а в прогоне их тысячи (по ~13 на эпизод): папка на 150 эпизодов грузится час, архив — секунды.
+
+Из корня репозитория:
 
 ```bash
-rclone copy runs/prefreeze-haiku-retell gdrive:prefreeze-haiku-retell --progress
+tar -czf /tmp/prefreeze-haiku-retell.tar.gz -C runs prefreeze-haiku-retell
+```
+
+```bash
+rclone copy /tmp/prefreeze-haiku-retell.tar.gz gdrive: --progress
 ```
 
 Несколько прогонов сразу:
 
 ```bash
-for r in runs/prefreeze-*-retell/; do rclone copy "$r" "gdrive:$(basename "$r")" --progress; done
+for r in runs/prefreeze-*-retell/; do n=$(basename "$r"); tar -czf "/tmp/$n.tar.gz" -C runs "$n" && rclone copy "/tmp/$n.tar.gz" gdrive: --progress; done
 ```
 
-`rclone copy` докачивает только новое и изменённое; повторный запуск безопасен. Он ничего не
-удаляет на диске (в отличие от `rclone sync`, который им не пользуемся).
+Проверить, что дошло без порчи (сверка по контрольной сумме):
 
-Архивы (`.tar.gz`) тоже можно, но папкой удобнее: эпизод можно открыть, не распаковывая всё.
+```bash
+rclone check /tmp/prefreeze-haiku-retell.tar.gz gdrive: --one-way --include prefreeze-haiku-retell.tar.gz
+```
+
+`rclone copy` ничего не удаляет на диске (в отличие от `rclone sync`, которым не пользуемся). Если
+архив с тем же именем уже есть и отличается, rclone заменит его новым.
 
 ## Скачать прогон
 
 ```bash
-rclone copy gdrive:prefreeze-haiku-retell runs/prefreeze-haiku-retell --progress
+rclone copy gdrive:prefreeze-haiku-retell.tar.gz /tmp/ --progress
+```
+
+```bash
+tar -xzf /tmp/prefreeze-haiku-retell.tar.gz -C runs
 ```
 
 ## Правила
 
 - **Залить до мержа PR с результатами.** В README результатов, в таблице «Прогоны», — `run_id`;
   по нему прогон находится на диске.
-- **Папку на диске не переименовывать и не переписывать.** Если прогон пересчитан или
-  перенумерован скриптом из `scripts/` (например, `renumber_hedged.py`), залить новую версию
+- **Архив на диске не переименовывать.** Если прогон пересчитан или
+  перенумерован скриптом из `scripts/` (например, `renumber_hedged.py`), залить новый архив
   поверх и написать об этом в README результатов.
-- **Сломанные прогоны** (лимит ключа, падение провайдера) — в `gdrive:_broken/<run_id>`, а не
+- **Сломанные прогоны** (лимит ключа, падение провайдера) — в `gdrive:_broken/`, а не
   рядом с рабочими.
 - Прогоны на ветках, которые не идут в `main` (например, `main-for-harness`), — туда же, под своим
   `run_id`.
