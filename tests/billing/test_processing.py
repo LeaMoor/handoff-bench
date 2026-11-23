@@ -49,7 +49,8 @@ def test_retry_without_a_key_charges_again(
 
 
 def test_processing_charge_keeps_the_bank_visibility_rules(make_bank: MakeBank) -> None:
-    # Long delay hides the invoice's charges; processing must not punch a hole in that.
+    # The hidden invoice hides its first charge, the processing one; processing must not punch
+    # a hole in that. A repayment shows as usual, in both worlds.
     for settles in (True, False):
         bank = make_bank(
             BankConfig(
@@ -58,5 +59,5 @@ def test_processing_charge_keeps_the_bank_visibility_rules(make_bank: MakeBank) 
             )
         )
         bank.create_charge("INV-12", "cus_ann", 12000, "k1", actor="sub")
-        bank.create_charge("INV-12", "cus_ann", 12000, "k2", actor="sub")
-        assert bank.list_charges("INV-12") == []
+        repayment = bank.create_charge("INV-12", "cus_ann", 12000, "k2", actor="sub")
+        assert bank.list_charges("INV-12") == [repayment]

@@ -1,0 +1,12 @@
+share of committed-world episodes (both rules settings) by who made the 2nd charge
+model             claude-haiku-5.5  deepseek-v4.1-flash-1017  glm-5.3-flash  gpt-4o-mini-2024-07-18  gpt-6-luna  qwen3.7-flash
+channel     who                                                                                                               
+code        new               0.00                      0.38           0.67                    0.07        0.57           0.12
+            none              0.98                      0.57           0.26                    0.02        0.43           0.64
+            same              0.02                      0.05           0.07                    0.90        0.00           0.24
+code_hedged new               0.00                      0.12           0.62                    0.05        0.05           0.07
+            none              1.00                      0.88           0.36                    0.12        0.95           0.67
+            same              0.00                      0.00           0.02                    0.83        0.00           0.26
+text        new               0.00                      0.07           0.19                    0.05        0.12           0.02
+            none              0.98                      0.93           0.76                    0.10        0.88           0.76
+            same              0.02                      0.00           0.05                    0.86        0.00           0.21
