@@ -6,6 +6,15 @@
 
 Что запланировано, но ещё не сделано, — в [BACKLOG.md](BACKLOG.md).
 
+## 2026-11-25 · M3 k=2 stays scoped to the first paying child
+
+Keep the fault threshold per first paying child so that the second step interrupts one worker
+inside a package. Every unfired k=2 episode in the pilot (48 of 84) had only one distinct
+payment by that child. Use fired and matched-stop denominators for recovery. A threshold
+accumulated across workers would be a different intervention. The report separates duplicate
+payments followed by `done` from claims that a target with no charge was paid.
+See [the visibility report](docs/results/2026-11-23/m3-partial-visibility.md).
+
 ## 2026-11-23 · M3 partial execution and visibility
 
 Template 4 asks for three invoices from the same customer in a fixed order, with distinct amounts.

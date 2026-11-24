@@ -30,6 +30,7 @@ _WHOLE_BATCH = re.compile(
 _HEDGED = r"\b(?:if|whether|may|might|possibly)\b"
 _HEDGED_OR_NEGATED = re.compile(
     _HEDGED + r"|\b(?:unknown|unconfirmed|uncertain|unclear|unpaid|neither|none of)\b"
+    r"|\b(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t)\s+(?:\w+\s+){0,2}(?:paid|settled|charged)\b"
     r"|\bnot\s+(?:\w+\s+){0,2}(?:paid|settled|charged)\b"
     r"|\b(?:can't|cannot|could not|did not|unable to)\s+(?:verify|confirm|determine)\b",
     re.I,
