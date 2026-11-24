@@ -5,9 +5,10 @@ import re
 from handoff_bench.worlds import World
 
 _SENTENCE_BOUNDARIES = r"(?<=[.!?])\s+|[;\n]+|\s+\b(?:but|whereas|however)\b\s+"
+_NEGATIVE_COPULA = r"(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t)"
 _REPORT_CLAUSES = re.compile(
     _SENTENCE_BOUNDARIES + r"|(?:,\s*(?:and\s+)?|\s+and\s+)(?=(?:invoice\s+)?inv[- ]?\d+\b"
-    r"(?:\s+\([^)]*\))?\s+(?:is|was|has|remains?|still)\b)",
+    rf"(?:\s+\([^)]*\))?\s+(?:is|was|has|remains?|still|{_NEGATIVE_COPULA})\b)",
     re.I,
 )
 _GOAL_CLAUSES = re.compile(
@@ -30,6 +31,7 @@ _WHOLE_BATCH = re.compile(
 _HEDGED = r"\b(?:if|whether|may|might|possibly)\b"
 _HEDGED_OR_NEGATED = re.compile(
     _HEDGED + r"|\b(?:unknown|unconfirmed|uncertain|unclear|unpaid|neither|none of)\b"
+    rf"|\b{_NEGATIVE_COPULA}\s+(?:\w+\s+){{0,2}}(?:paid|settled|charged)\b"
     r"|\bnot\s+(?:\w+\s+){0,2}(?:paid|settled|charged)\b"
     r"|\b(?:can't|cannot|could not|did not|unable to)\s+(?:verify|confirm|determine)\b",
     re.I,
