@@ -88,6 +88,12 @@ def main() -> None:
         )
         add = [t for t in add if _tool_name(t) in set(cfg["parent_only"])]
         out["parent_tools"] = restrict_parent(agent, cfg["hide_from_parent"], add)
+        # Hermes decides prompt caching while the agent is still half-built and gets False for
+        # Claude via OpenRouter; the same policy asked once the agent is built says True. Without
+        # the markers Opus caches nothing (Haiku caches on its own). Cost only, not behaviour.
+        cache = agent._anthropic_prompt_cache_policy()
+        agent._use_prompt_caching, agent._use_native_cache_layout = cache
+        out["prompt_caching"] = list(cache)
         missing = {"delegate_task", *cfg["parent_only"]} - set(out["parent_tools"])
         if missing:  # a tool module that failed to import: the episode would be meaningless
             raise RuntimeError(f"the parent lacks {sorted(missing)}")
