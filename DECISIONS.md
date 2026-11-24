@@ -14,8 +14,14 @@ seeds 1–7. After a timeout the single agent is asked to open an internal revie
 its result in separate turns. In B1-dirty the second call returns a synthetic service error.
 Both variants expose the same read-only tool, with no access to the ledger. The bank, payment
 tools, key policy and grader are identical to B0. The extra calls depend on model compliance,
-which is measured from the traces. B1-clean changes the prompt and workflow alongside length,
-so the comparison does not identify a pure token-count effect.
+which is measured from the traces. Interpret the B0 comparison as the combined effect of the
+assigned workflow and length. In the dirty condition, the review service continues returning
+its error if the model retries retrieval. Same-snapshot controls use the first two seeds for
+the same templates, models and providers.
+
+The run produced 504 valid B1 episodes and 144 valid controls. In 36 matched committed-timeout
+combinations, duplicates were 10 for B0, 11 for delegated text, 15 for B1-clean, and 14 for
+B1-dirty. See [the B1 report](docs/results/2026-11-25/m1-b1.md).
 
 ## 2026-11-21 · «-dirty» только от изменённых файлов в git
 
