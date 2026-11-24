@@ -48,7 +48,7 @@ def main() -> None:
                 continue
             key = (row["model"], row["episode_id"])
             if key in seen:
-                raise ValueError(f"duplicate valid episode {key}")
+                continue  # Keep the first valid copy in sorted run order.
             seen.add(key)
             cell = int(row["cell"])
             ep = run / row["episode_id"]
@@ -121,7 +121,10 @@ def main() -> None:
             summary["retry_unnamed_attempts"] += not named and bool(attempts)
             summary["no_retry"] += not goals
             summary["retry_full_attempts"] += len(attempts) == len(targets)
-            paired[row["model"], row["seed"], 1 if cell in (78, 80) else 2][cell] = targets
+            variant = tuple(
+                row[k] for k in ("model", "provider", "world", "template", "seed", "repeat")
+            )
+            paired[variant, 1 if cell in (78, 80) else 2][cell] = targets
 
     print("\nBy cell (all valid rows, recovery denominators count only fired episodes)")
     for cell in range(77, 82):
@@ -140,9 +143,7 @@ def main() -> None:
     print("\nMatched stops (threshold | cell | pairs | repaid | paid at stop)")
     for threshold, cells in ((1, (78, 80)), (2, (79, 81))):
         matches = [
-            group
-            for (_, _, k), group in paired.items()
-            if k == threshold and set(group) == set(cells)
+            group for (_, k), group in paired.items() if k == threshold and set(group) == set(cells)
         ]
         for cell in cells:
             targets = [t for group in matches for t in group[cell] if t["paid_at_stop"]]
