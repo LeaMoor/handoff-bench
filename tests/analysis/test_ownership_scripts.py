@@ -54,6 +54,9 @@ def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
     run = tmp_path / "runs" / "pilot"
     episode = run / f"c{cell}-w1-t{template}-s1-r0"
     episode.mkdir(parents=True)
+    crash = run / "unrecorded-episode"
+    crash.mkdir()
+    (crash / "crash.txt").touch()
     world = generate(1, 1, 4)
     missing = world.targets[-1]
     (episode / "config.json").write_text(

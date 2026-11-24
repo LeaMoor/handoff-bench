@@ -41,7 +41,11 @@ def episode_world(config: dict[str, Any], episode: Path) -> World:
 rows = []
 for run in sys.argv[1:]:
     old = pd.read_csv(Path(run) / "results.csv").set_index("episode_id")
-    for ep in sorted(p for p in Path(run).iterdir() if p.is_dir()):
+    unrecorded = {p.name for p in Path(run).iterdir() if p.is_dir()} - set(old.index)
+    if unrecorded:
+        print(f"{run}: skipped {len(unrecorded)} directories without results")
+    for episode_id, recorded in old.sort_index().iterrows():
+        ep = Path(run) / episode_id
         config = json.loads((ep / "config.json").read_text())
         cfg = config["episode"]
         trace = json.loads((ep / "trace.json").read_text())
@@ -80,20 +84,21 @@ for run in sys.argv[1:]:
                 effects,
                 world=world,
                 finish_args=finish,
-                stop_reason=stop,
+                stop_reason=(
+                    recorded.stop_reason if cfg.get("block") == "partial_execution" else stop
+                ),
                 whole_batch=cfg.get("block") == "partial_execution",
                 final_text=final,
             )
         resp = [len(m["tool_calls"]) for m in tr["messages"] if m.get("tool_calls")]
         b = code_behaviour(calls, orchestrator="orchestrator", responses=resp, final_text=final)
-        o = old.loc[ep.name]
         row = dict(
             run=Path(run).name.replace("prefreeze-", ""),
             episode=ep.name,
             cell=cfg["cell"],
-            old_outcome=o.outcome,
+            old_outcome=recorded.outcome,
             new_outcome=g.outcome,
-            old_first=o.first_action,
+            old_first=recorded.first_action,
             new_first=b.first_action,
             new_decision=b.decision,
             uncertain=" | ".join((finish or {}).get("uncertain") or []),
