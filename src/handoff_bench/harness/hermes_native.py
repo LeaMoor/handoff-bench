@@ -312,6 +312,8 @@ async def run_hermes_native_episode(
                 await tools.serve(until=process)
                 stderr, timed_out = await process
     # Hermes' own live logs of its children are raw logs: kept; the rest of the home is not.
+    # Hermes building its dependencies under the episode's home: minutes and ~1 GB per episode.
+    built_deps = (home / "installs").exists()
     live = home / "cache" / "delegation" / "live"
     if live.is_dir():
         shutil.copytree(live, episode_dir / LIVE_DIR, dirs_exist_ok=True)
@@ -360,6 +362,7 @@ async def run_hermes_native_episode(
             "orchestrator": trace.model_dump(mode="json"),
             "subagents": [s.model_dump(mode="json") for s in subagents],
             "parent_tools": out.get("parent_tools"),
+            "hermes_built_deps": built_deps,
         },
     )
     return EpisodeResult(

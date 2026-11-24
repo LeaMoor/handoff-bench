@@ -111,6 +111,7 @@ async def test_parent_repeats_and_the_stand_key_decides(tmp_path, key, keys, cha
     assert "Timed out." in str(rows[0].result)  # the child's report, as Hermes returned it
     trace = json.loads((tmp_path / "ep" / "trace.json").read_text())
     assert [s["actor"] for s in trace["subagents"]] == ["sub-1", "sub-2"]
+    assert trace["hermes_built_deps"] is False  # it borrowed the user's own dependencies
     assert trace["orchestrator"]["messages"][1]["content"] == DEMO_WORLD.task
     # The report reached the parent through Hermes: its second request carries it.
     second = [s for s in fake.seen if s["role"] == "parent"][1]

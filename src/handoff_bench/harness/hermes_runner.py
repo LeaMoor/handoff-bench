@@ -46,14 +46,21 @@ def restrict_parent(agent: Any, hide: list[str], add: list[dict[str, Any]]) -> l
 def main() -> None:
     cfg = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     out_path = Path(cfg["out"])
-    os.environ["HERMES_HOME"] = cfg["home"]
     os.environ["HB_STAND_CONFIG"] = cfg["stand_config"]
     sys.path.insert(0, cfg["agent_root"])
     out: dict[str, Any] = {"failed": True}
     try:
         # First, as Hermes' launcher does: it puts Hermes' dependencies on the path. Without it
         # tool modules (delegate_tool among them) may fail to import and drop out silently.
+        # Under the user's own home: dependency state is per home, and under a fresh one
+        # Hermes builds a whole environment for it (minutes, hundreds of MB per episode).
+        if cfg.get("deps_home"):
+            os.environ["HERMES_HOME"] = cfg["deps_home"]
+        else:
+            os.environ.pop("HERMES_HOME", None)
         import hermes_bootstrap  # noqa: F401, I001 - must precede every Hermes import
+
+        os.environ["HERMES_HOME"] = cfg["home"]  # the episode's: config, plugin, sessions
 
         import model_tools
         from run_agent import AIAgent
