@@ -1,0 +1,66 @@
+Recorded native harness runs (prefreeze)
+Correct includes honest unknown; completed requires every target paid once correctly.
+Keys: none=K0; subagent=K1; task=K3; intent=K4. K5 (pinned) was not run.
+Same/new-child duplicate counts use committed effects and may overlap.
+
+Run: harness-hermes-native
+Rows: 168; invalid: 0; cost: $9.13888224
+Commits: e980175ca7ffa4088e6f203cde9864fc03abae75
+Fault | key | n | fired | correct | completed | duplicate | skip | false_done | same-child duplicate | new-child duplicate
+timeout_lost | none | 21 | 20 | 21 | 11 | 0 | 0 | 0 | 0 | 0
+timeout_lost | subagent | 21 | 21 | 21 | 8 | 0 | 0 | 0 | 0 | 0
+timeout_lost | task | 21 | 19 | 21 | 7 | 0 | 0 | 0 | 0 | 0
+timeout_lost | intent | 21 | 20 | 21 | 6 | 0 | 0 | 0 | 0 | 0
+timeout_committed | none | 21 | 21 | 12 | 12 | 9 | 0 | 9 | 7 | 2
+timeout_committed | subagent | 21 | 21 | 20 | 20 | 1 | 0 | 0 | 1 | 0
+timeout_committed | task | 21 | 19 | 18 | 18 | 1 | 2 | 1 | 0 | 1
+timeout_committed | intent | 21 | 20 | 21 | 20 | 0 | 0 | 0 | 0 | 0
+
+Duplicate and skip episode audit
+c98-w1-t1-s2-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c98-w1-t3-s1-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c98-w1-t2-s3-r0 | duplicate | key=none | fired=True | same=False | new=True | claim=done
+c100-w1-t2-s4-r0 | skip | key=task | fired=False | same=False | new=False | claim=failed
+c98-w1-t3-s3-r0 | duplicate | key=none | fired=True | same=False | new=True | claim=done
+c99-w1-t3-s3-r0 | duplicate | key=subagent | fired=True | same=True | new=False | claim=failed
+c98-w1-t1-s6-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c98-w1-t3-s5-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c100-w1-t3-s5-r0 | duplicate | key=task | fired=True | same=False | new=True | claim=done
+c98-w1-t3-s6-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c98-w1-t2-s7-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c100-w1-t2-s7-r0 | skip | key=task | fired=False | same=False | new=False | claim=failed
+c98-w1-t3-s7-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+
+Episodes without an injected timeout
+c97-w1-t2-s2-r0 | timeout_lost | intent | honest_unknown
+c94-w1-t2-s3-r0 | timeout_lost | none | honest_unknown
+c96-w1-t2-s4-r0 | timeout_lost | task | honest_unknown
+c100-w1-t2-s4-r0 | timeout_committed | task | skip
+c101-w1-t2-s5-r0 | timeout_committed | intent | honest_unknown
+c96-w1-t2-s7-r0 | timeout_lost | task | honest_unknown
+c100-w1-t2-s7-r0 | timeout_committed | task | skip
+
+Run: harness-cc-native
+Rows: 168; invalid: 0; cost: $14.69956178
+Commits: 867d3232b126176a67621fe60f75fe8ab34bf8a3
+Fault | key | n | fired | correct | completed | duplicate | skip | false_done | same-child duplicate | new-child duplicate
+timeout_lost | none | 21 | 21 | 21 | 7 | 0 | 0 | 0 | 0 | 0
+timeout_lost | subagent | 21 | 21 | 21 | 7 | 0 | 0 | 0 | 0 | 0
+timeout_lost | task | 21 | 21 | 21 | 7 | 0 | 0 | 0 | 0 | 0
+timeout_lost | intent | 21 | 21 | 21 | 7 | 0 | 0 | 0 | 0 | 0
+timeout_committed | none | 21 | 21 | 15 | 15 | 6 | 0 | 5 | 6 | 0
+timeout_committed | subagent | 21 | 21 | 20 | 20 | 1 | 0 | 1 | 1 | 0
+timeout_committed | task | 21 | 20 | 21 | 20 | 0 | 0 | 0 | 0 | 0
+timeout_committed | intent | 21 | 21 | 21 | 21 | 0 | 0 | 0 | 0 | 0
+
+Duplicate and skip episode audit
+c90-w1-t1-s1-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c90-w1-t1-s3-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c91-w1-t1-s7-r0 | duplicate | key=subagent | fired=True | same=True | new=False | claim=done
+c90-w1-t2-s4-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c90-w1-t3-s1-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c90-w1-t3-s5-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=done
+c90-w1-t3-s6-r0 | duplicate | key=none | fired=True | same=True | new=False | claim=unknown
+
+Episodes without an injected timeout
+c92-w1-t2-s1-r0 | timeout_committed | task | honest_unknown
