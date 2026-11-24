@@ -16,15 +16,19 @@ The benchmark code was `100945c7ba65a22d5f6448ed33523b475bdb37c2`. The batch run
 full model settings in each episode's `config.json`. The six configs request 12 episodes each,
 with a launch threshold of $0.25 per batch. In-flight episodes can finish after that threshold.
 
-[Haiku](../../../configs/prefreeze/haiku-ownership.yaml) · [GPT-4o-mini](../../../configs/prefreeze/4omini-ownership.yaml) · [Luna](../../../configs/prefreeze/luna-ownership.yaml) · [Qwen](../../../configs/prefreeze/qwen-ownership.yaml) · [GLM](../../../configs/prefreeze/glm-ownership.yaml) · [DeepSeek](../../../configs/prefreeze/ds-ownership.yaml)
+[Haiku](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/haiku-ownership.yaml) · [GPT-4o-mini](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/4omini-ownership.yaml) · [Luna](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/luna-ownership.yaml) · [Qwen](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/qwen-ownership.yaml) · [GLM](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/glm-ownership.yaml) · [DeepSeek](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/ds-ownership.yaml)
 
 OpenRouter rejected the original pinned DeepSeek route with HTTP 404 because the account policy
 excluded the provider. Those 12 rejected episodes cost $0 and are outside the paired results.
 We reran all three conditions for the same DeepSeek V4.1 Flash 1017 model with
 `deepinfra/fp8` pinned and the original account policy in effect. The committed DeepSeek config
-now points to that route.
+at the linked historical commit points to that route.
 
 ## Results
+
+[Generated tables](m8-tables.txt) use the raw run CSVs and the archived worklists. Rebuild
+the six-model pilot with `uv run python scripts/m8_tables.py runs/prefreeze-*-ownership-v2`.
+These rows use the historical template 2.
 
 All 72 paired episodes completed with valid bank traces, four per condition for each model.
 Both workers ran concurrently in every episode. OpenRouter reported **$0.07945848** in

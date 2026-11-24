@@ -29,16 +29,18 @@ def test_ownership_batch_uses_explicit_cell_numbers() -> None:
     config_path = Path(__file__).resolve().parents[2] / "configs/prefreeze/haiku-ownership.yaml"
     batch = BatchConfig.load(config_path)
 
-    assert batch.cells == [74, 75, 76]
+    assert batch.cells == [74, 75, 76, 94]
     assert [(cell.number, cell.ownership) for cell in CELLS.values() if cell.ownership] == [
         (74, "disjoint"),
         (75, "overlap"),
         (76, "d12"),
+        (94, "d12_owner"),
     ]
-    assert [(episode.cell, episode.ownership) for episode in batch.episodes("test")[:3]] == [
+    assert [(episode.cell, episode.ownership) for episode in batch.episodes("test")[:4]] == [
         (74, "disjoint"),
         (75, "overlap"),
         (76, "d12"),
+        (94, "d12_owner"),
     ]
 
 
@@ -126,6 +128,7 @@ class PairedModel:
         (76, False, False, ["sub-1"], ["sub-2"]),
         (76, True, False, ["sub-1"], ["sub-2"]),
         (76, False, True, [], ["sub-2"]),
+        (94, True, False, ["sub-1"], ["sub-2"]),
     ],
 )
 async def test_parallel_worklists(
@@ -136,8 +139,8 @@ async def test_parallel_worklists(
     shared_commits: list[str],
     denials: list[str],
 ) -> None:
-    config = EpisodeConfig(cell=cell, template=2, seed=1)
-    world = generate(1, 1, 2, ownership=True)
+    config = EpisodeConfig(cell=cell, template=4, seed=1)
+    world = generate(1, 1, 4)
     a, shared, b = world.targets
     model = PairedModel(
         world, disjoint=cell == 74, non_owner_first=non_owner_first, owner_skips=owner_skips
@@ -153,7 +156,7 @@ async def test_parallel_worklists(
         "work-b": [b] if cell == 74 else [shared, b],
     }
     assert settings["owners"] == (
-        {a: "work-a", shared: "work-a", b: "work-b"} if cell == 76 else None
+        {a: "work-a", shared: "work-a", b: "work-b"} if cell in (76, 94) else None
     )
     assert settings["bank"]["timeout"] is None
     assert trace["tasks"] == {"sub-1": "work-a", "sub-2": "work-b"}
@@ -202,12 +205,18 @@ async def test_parallel_worklists(
         c.outcome == "rejected" for c in shared_attempts if c.error_code == "ownership_denied"
     )
 
+    for call in shared_attempts:
+        if call.error_code == "ownership_denied":
+            assert ("owned by work-a; do not retry" in (call.error_message or "")) == (cell == 94)
+
     result = row.ownership
     assert result is not None
     assert result.concurrent_children
     assert result.records[shared].attempted_by_multiple_children == (cell != 74 and not owner_skips)
     assert result.records[shared].charge_count == len(shared_commits)
-    assert result.records[shared].charged_amount == world.focal.amount * len(shared_commits)
+    assert result.records[shared].charged_amount == next(
+        i.amount for i in world.invoices if i.invoice_id == shared
+    ) * len(shared_commits)
     assert result.skipped_invoices == ([shared] if owner_skips else [])
     assert result.duplicated_invoices == ([shared] if cell == 75 else [])
     assert result.off_target_charges == 0
@@ -232,8 +241,8 @@ async def test_parallel_worklists(
 
 
 async def test_child_failure_cancels_and_joins_sibling(tmp_path: Path) -> None:
-    config = EpisodeConfig(cell=76, template=2, seed=1)
-    world = generate(1, 1, 2, ownership=True)
+    config = EpisodeConfig(cell=76, template=4, seed=1)
+    world = generate(1, 1, 4)
     sibling_started = anyio.Event()
     sibling_stopped = anyio.Event()
     parent = FakeModel([[("delegate_parallel", {})]])

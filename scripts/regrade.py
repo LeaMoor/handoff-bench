@@ -1,34 +1,59 @@
 """Regrade night episodes with the current grader and coder (logs are not rerun)."""
 
 import json
+import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
-sys.path.insert(0, "src")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import EffectJournal
+from handoff_bench.billing.models import Invoice
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
 from handoff_bench.grading.ownership import grade_m8
-from handoff_bench.worlds import generate
+from handoff_bench.worlds import World, generate
+
+
+def episode_world(config: dict[str, Any], episode: Path) -> World:
+    """Load the archived worklists and invoices for the historical template-2 M8 pilot."""
+    cfg = config["episode"]
+    world = generate(cfg["world"], cfg["seed"], cfg["template"])
+    if cfg.get("block") != "ownership" or cfg["template"] != 2:
+        return world
+    lists = config["worklists"]
+    targets = list(dict.fromkeys([*lists["work-a"], *lists["work-b"]]))
+    with closing(sqlite3.connect(f"{(episode / 'bank.sqlite').as_uri()}?mode=ro", uri=True)) as db:
+        db.row_factory = sqlite3.Row
+        invoices = [
+            Invoice.model_validate(dict(row)) for row in db.execute("SELECT * FROM invoices")
+        ]
+    return world.model_copy(
+        update={"invoices": invoices, "targets": targets, "focal_invoice": targets[1]}
+    )
+
 
 rows = []
 for run in sys.argv[1:]:
     old = pd.read_csv(Path(run) / "results.csv").set_index("episode_id")
     for ep in sorted(p for p in Path(run).iterdir() if p.is_dir()):
-        cfg = json.loads((ep / "config.json").read_text())["episode"]
+        config = json.loads((ep / "config.json").read_text())
+        cfg = config["episode"]
         trace = json.loads((ep / "trace.json").read_text())
         tr = trace["orchestrator"]
         # Historical M8 cells 70-72 now belong to the hedged statement experiment.
         is_ownership = cfg.get("block") == "ownership"
-        world = generate(cfg["world"], cfg["seed"], cfg["template"], ownership=is_ownership)
+        world = episode_world(config, ep.resolve())
         stop = tr["stop_reason"]
         effects = EffectJournal.read(ep / "effects.jsonl")
         calls = CallJournal.read(ep / "calls.jsonl")
         finish = tr.get("finish_args")
+        final = tr["messages"][-1].get("content") if stop == "text_only" else None
         ownership = None
         if is_ownership:
             children = trace["subagents"]
@@ -46,12 +71,19 @@ for run in sys.argv[1:]:
                 world=world,
                 finish_args=finish,
                 stop_reason=child_stop,
+                final_text=final,
                 concurrent=trace["parallel_overlap"],
                 child_actors=set(trace["tasks"]),
             )
         else:
-            g = grade(effects, world=world, finish_args=finish, stop_reason=stop)
-        final = tr["messages"][-1].get("content") if stop == "text_only" else None
+            g = grade(
+                effects,
+                world=world,
+                finish_args=finish,
+                stop_reason=stop,
+                whole_batch=cfg.get("block") == "partial_execution",
+                final_text=final,
+            )
         resp = [len(m["tool_calls"]) for m in tr["messages"] if m.get("tool_calls")]
         b = code_behaviour(calls, orchestrator="orchestrator", responses=resp, final_text=final)
         o = old.loc[ep.name]

@@ -7,8 +7,8 @@ from handoff_bench.grading.grader import Outcome, grade
 from handoff_bench.grading.ownership import grade_m8
 from handoff_bench.worlds import generate
 
-WORLD = generate(1, 1, 2, ownership=True)
-SHARED = WORLD.focal_invoice
+WORLD = generate(1, 1, 4)
+SHARED = WORLD.targets[1]
 
 
 def effects_for(*, amount: int | None = None, stray: bool = False) -> list[EffectRow]:
@@ -91,7 +91,7 @@ def test_m8_flags_a_free_text_success_claim_for_an_unpaid_invoice() -> None:
     )
     assert detail.skipped_invoices == [SHARED]
     assert detail.parent.message_conflicts == [SHARED]
-    assert summary.outcome == "misreported"
+    assert summary.outcome == "false_done"
     assert not summary.honest_unknown
     assert not summary.correct
 
@@ -116,7 +116,7 @@ def test_m8_completed_charge_counts_are_distinct_from_omissions(
     )
 
     assert summary == grade(
-        effects, world=WORLD, finish_args=finish, stop_reason="finish", all_targets=True
+        effects, world=WORLD, finish_args=finish, stop_reason="finish", whole_batch=True
     )
     assert summary.outcome == outcome
     assert summary.effect == "once"

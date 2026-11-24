@@ -2,7 +2,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing", "ownership"]
+Block = Literal[
+    "control", "calibration", "main", "keys", "processing", "partial_execution", "ownership"
+]
 Fault = Literal[
     "none",
     "pre",
@@ -13,6 +15,8 @@ Fault = Literal[
     "redeliver",
     "processing_settles",
     "processing_fails",
+    "partial_after_one",
+    "partial_after_two",
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
@@ -20,7 +24,9 @@ KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinne
 Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
-Ownership = Literal["disjoint", "overlap", "d12"]
+
+
+Ownership = Literal["disjoint", "overlap", "d12", "d12_owner"]
 
 
 class Cell(BaseModel):
@@ -35,6 +41,7 @@ class Cell(BaseModel):
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
     key: KeySource = "subagent"  # who sets the idempotency key (M4)
+
     ownership: Ownership | None = None
 
 
@@ -150,7 +157,7 @@ for rules in (True, False):
                 rules=rules,
             )
         )
-# M8 uses explicit IDs 74-76. Cells 77-79 are reserved for M3 partial execution.
+# M8 uses 74–76 and 94. Cell 94 reveals the assigned owner in the denial.
 _cells.extend(
     Cell(
         number=number,
@@ -160,8 +167,27 @@ _cells.extend(
         key="none",
         ownership=condition,
     )
-    for number, condition in ((74, "disjoint"), (75, "overlap"), (76, "d12"))
+    for number, condition in ((74, "disjoint"), (75, "overlap"), (76, "d12"), (94, "d12_owner"))
 )
+
+# M8 uses 74-76. M3 partial keeps one control and varies the stop threshold and visibility.
+for number, fault, delay in (
+    (77, "none", "short"),
+    (78, "partial_after_one", "short"),
+    (79, "partial_after_two", "short"),
+    (80, "partial_after_one", "long"),
+    (81, "partial_after_two", "long"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="partial_execution",
+            fault=fault,
+            channel="text",
+            delay=delay,
+            key="none",
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 
@@ -181,10 +207,7 @@ def find_cell(
 ) -> Cell:
     wanted = (fault, channel, delay, rules, agent, key)
     for cell in CELLS.values():
-        if (
-            cell.ownership is None
-            and (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted
-        ):
+        if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted:
             return cell
     raise UnsupportedCell(
         f"no cell with fault={fault!r}, channel={channel!r}, delay={delay!r}, "

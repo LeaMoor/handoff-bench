@@ -37,15 +37,24 @@ from handoff_bench.cells import (
     Ownership,
 )
 from handoff_bench.channels.render import RENDERERS
+from handoff_bench.faults.partial import PartialExecution
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
 from handoff_bench.ownership import prepare_ownership
-from handoff_bench.worlds import World
-from handoff_bench.worlds.generator import OWNERSHIP_TEMPLATE
+from handoff_bench.worlds import BATCH_TEMPLATE, World
 
 ORCHESTRATOR = "orchestrator"
+
+
+def validate_cell_template(cell: Cell, template: int) -> None:
+    """Keep the three-invoice task paired with its batch grader."""
+    batch = cell.block in ("partial_execution", "ownership")
+    if batch and template != BATCH_TEMPLATE:
+        raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
+    if not batch and template == BATCH_TEMPLATE:
+        raise ValueError(f"template {BATCH_TEMPLATE} requires a partial-execution or M8 cell")
 
 
 class EpisodeConfig(BaseModel):
@@ -70,8 +79,6 @@ class EpisodeConfig(BaseModel):
             raise ValueError(f"unknown cell {data.get('cell')}")
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
-        if cell.ownership is not None and data.get("template") != OWNERSHIP_TEMPLATE:
-            raise ValueError(f"M8 requires template {OWNERSHIP_TEMPLATE}")
         data = dict(data)
         for name in ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership"):
             if name in data and data.pop(name) != getattr(cell, name):
@@ -80,6 +87,11 @@ class EpisodeConfig(BaseModel):
         if "agents" not in data:
             data["agents"] = _agents_for(cell)
         return data
+
+    @model_validator(mode="after")
+    def _check_template(self) -> "EpisodeConfig":
+        validate_cell_template(CELLS[self.cell], self.template)
+        return self
 
     @computed_field
     @property
@@ -136,7 +148,11 @@ def _agents_for(cell: Cell) -> AgentsConfig:
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
         )
-    tools = ORCH_TOOLS_MAIN if cell.block in ("main", "processing") else ORCH_TOOLS_CALIBRATION
+    tools = (
+        ORCH_TOOLS_MAIN
+        if cell.block in ("main", "processing", "partial_execution")
+        else ORCH_TOOLS_CALIBRATION
+    )
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
@@ -174,15 +190,18 @@ async def run_episode(
     model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
-    fault = with_delay(FAULTS[config.fault](world), config.delay, world)
     agents = config.agents
     episode_dir.mkdir(parents=True, exist_ok=True)
+    effects = EffectJournal(episode_dir / "effects.jsonl")
+    fault = with_delay(FAULTS[config.fault](world, effects), config.delay, world)
     tasks: dict[str, str] = {}
     ownership = prepare_ownership(world, CELLS[config.cell], tasks)
     _write_json(
         episode_dir / "config.json",
         {
-            "episode": config.model_dump(mode="json"),
+            "episode": config.model_dump(
+                mode="json", exclude={"ownership"} if not ownership.goals else None
+            ),
             "bank": fault.bank.model_dump(mode="json"),
             **ownership.settings,
         },
@@ -190,11 +209,13 @@ async def run_episode(
     service = BillingService(
         episode_id=config.episode_id,
         config=fault.bank,
-        journal=EffectJournal(episode_dir / "effects.jsonl"),
+        journal=effects,
         db_path=episode_dir / "bank.sqlite",
         id_seed=config.seed,
     )
     service.add_invoices(world.invoices)
+    if config.delay == "long" and isinstance(fault.injector, PartialExecution):
+        fault.injector.hide_committed = service.hide_charges
 
     parallel: ParallelDelegation | None = None
     with service, running_server(service) as url:
@@ -235,7 +256,9 @@ async def run_episode(
                 tools=gateway.openai_tools(list(agents.orchestrator_tools)),
                 finish_tools=frozenset({"finish"}),
             )
-            trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
+            trace = await run_agent(
+                spec, ownership.task or world.task, model=model, gateway=gateway, log=log
+            )
 
     subagents = delegation.subagents
     trace_data = {
@@ -244,6 +267,8 @@ async def run_episode(
     }
     if parallel is not None:
         trace_data.update(tasks=tasks, parallel_overlap=parallel.overlap)
+    if isinstance(fault.injector, PartialExecution) and fault.injector.stop is not None:
+        trace_data["partial_stop"] = fault.injector.stop.model_dump(mode="json")
     _write_json(episode_dir / "trace.json", trace_data)
     traces = [trace, *subagents]
     usage = sum((t.usage for t in traces), Usage())

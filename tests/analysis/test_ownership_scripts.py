@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from handoff_bench.billing import EffectJournal
+from handoff_bench.billing import BankConfig, BillingService, EffectJournal
 from handoff_bench.billing.models import EffectRow
 from handoff_bench.worlds import generate
 
@@ -47,14 +47,14 @@ def test_grid_ignores_ownership_rows_with_hedged_cell_ids(tmp_path: Path) -> Non
     assert result.stdout == expected.stdout
 
 
-@pytest.mark.parametrize("cell", [70, 74])
+@pytest.mark.parametrize(("cell", "template"), [(70, 2), (74, 4)])
 def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
-    tmp_path: Path, cell: int
+    tmp_path: Path, cell: int, template: int
 ) -> None:
     run = tmp_path / "runs" / "pilot"
-    episode = run / f"c{cell}-w1-t2-s1-r0"
+    episode = run / f"c{cell}-w1-t{template}-s1-r0"
     episode.mkdir(parents=True)
-    world = generate(1, 1, 2, ownership=True)
+    world = generate(1, 1, 4)
     missing = world.targets[-1]
     (episode / "config.json").write_text(
         json.dumps(
@@ -64,8 +64,9 @@ def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
                     "block": "ownership",
                     "world": 1,
                     "seed": 1,
-                    "template": 2,
+                    "template": template,
                 },
+                "worklists": {"work-a": world.targets[:2], "work-b": world.targets[1:]},
             }
         )
     )
@@ -85,6 +86,14 @@ def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
     )
     (episode / "calls.jsonl").touch()
     journal = EffectJournal(episode / "effects.jsonl")
+    if template == 2:
+        with BillingService(
+            episode_id=episode.name,
+            config=BankConfig(),
+            journal=journal,
+            db_path=episode / "bank.sqlite",
+        ) as bank:
+            bank.add_invoices(world.invoices)
     for step, invoice in enumerate(world.invoices[:2], start=1):
         journal.write(
             EffectRow(
@@ -116,5 +125,5 @@ def test_regrade_uses_the_m8_world_for_historical_and_current_cells(
     assert row["new_outcome"] == "false_done"
     assert row["effect"] == "skip"
     assert result["skipped_invoices"] == [missing]
-    assert result["records"][world.focal_invoice]["expected_amount"] == world.focal.amount
+    assert result["records"][missing]["expected_amount"] == world.focal.amount
     assert result["off_target_charges"] == 0

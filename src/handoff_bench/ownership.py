@@ -13,7 +13,7 @@ WORK_A, WORK_B = "work-a", "work-b"
 
 
 def _worklists_for(world: World, condition: Ownership) -> dict[str, tuple[str, ...]]:
-    """Assign two payments to A and one or two to B, with the focal invoice shared."""
+    """Assign two payments to A and one or two to B, with the middle invoice shared."""
     first, shared, last = world.targets
     return {WORK_A: (first, shared), WORK_B: (last,) if condition == "disjoint" else (shared, last)}
 
@@ -32,9 +32,12 @@ def _goals_for(world: World, worklists: Mapping[str, tuple[str, ...]]) -> dict[s
 class OwnershipHook(CallHook):
     """Allow charges only for invoices owned by the caller's task. Reads stay available."""
 
-    def __init__(self, owners: Mapping[str, str], tasks: Mapping[str, str]) -> None:
+    def __init__(
+        self, owners: Mapping[str, str], tasks: Mapping[str, str], *, reveal_owner: bool = False
+    ) -> None:
         self.owners = owners
         self.tasks = tasks
+        self.reveal_owner = reveal_owner
 
     async def before_call(self, call: PendingCall) -> ToolResult | None:
         if call.tool != "create_charge":
@@ -43,10 +46,13 @@ class OwnershipHook(CallHook):
         owner = self.owners.get(invoice) if isinstance(invoice, str) else None
         if owner is not None and self.tasks.get(call.actor) == owner:
             return None
+        message = f"Your task is not authorized to charge invoice {invoice!r}."
+        if self.reveal_owner and owner is not None:
+            message += f" Invoice is owned by {owner}; do not retry."
         return ToolResult(
             outcome="rejected",
             error_code="ownership_denied",
-            error_message=f"Your task is not authorized to charge invoice {invoice!r}.",
+            error_message=message,
         )
 
 
@@ -54,6 +60,7 @@ class OwnershipHook(CallHook):
 class OwnershipSetup:
     """Episode inputs specific to M8."""
 
+    task: str | None = None
     goals: dict[str, str] = field(default_factory=dict)
     settings: dict[str, Any] = field(default_factory=dict)
     hooks: tuple[CallHook, ...] = ()
@@ -67,11 +74,15 @@ def prepare_ownership(world: World, cell: Cell, tasks: Mapping[str, str]) -> Own
     worklists = _worklists_for(world, cell.ownership)
     owners = None
     hooks = ()
-    if cell.ownership == "d12":
+    if cell.ownership in ("d12", "d12_owner"):
         # A owns the shared invoice in both possible execution orders.
         owners = {inv: task for task, invoices in reversed(worklists.items()) for inv in invoices}
-        hooks = (OwnershipHook(owners, tasks),)
+        hooks = (OwnershipHook(owners, tasks, reveal_owner=cell.ownership == "d12_owner"),)
     return OwnershipSetup(
+        task=(
+            f"Pay invoices {', '.join(world.targets)} for {world.customer_name} "
+            f"({world.customer_id}) exactly once each. Report the outcome for each invoice."
+        ),
         goals=_goals_for(world, worklists),
         settings={"worklists": worklists, "owners": owners},
         hooks=hooks,

@@ -109,7 +109,9 @@ def _main(df: pd.DataFrame) -> pd.DataFrame:
     """Valid main-block episodes whose fault fired; a timeout that did not fire is a control run
     in disguise (counted in `fault_not_fired`)."""
     m = valid(df)
-    return m[m["cell"].isin(MAIN_CELLS) & m["fault_fired"]]
+    # Historical pilot cells 70-72 were reused for hedged statements. The CSV records
+    # the experiment block that actually ran.
+    return m[m["block"].eq("main") & m["fault_fired"]]
 
 
 def main_by_channel(

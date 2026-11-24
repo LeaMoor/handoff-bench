@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from handoff_bench.agents.call_journal import CallRow
 from handoff_bench.agents.tools import StopReason
 from handoff_bench.billing.models import EffectRow
-from handoff_bench.grading.grader import Claim, Grade, grade, mentions
+from handoff_bench.grading.grader import Claim, Grade, grade
+from handoff_bench.grading.invoice_text import mentions
 from handoff_bench.worlds import World
 
 _SENTENCE_BREAK = re.compile(r"[.!?](?=\s|$)|\n+")
@@ -185,10 +186,16 @@ def grade_m8(
     stop_reason: StopReason,
     concurrent: bool,
     child_actors: set[str],
+    final_text: str | None = None,
 ) -> tuple[Grade, OwnershipGrade]:
     """Grade the M8 bank outcome and report identically for live and replayed episodes."""
     summary = grade(
-        effects, world=world, finish_args=finish_args, stop_reason=stop_reason, all_targets=True
+        effects,
+        world=world,
+        finish_args=finish_args,
+        stop_reason=stop_reason,
+        whole_batch=True,
+        final_text=final_text,
     )
     detail = grade_ownership(
         effects,
