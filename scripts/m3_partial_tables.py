@@ -126,10 +126,33 @@ def main() -> None:
             )
             paired[variant, 1 if cell in (78, 80) else 2][cell] = targets
 
+    fields = (
+        "valid",
+        "fired",
+        "not_fired",
+        "first_child_zero",
+        "first_child_one",
+        "exact",
+        "paid_at_stop",
+        "repaid",
+        "unpaid_at_stop",
+        "left_unpaid",
+        "false_done",
+        "duplicate_done",
+        "claims_unpaid",
+        "both_flags",
+        "wrong_amount",
+        "off_target",
+        "retry_full_named",
+        "retry_partial_named",
+        "retry_unnamed_attempts",
+        "no_retry",
+        "retry_full_attempts",
+    )
     print("\nBy cell (all valid rows, recovery denominators count only fired episodes)")
     for cell in range(77, 82):
         totals = sum((stats for (_, c), stats in counts.items() if c == cell), Counter())
-        print(cell, *(f"{key}={value}" for key, value in sorted(totals.items()) if key != "spend"))
+        print(cell, *(f"{key}={totals[key]}" for key in fields))
     print("\nBy model (valid | visible fired/repaid/paid | hidden fired/repaid/paid | spend)")
     for model in sorted({model for model, _ in counts}):
         visible = counts[model, 78] + counts[model, 79]

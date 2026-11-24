@@ -16,11 +16,14 @@ from handoff_bench.worlds import generate
 rows = []
 for run in sys.argv[1:]:
     old = pd.read_csv(Path(run) / "results.csv").set_index("episode_id")
-    for ep in sorted(p for p in Path(run).iterdir() if p.is_dir()):
+    unrecorded = {p.name for p in Path(run).iterdir() if p.is_dir()} - set(old.index)
+    if unrecorded:
+        print(f"{run}: skipped {len(unrecorded)} directories without results")
+    for episode_id, recorded in old.sort_index().iterrows():
+        ep = Path(run) / episode_id
         cfg = json.loads((ep / "config.json").read_text())["episode"]
         tr = json.loads((ep / "trace.json").read_text())["orchestrator"]
         world = generate(cfg["world"], cfg["seed"], cfg["template"])
-        o = old.loc[ep.name]
         stop = tr["stop_reason"]
         whole_batch = cfg.get("block") == "partial_execution"
         final = tr["messages"][-1].get("content") if stop == "text_only" else None
@@ -28,7 +31,7 @@ for run in sys.argv[1:]:
             EffectJournal.read(ep / "effects.jsonl"),
             world=world,
             finish_args=tr.get("finish_args"),
-            stop_reason=o.stop_reason if whole_batch else stop,
+            stop_reason=recorded.stop_reason if whole_batch else stop,
             whole_batch=whole_batch,
             final_text=final,
         )
@@ -44,9 +47,9 @@ for run in sys.argv[1:]:
                 run=Path(run).name.replace("prefreeze-", ""),
                 episode=ep.name,
                 cell=cfg["cell"],
-                old_outcome=o.outcome,
+                old_outcome=recorded.outcome,
                 new_outcome=g.outcome,
-                old_first=o.first_action,
+                old_first=recorded.first_action,
                 new_first=b.first_action,
                 new_decision=b.decision,
                 uncertain=" | ".join((tr.get("finish_args") or {}).get("uncertain") or []),
