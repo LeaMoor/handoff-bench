@@ -50,6 +50,8 @@ schemas, bank behaviour, faults, worlds or grading of existing ones.
 | 77–81 | M3 partial execution, visible and hidden charges | #20 |
 | 82–85 | M2 retell channel | #21 |
 | 86–93 | Claude Code's own subagents (variant B) | `main-for-harness`, not merged into `main` |
+| 86–91 | M3 declined capture | #24, separate from the harness branch |
+| 95–98 | M1 B1-clean and B1-dirty | M1 B1 |
 
 Take the next free number after the highest one here. Update the table when a PR merges or closes.
 

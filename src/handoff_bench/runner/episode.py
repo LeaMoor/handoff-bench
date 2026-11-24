@@ -21,6 +21,7 @@ from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
 from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
+from handoff_bench.agents.single_workflow import REVIEW_PROMPT, REVIEW_TOOL, register_review
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
@@ -108,6 +109,11 @@ class EpisodeConfig(BaseModel):
 
 
 def _agents_for(cell: Cell) -> AgentsConfig:
+    if cell.block == "single_workflow":
+        return AgentsConfig(
+            orchestrator_tools=(*SINGLE_TOOLS, REVIEW_TOOL),
+            orchestrator_prompt=SINGLE_SYSTEM_PROMPT + REVIEW_PROMPT,
+        )
     if cell.agent == "single":
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
@@ -187,6 +193,8 @@ async def run_episode(
                 tasks=tasks,
                 hide_key=config.key == "none",
             )
+            if config.block == "single_workflow":
+                register_review(gateway, dirty=config.cell in (97, 98))
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,

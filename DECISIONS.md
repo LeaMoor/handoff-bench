@@ -6,6 +6,17 @@
 
 Что запланировано, но ещё не сделано, — в [BACKLOG.md](BACKLOG.md).
 
+## 2026-11-25 · M1 single-agent workflow controls
+
+B1-clean (95–96) and B1-dirty (97–98) pair the lost and committed timeout worlds from B0
+(30–31), with delegated text cells 24–25 as the delegation comparison. Use templates 1–3 and
+seeds 1–7. After a timeout the single agent is asked to open an internal review and retrieve
+its result in separate turns. In B1-dirty the second call returns a synthetic service error.
+Both variants expose the same read-only tool, with no access to the ledger. The bank, payment
+tools, key policy and grader are identical to B0. The extra calls depend on model compliance,
+which is measured from the traces. B1-clean changes the prompt and workflow alongside length,
+so the comparison does not identify a pure token-count effect.
+
 ## 2026-11-21 · «-dirty» только от изменённых файлов в git
 
 **Что увидели.** Стенд помечал коммит прогона `-dirty` по `git status --porcelain`, а он видит и
