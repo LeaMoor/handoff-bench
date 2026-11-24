@@ -1,6 +1,6 @@
 # M8 paired Haiku pilot
 
-The pilot used world 1, template 2, seeds 1–4, and historical cell IDs 70–72. The results tables retain those historical IDs. Raw episode directories and IDs retain their `c70-`, `c71-`, and `c72-` prefixes. The current [Haiku batch config](../../../configs/prefreeze/haiku-ownership.yaml) uses the corresponding cells 74–76. For a given seed, all three conditions used the same three target invoices, amounts, and distractors. The user asked for exactly one payment per invoice. Both children ran through the same text reporting channel with normal bank visibility, bank and report faults off, and K0. K0 hides the idempotency key field and strips any key sent by a model.
+The pilot used world 1, template 2, seeds 1–4, and historical cell IDs 70–72. The results tables retain those historical IDs. Raw episode directories and IDs retain their `c70-`, `c71-`, and `c72-` prefixes. The [six-model pilot config](https://github.com/LeaMoor/handoff-bench/blob/dbedd9b5aa8bd24a4d38754df58bad373b723fd7/configs/prefreeze/haiku-ownership.yaml) uses the corresponding cells 74–76 on historical template 2. For a given seed, all three conditions used the same three target invoices, amounts, and distractors. The user asked for exactly one payment per invoice. Both children ran through the same text reporting channel with normal bank visibility, bank and report faults off, and K0. K0 hides the idempotency key field and strips any key sent by a model.
 
 | Historical pilot cell | Current M8 cell | Condition | Worklist A | Worklist B |
 | --- | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ The pilot used world 1, template 2, seeds 1–4, and historical cell IDs 70–72
 
 D12 gives A write permission for invoices 1 and 2 and B write permission for invoice 3. The harness reserves both task and actor IDs before starting either child. The gateway rejects any charge without a manifest entry or from a different task, including charges for distractors. Both children can read bank records. The two overlap conditions use identical prompts and worklists. In the D12 condition the model learns about the restriction when its tool call is denied.
 
-To run the same conditions with the current cell IDs, use `uv run stand batch configs/prefreeze/haiku-ownership.yaml`. Use a fresh output directory with `--runs-dir` when the configured run ID already exists. OpenRouter reads its key from `OPENROUTER_API_KEY`. Raw traces for the original cells 70–72 are in the ignored `runs/prefreeze-haiku-ownership/` directory. The per-episode `result.json` and the JSON-valued `ownership` column of `results.csv` record attempts, denials, committed amounts and actors, and the parent report audit. The worklists and manifest are in each `config.json`.
+For the archived template-2 design, use the linked config at its historical commit. The current config reruns cells 74–76 and adds cell 94 on template 4. OpenRouter reads its key from `OPENROUTER_API_KEY`. Raw traces for the original cells 70–72 are in the ignored `runs/prefreeze-haiku-ownership/` directory. The per-episode `result.json` and the JSON-valued `ownership` column of `results.csv` record attempts, denials, committed amounts and actors, and the parent report audit. The worklists and manifest are in each `config.json`.
 
 ## Live results
 
