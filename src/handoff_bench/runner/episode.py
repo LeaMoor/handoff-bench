@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 from handoff_bench.agents.call_journal import CallJournal, CallRow, is_processing
 from handoff_bench.agents.delegation import (
+    HERMES_NATIVE_ORCHESTRATOR_PROMPT,
     NATIVE_ORCH_TOOLS,
     NATIVE_ORCHESTRATOR_PROMPT,
     NATIVE_SUB_TOOLS,
@@ -33,6 +34,7 @@ from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.harness.claude_code import HarnessSettings
+from handoff_bench.harness.hermes import HermesSettings
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
 from handoff_bench.worlds import World
@@ -61,8 +63,8 @@ class EpisodeConfig(BaseModel):
     repeat: int = 0
     agents: AgentsConfig
     model: ModelSettings | None = None
-    # None: our own loop on `model`; otherwise a harness (Claude Code) is the orchestrator.
-    orchestrator: HarnessSettings | None = None
+    # None: our own loop on `model`; otherwise an external harness is the orchestrator.
+    orchestrator: HarnessSettings | HermesSettings | None = None
     commit: str = "unknown"
 
     @model_validator(mode="before")
@@ -123,6 +125,15 @@ class EpisodeConfig(BaseModel):
 
 
 def _agents_for(cell: Cell) -> AgentsConfig:
+    if cell.block == "hermes_native":
+        # Hermes builds its children's prompt itself; `subagent_prompt` is not sent.
+        return AgentsConfig(
+            orchestrator_tools=NATIVE_ORCH_TOOLS,
+            orchestrator_prompt=HERMES_NATIVE_ORCHESTRATOR_PROMPT,
+            subagent_tools=NATIVE_SUB_TOOLS,
+            subagent_prompt="",
+            subagent_rules="",
+        )
     if cell.block == "native":
         return AgentsConfig(
             orchestrator_tools=NATIVE_ORCH_TOOLS,

@@ -11,6 +11,8 @@ from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
 from handoff_bench.harness.claude_code import ClaudeCodeOrchestrator
+from handoff_bench.harness.hermes import HermesOrchestrator, HermesSettings
+from handoff_bench.harness.hermes_native import run_hermes_native_episode
 from handoff_bench.harness.native import run_native_episode
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
@@ -19,7 +21,7 @@ from handoff_bench.worlds import generate
 
 
 def check_supported(cell: Cell) -> None:
-    if cell.block == "native":  # the harness's own subagents: no renderer of ours
+    if cell.block in ("native", "hermes_native"):  # the harness's own subagents: no renderer
         return
     if cell.fault not in FAULTS or cell.channel not in RENDERERS:
         raise UnsupportedCell(
@@ -44,8 +46,15 @@ async def run_one(
     episode_dir = run_dir / config.episode_id
     if config.block == "native":
         result = await run_native_episode(world, config, episode_dir=episode_dir)
+    elif config.block == "hermes_native":
+        result = await run_hermes_native_episode(world, config, episode_dir=episode_dir)
     else:
-        harness = ClaudeCodeOrchestrator(config.orchestrator) if config.orchestrator else None
+        if isinstance(config.orchestrator, HermesSettings):
+            harness = HermesOrchestrator(config.orchestrator)
+        elif config.orchestrator:
+            harness = ClaudeCodeOrchestrator(config.orchestrator)
+        else:
+            harness = None
         result = await run_episode(
             model, world, config, episode_dir=episode_dir, orchestrator=harness
         )

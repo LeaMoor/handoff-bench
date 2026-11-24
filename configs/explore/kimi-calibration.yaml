@@ -1,0 +1,23 @@
+model:
+  model: moonshotai/kimi-k3.1-pro
+  provider: moonshotai
+run_id: explore-kimi-calibration
+cells:
+- 2
+- 3
+- 4
+- 5
+- 32
+- 33
+- 34
+- 35
+templates:
+- 1
+- 2
+- 3
+seeds:
+- 1
+- 2
+parallel: 4
+budget_usd: 3.5
+allow_dirty: true

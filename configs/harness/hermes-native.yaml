@@ -1,0 +1,20 @@
+# Hermes' own subagents (cells 94-101), the counterpart of cc-native (86-93): Opus parent,
+# Haiku children, both via OpenRouter. A timeout with the charge invisible to checks, in the two
+# worlds; the plugin sets the key at the stand: none / the subagent's own / per subagent / per payment.
+# 21 episodes per cell. Set budget_usd from the smoke's cost per episode before running.
+# `model` is unused here (no subagent of ours).
+run_id: harness-hermes-native
+orchestrator:
+  harness: hermes
+  model: anthropic/claude-opus-5.5
+  provider: openrouter
+  subagent_model: anthropic/claude-haiku-5.5
+  subagent_provider: openrouter
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [94, 95, 96, 97, 98, 99, 100, 101]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 1
+budget_usd: 25

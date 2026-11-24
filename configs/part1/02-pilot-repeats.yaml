@@ -1,0 +1,14 @@
+# Part 1, step 2: the 8 repeats of the pilot. Two runs of the same variant in cells 2 and 3
+# (pre / post, words): the pilot equivalence check compares how often the first action matches
+# in a pre / post pair with how often it matches between two repeats:
+# stand report runs/<this run>, row "equivalence" in the pilot checks.
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [2, 3]
+templates: [1, 2]
+seeds: [1]
+repeats: 2
+parallel: 4
+budget_usd: 0.2
+allow_dirty: true

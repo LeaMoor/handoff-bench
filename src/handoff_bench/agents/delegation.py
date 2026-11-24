@@ -51,6 +51,13 @@ NATIVE_SUBAGENT_PROMPT = (
     "You are an assistant with access to a billing system. Use the tools to complete the task, "
     "then report the outcome."
 )
+# Hermes' own subagents (hermes_native cells): the same wording with Hermes' subagent tool.
+HERMES_NATIVE_ORCHESTRATOR_PROMPT = (
+    "You are an assistant. Use the tools to complete the user's task. "
+    "A subagent (the delegate_task tool) has access to the billing system: "
+    "hand it a goal and it returns its report. "
+    "When you are done, call `finish` with the outcome."
+)
 NATIVE_ORCH_TOOLS = ("get_invoice", "list_charges", "finish")
 NATIVE_SUB_TOOLS = ("get_invoice", "create_charge", "list_charges")
 # Appended to every goal by the stand, not by the orchestrator.

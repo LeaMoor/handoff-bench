@@ -1,0 +1,16 @@
+# One M4 episode to check the Hermes profile and process shutdown path.
+run_id: harness-hermes-runtime-smoke
+orchestrator:
+  harness: hermes
+  model: anthropic/claude-haiku-5.5
+  provider: openrouter
+  binary: /Users/alina/.local/bin/hermes
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [52]
+templates: [1]
+seeds: [2]
+parallel: 1
+budget_usd: 1
+allow_dirty: true

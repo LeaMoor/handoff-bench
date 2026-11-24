@@ -11,6 +11,7 @@ from handoff_bench.agents.loop import ModelCallLog
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
 from handoff_bench.harness.claude_code import HarnessSettings, UsageLimitReached
+from handoff_bench.harness.hermes import HermesSettings
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import EpisodeConfig
 from handoff_bench.runner.results import ResultsCsv
@@ -23,7 +24,7 @@ class BatchConfig(BaseModel):
 
     run_id: str | None = None
     model: ModelSettings
-    orchestrator: HarnessSettings | None = None  # None: our loop on `model`
+    orchestrator: HarnessSettings | HermesSettings | None = None  # None: our loop on `model`
     cells: list[int]
     world: int = 1
     templates: list[int]
@@ -47,6 +48,8 @@ class BatchConfig(BaseModel):
             if number not in CELLS:
                 raise ValueError(f"unknown cell {number}")
             check_supported(CELLS[number])
+        if isinstance(self.orchestrator, HermesSettings) and self.parallel != 1:
+            raise ValueError("Hermes batches currently require parallel: 1")
         return self
 
     @classmethod

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing", "native"]
+Block = Literal["control", "calibration", "main", "keys", "processing", "native", "hermes_native"]
 Fault = Literal[
     "none",
     "pre",
@@ -167,6 +167,21 @@ for fault in _TIMEOUTS:
                 key=key,
             )
         )
+# Cells 94-101: the same with Hermes' own subagents (`delegate_task`); Hermes' plugin of ours
+# sets the key at the stand. 86-93 are Claude Code's, on `main-for-harness`.
+for fault in _TIMEOUTS:
+    for key in ("none", "subagent", "task", "intent"):
+        _cells.append(
+            Cell(
+                number=94 + len([c for c in _cells if c.block == "hermes_native"]),
+                block="hermes_native",
+                fault=fault,
+                channel="native",
+                delay="long",
+                rules=False,
+                key=key,
+            )
+        )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 
@@ -183,9 +198,12 @@ def find_cell(
     rules: bool = True,
     agent: str = "delegated",
     key: str = "subagent",
+    block: str | None = None,
 ) -> Cell:
     wanted = (fault, channel, delay, rules, agent, key)
     for cell in CELLS.values():
+        if block is not None and cell.block != block:
+            continue
         if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted:
             return cell
     raise UnsupportedCell(

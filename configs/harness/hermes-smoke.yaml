@@ -1,0 +1,17 @@
+# Hermes on Haiku as the orchestrator, with the benchmark's Haiku subagent and billing MCP.
+# One episode per condition: no key, subagent key, and system key by payment intent.
+run_id: harness-hermes-smoke-v2
+orchestrator:
+  harness: hermes
+  model: anthropic/claude-haiku-5.5
+  provider: openrouter
+  binary: /Users/alina/.local/bin/hermes
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [48, 49, 52]
+templates: [1]
+seeds: [1]
+parallel: 1
+budget_usd: 2
+allow_dirty: true # exploratory pilot while the Hermes adapter is being built

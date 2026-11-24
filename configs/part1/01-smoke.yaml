@@ -1,0 +1,10 @@
+# Part 1, step 1: smoke, one episode in each of the 11 cells (docs/plan-part-1.md).
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+cells: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+templates: [1]
+seeds: [1]
+parallel: 4
+budget_usd: 0.3
+allow_dirty: true  # stand is still being fixed
