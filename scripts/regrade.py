@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, "src")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from handoff_bench.agents.call_journal import CallJournal
 from handoff_bench.billing import EffectJournal
 from handoff_bench.grading.coder import code_behaviour
@@ -20,14 +20,18 @@ for run in sys.argv[1:]:
         cfg = json.loads((ep / "config.json").read_text())["episode"]
         tr = json.loads((ep / "trace.json").read_text())["orchestrator"]
         world = generate(cfg["world"], cfg["seed"], cfg["template"])
+        o = old.loc[ep.name]
         stop = tr["stop_reason"]
+        whole_batch = cfg.get("block") == "partial_execution"
+        final = tr["messages"][-1].get("content") if stop == "text_only" else None
         g = grade(
             EffectJournal.read(ep / "effects.jsonl"),
             world=world,
             finish_args=tr.get("finish_args"),
-            stop_reason=stop,
+            stop_reason=o.stop_reason if whole_batch else stop,
+            whole_batch=whole_batch,
+            final_text=final,
         )
-        final = tr["messages"][-1].get("content") if stop == "text_only" else None
         resp = [len(m["tool_calls"]) for m in tr["messages"] if m.get("tool_calls")]
         b = code_behaviour(
             CallJournal.read(ep / "calls.jsonl"),
@@ -35,7 +39,6 @@ for run in sys.argv[1:]:
             responses=resp,
             final_text=final,
         )
-        o = old.loc[ep.name]
         rows.append(
             dict(
                 run=Path(run).name.replace("prefreeze-", ""),
