@@ -14,6 +14,11 @@ to the D12 denial. Assignments, tool schemas, child prompts, and the bank are ma
 cell 76. A denial names the owner regardless of whether the owner has paid. Historical
 template-2 pilots are reported separately from this comparison.
 
+Across 504 valid template-4 episodes, overlap produced a shared duplicate in 119 of 126.
+Each D12 variant prevented all 126 shared duplicates. Parent `unknown` fell from 46 to
+29 of 126 with the owner-aware denial. Both bundles were fully paid in 125 matched pairs,
+with 45 and 29 unknowns. See [the report and tables](docs/results/2026-11-25/m8-owner-aware.md).
+
 ## 2026-11-23 · M8 worklist overlap and D12 ownership
 
 **Decision.** The harness supplies fixed worklists. The orchestrator starts them with
