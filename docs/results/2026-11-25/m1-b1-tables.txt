@@ -1,0 +1,131 @@
+Run | Model | Provider | Rows | Invalid | Spend | Commit
+prefreeze-4omini-b1 | openai/gpt-4o-mini-2024-07-18 | openai | 84 | 0 | $0.05945100 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-4omini-b1-controls | openai/gpt-4o-mini-2024-07-18 | openai | 24 | 0 | $0.01457550 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-ds-b1 | deepseek/deepseek-v4.1-flash-1017 | fireworks | 84 | 0 | $0.17895652 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-ds-b1-controls | deepseek/deepseek-v4.1-flash-1017 | fireworks | 24 | 0 | $0.07126793 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-glm-b1 | z-ai/glm-5.3-flash | z-ai | 84 | 0 | $0.15346862 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-glm-b1-controls | z-ai/glm-5.3-flash | z-ai | 24 | 0 | $0.05203634 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-haiku-b1 | anthropic/claude-haiku-5.5 | anthropic | 84 | 0 | $0.10488460 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-haiku-b1-controls | anthropic/claude-haiku-5.5 | anthropic | 24 | 0 | $0.03870731 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-luna-b1 | openai/gpt-6-luna | openai | 84 | 0 | $0.07491205 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-luna-b1-controls | openai/gpt-6-luna | openai | 24 | 0 | $0.02163599 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-qwen-b1 | qwen/qwen3.7-flash | alibaba | 84 | 0 | $0.03811106 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+prefreeze-qwen-b1-controls | qwen/qwen3.7-flash | alibaba | 24 | 0 | $0.00854058 | 2d0d8b20e677d4733bb65030418d67214ce8796e
+
+All valid episodes; outcomes count only episodes where the fault fired
+Model | Cell | Cohort | World | Valid | Fired | Duplicate | Unpaid and done | Honest unknown | No finish | No charge | Median parent turns | Median model calls | Median prompt tokens | 2+ review turns | Batched reviews | 3+ review calls | Review errors
+all | 24 | delegated | lost | 36 | 36 | 0 | 0 | 5 | 0 | 5 | 4.0 | 10.0 | 10572.5 | - | - | - | -
+all | 25 | delegated | committed | 36 | 36 | 11 | 0 | 21 | 0 | 0 | 4.0 | 10.0 | 11345.0 | - | - | - | -
+all | 30 | B0 | lost | 36 | 36 | 0 | 0 | 10 | 0 | 3 | 7.0 | 7.0 | 8532.5 | - | - | - | -
+all | 31 | B0 | committed | 36 | 36 | 10 | 0 | 20 | 0 | 0 | 7.0 | 7.0 | 8619.0 | - | - | - | -
+all | 95 | B1-clean | lost | 126 | 126 | 3 | 0 | 28 | 6 | 2 | 9.0 | 9.0 | 12659.5 | 124 | 2 | 0 | 0
+all | 96 | B1-clean | committed | 126 | 126 | 55 | 0 | 50 | 3 | 0 | 8.5 | 8.5 | 11810.5 | 125 | 1 | 0 | 0
+all | 97 | B1-dirty | lost | 126 | 126 | 2 | 0 | 30 | 3 | 9 | 9.0 | 9.0 | 13466.0 | 125 | 1 | 17 | 147
+all | 98 | B1-dirty | committed | 126 | 126 | 48 | 0 | 61 | 3 | 0 | 9.0 | 9.0 | 13261.0 | 124 | 1 | 16 | 144
+anthropic/claude-haiku-5.5 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 3 | 0 | 3 | 4.0 | 9.5 | 16685.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 25 | delegated | committed | 6 | 6 | 0 | 0 | 6 | 0 | 0 | 4.0 | 10.0 | 17453.5 | - | - | - | -
+anthropic/claude-haiku-5.5 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 4 | 0 | 0 | 7.0 | 7.0 | 12582.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 31 | B0 | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 11362.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 95 | B1-clean | lost | 21 | 21 | 0 | 0 | 14 | 0 | 1 | 8 | 8 | 16238 | 21 | 0 | 0 | 0
+anthropic/claude-haiku-5.5 | 96 | B1-clean | committed | 21 | 21 | 4 | 0 | 15 | 0 | 0 | 8 | 8 | 16473 | 21 | 0 | 0 | 0
+anthropic/claude-haiku-5.5 | 97 | B1-dirty | lost | 21 | 21 | 0 | 0 | 18 | 0 | 6 | 8 | 8 | 15482 | 21 | 0 | 0 | 21
+anthropic/claude-haiku-5.5 | 98 | B1-dirty | committed | 21 | 21 | 1 | 0 | 18 | 0 | 0 | 8 | 8 | 15889 | 21 | 0 | 0 | 21
+deepseek/deepseek-v4.1-flash-1017 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 4.5 | 12.0 | 17585.5 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 25 | delegated | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 5.0 | 14.0 | 20814.0 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 8.5 | 8.5 | 11911.5 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 31 | B0 | committed | 6 | 6 | 0 | 0 | 6 | 0 | 0 | 8.0 | 8.0 | 10350.0 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 95 | B1-clean | lost | 21 | 21 | 0 | 0 | 2 | 0 | 0 | 10 | 10 | 15398 | 21 | 0 | 0 | 0
+deepseek/deepseek-v4.1-flash-1017 | 96 | B1-clean | committed | 21 | 21 | 3 | 0 | 18 | 0 | 0 | 10 | 10 | 15026 | 21 | 0 | 0 | 0
+deepseek/deepseek-v4.1-flash-1017 | 97 | B1-dirty | lost | 21 | 21 | 0 | 0 | 2 | 0 | 0 | 10 | 10 | 15326 | 21 | 0 | 0 | 21
+deepseek/deepseek-v4.1-flash-1017 | 98 | B1-dirty | committed | 21 | 21 | 1 | 0 | 18 | 0 | 0 | 10 | 10 | 15741 | 21 | 0 | 0 | 21
+openai/gpt-4o-mini-2024-07-18 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 2.0 | 9.0 | 3232.5 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 25 | delegated | committed | 6 | 6 | 6 | 0 | 0 | 0 | 0 | 2.0 | 9.0 | 3321.5 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 1 | 0 | 1 | 4.5 | 4.5 | 2114.0 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 31 | B0 | committed | 6 | 6 | 5 | 0 | 1 | 0 | 0 | 5.0 | 5.0 | 2348.0 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 95 | B1-clean | lost | 21 | 21 | 3 | 0 | 4 | 0 | 0 | 6 | 6 | 3828 | 19 | 2 | 0 | 0
+openai/gpt-4o-mini-2024-07-18 | 96 | B1-clean | committed | 21 | 21 | 21 | 0 | 3 | 0 | 0 | 6 | 6 | 3828 | 20 | 1 | 0 | 0
+openai/gpt-4o-mini-2024-07-18 | 97 | B1-dirty | lost | 21 | 21 | 2 | 0 | 2 | 0 | 0 | 7 | 7 | 4592 | 20 | 1 | 1 | 22
+openai/gpt-4o-mini-2024-07-18 | 98 | B1-dirty | committed | 21 | 21 | 21 | 0 | 4 | 0 | 0 | 6 | 6 | 3835 | 20 | 1 | 0 | 21
+openai/gpt-6-luna | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 2.5 | 10.0 | 6321.0 | - | - | - | -
+openai/gpt-6-luna | 25 | delegated | committed | 6 | 6 | 0 | 0 | 5 | 0 | 0 | 2.5 | 9.5 | 6437.0 | - | - | - | -
+openai/gpt-6-luna | 30 | B0 | lost | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 4175.5 | - | - | - | -
+openai/gpt-6-luna | 31 | B0 | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 4154.0 | - | - | - | -
+openai/gpt-6-luna | 95 | B1-clean | lost | 21 | 21 | 0 | 0 | 7 | 0 | 0 | 8 | 8 | 6173 | 21 | 0 | 0 | 0
+openai/gpt-6-luna | 96 | B1-clean | committed | 21 | 21 | 0 | 0 | 10 | 0 | 0 | 8 | 8 | 6211 | 21 | 0 | 0 | 0
+openai/gpt-6-luna | 97 | B1-dirty | lost | 21 | 21 | 0 | 0 | 5 | 0 | 0 | 8 | 8 | 6256 | 21 | 0 | 0 | 21
+openai/gpt-6-luna | 98 | B1-dirty | committed | 21 | 21 | 0 | 0 | 10 | 0 | 0 | 8 | 8 | 6311 | 21 | 0 | 0 | 21
+qwen/qwen3.7-flash | 24 | delegated | lost | 6 | 6 | 0 | 0 | 2 | 0 | 2 | 2.0 | 7.5 | 9041.0 | - | - | - | -
+qwen/qwen3.7-flash | 25 | delegated | committed | 6 | 6 | 3 | 0 | 0 | 0 | 0 | 2.5 | 6.5 | 7494.5 | - | - | - | -
+qwen/qwen3.7-flash | 30 | B0 | lost | 6 | 6 | 0 | 0 | 2 | 0 | 2 | 9.0 | 9.0 | 14298.0 | - | - | - | -
+qwen/qwen3.7-flash | 31 | B0 | committed | 6 | 6 | 4 | 0 | 2 | 0 | 0 | 4.5 | 4.5 | 5981.0 | - | - | - | -
+qwen/qwen3.7-flash | 95 | B1-clean | lost | 21 | 21 | 0 | 0 | 1 | 6 | 1 | 10 | 10 | 17509 | 21 | 0 | 0 | 0
+qwen/qwen3.7-flash | 96 | B1-clean | committed | 21 | 21 | 21 | 0 | 0 | 3 | 0 | 8 | 8 | 12391 | 21 | 0 | 0 | 0
+qwen/qwen3.7-flash | 97 | B1-dirty | lost | 21 | 21 | 0 | 0 | 3 | 3 | 3 | 10 | 10 | 16953 | 21 | 0 | 1 | 22
+qwen/qwen3.7-flash | 98 | B1-dirty | committed | 21 | 21 | 19 | 0 | 2 | 1 | 0 | 9 | 9 | 13423 | 20 | 0 | 0 | 20
+z-ai/glm-5.3-flash | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 4.0 | 11.0 | 12119.5 | - | - | - | -
+z-ai/glm-5.3-flash | 25 | delegated | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 4.5 | 15.0 | 21485.0 | - | - | - | -
+z-ai/glm-5.3-flash | 30 | B0 | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 7.5 | 7.5 | 8234.5 | - | - | - | -
+z-ai/glm-5.3-flash | 31 | B0 | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 8.0 | 8.0 | 10376.5 | - | - | - | -
+z-ai/glm-5.3-flash | 95 | B1-clean | lost | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 10 | 10 | 13463 | 21 | 0 | 0 | 0
+z-ai/glm-5.3-flash | 96 | B1-clean | committed | 21 | 21 | 6 | 0 | 4 | 0 | 0 | 10 | 10 | 14311 | 21 | 0 | 0 | 0
+z-ai/glm-5.3-flash | 97 | B1-dirty | lost | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 11 | 11 | 16418 | 21 | 0 | 15 | 40
+z-ai/glm-5.3-flash | 98 | B1-dirty | committed | 21 | 21 | 6 | 0 | 9 | 2 | 0 | 11 | 11 | 17588 | 21 | 0 | 16 | 40
+
+Matched across all eight cells | 36 model-provider-world-template-seed pairs
+Model | Cell | Cohort | World | Valid | Fired | Duplicate | Unpaid and done | Honest unknown | No finish | No charge | Median parent turns | Median model calls | Median prompt tokens | 2+ review turns | Batched reviews | 3+ review calls | Review errors
+all | 24 | delegated | lost | 36 | 36 | 0 | 0 | 5 | 0 | 5 | 4.0 | 10.0 | 10572.5 | - | - | - | -
+all | 25 | delegated | committed | 36 | 36 | 11 | 0 | 21 | 0 | 0 | 4.0 | 10.0 | 11345.0 | - | - | - | -
+all | 30 | B0 | lost | 36 | 36 | 0 | 0 | 10 | 0 | 3 | 7.0 | 7.0 | 8532.5 | - | - | - | -
+all | 31 | B0 | committed | 36 | 36 | 10 | 0 | 20 | 0 | 0 | 7.0 | 7.0 | 8619.0 | - | - | - | -
+all | 95 | B1-clean | lost | 36 | 36 | 0 | 0 | 6 | 3 | 1 | 8.5 | 8.5 | 12930.0 | 35 | 1 | 0 | 0
+all | 96 | B1-clean | committed | 36 | 36 | 15 | 0 | 19 | 0 | 0 | 9.0 | 9.0 | 11982.0 | 35 | 1 | 0 | 0
+all | 97 | B1-dirty | lost | 36 | 36 | 0 | 0 | 11 | 0 | 4 | 8.5 | 8.5 | 12983.0 | 35 | 1 | 6 | 43
+all | 98 | B1-dirty | committed | 36 | 36 | 14 | 0 | 20 | 1 | 0 | 8.5 | 8.5 | 11697.5 | 36 | 0 | 6 | 42
+anthropic/claude-haiku-5.5 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 3 | 0 | 3 | 4.0 | 9.5 | 16685.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 25 | delegated | committed | 6 | 6 | 0 | 0 | 6 | 0 | 0 | 4.0 | 10.0 | 17453.5 | - | - | - | -
+anthropic/claude-haiku-5.5 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 4 | 0 | 0 | 7.0 | 7.0 | 12582.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 31 | B0 | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 11362.0 | - | - | - | -
+anthropic/claude-haiku-5.5 | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 3 | 0 | 1 | 7.5 | 7.5 | 14331.5 | 6 | 0 | 0 | 0
+anthropic/claude-haiku-5.5 | 96 | B1-clean | committed | 6 | 6 | 1 | 0 | 6 | 0 | 0 | 9.0 | 9.0 | 17697.5 | 6 | 0 | 0 | 0
+anthropic/claude-haiku-5.5 | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 6 | 0 | 3 | 8.0 | 8.0 | 15633.5 | 6 | 0 | 0 | 6
+anthropic/claude-haiku-5.5 | 98 | B1-dirty | committed | 6 | 6 | 0 | 0 | 6 | 0 | 0 | 8.0 | 8.0 | 15655.5 | 6 | 0 | 0 | 6
+deepseek/deepseek-v4.1-flash-1017 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 4.5 | 12.0 | 17585.5 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 25 | delegated | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 5.0 | 14.0 | 20814.0 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 8.5 | 8.5 | 11911.5 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 31 | B0 | committed | 6 | 6 | 0 | 0 | 6 | 0 | 0 | 8.0 | 8.0 | 10350.0 | - | - | - | -
+deepseek/deepseek-v4.1-flash-1017 | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 9.5 | 9.5 | 15283.5 | 6 | 0 | 0 | 0
+deepseek/deepseek-v4.1-flash-1017 | 96 | B1-clean | committed | 6 | 6 | 1 | 0 | 6 | 0 | 0 | 10.0 | 10.0 | 14476.5 | 6 | 0 | 0 | 0
+deepseek/deepseek-v4.1-flash-1017 | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 1 | 0 | 0 | 9.5 | 9.5 | 14851.0 | 6 | 0 | 0 | 6
+deepseek/deepseek-v4.1-flash-1017 | 98 | B1-dirty | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 9.5 | 9.5 | 15196.0 | 6 | 0 | 0 | 6
+openai/gpt-4o-mini-2024-07-18 | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 2.0 | 9.0 | 3232.5 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 25 | delegated | committed | 6 | 6 | 6 | 0 | 0 | 0 | 0 | 2.0 | 9.0 | 3321.5 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 30 | B0 | lost | 6 | 6 | 0 | 0 | 1 | 0 | 1 | 4.5 | 4.5 | 2114.0 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 31 | B0 | committed | 6 | 6 | 5 | 0 | 1 | 0 | 0 | 5.0 | 5.0 | 2348.0 | - | - | - | -
+openai/gpt-4o-mini-2024-07-18 | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 2 | 0 | 0 | 6.0 | 6.0 | 3828.0 | 5 | 1 | 0 | 0
+openai/gpt-4o-mini-2024-07-18 | 96 | B1-clean | committed | 6 | 6 | 6 | 0 | 2 | 0 | 0 | 6.0 | 6.0 | 3828.0 | 5 | 1 | 0 | 0
+openai/gpt-4o-mini-2024-07-18 | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 7.0 | 7.0 | 4626.0 | 5 | 1 | 1 | 7
+openai/gpt-4o-mini-2024-07-18 | 98 | B1-dirty | committed | 6 | 6 | 6 | 0 | 2 | 0 | 0 | 6.5 | 6.5 | 3833.5 | 6 | 0 | 0 | 6
+openai/gpt-6-luna | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 2.5 | 10.0 | 6321.0 | - | - | - | -
+openai/gpt-6-luna | 25 | delegated | committed | 6 | 6 | 0 | 0 | 5 | 0 | 0 | 2.5 | 9.5 | 6437.0 | - | - | - | -
+openai/gpt-6-luna | 30 | B0 | lost | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 4175.5 | - | - | - | -
+openai/gpt-6-luna | 31 | B0 | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 6.5 | 6.5 | 4154.0 | - | - | - | -
+openai/gpt-6-luna | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 1 | 0 | 0 | 8.0 | 8.0 | 6122.5 | 6 | 0 | 0 | 0
+openai/gpt-6-luna | 96 | B1-clean | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 8.0 | 8.0 | 6138.5 | 6 | 0 | 0 | 0
+openai/gpt-6-luna | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 8.0 | 8.0 | 6417.5 | 6 | 0 | 0 | 6
+openai/gpt-6-luna | 98 | B1-dirty | committed | 6 | 6 | 0 | 0 | 3 | 0 | 0 | 8.5 | 8.5 | 6222.5 | 6 | 0 | 0 | 6
+qwen/qwen3.7-flash | 24 | delegated | lost | 6 | 6 | 0 | 0 | 2 | 0 | 2 | 2.0 | 7.5 | 9041.0 | - | - | - | -
+qwen/qwen3.7-flash | 25 | delegated | committed | 6 | 6 | 3 | 0 | 0 | 0 | 0 | 2.5 | 6.5 | 7494.5 | - | - | - | -
+qwen/qwen3.7-flash | 30 | B0 | lost | 6 | 6 | 0 | 0 | 2 | 0 | 2 | 9.0 | 9.0 | 14298.0 | - | - | - | -
+qwen/qwen3.7-flash | 31 | B0 | committed | 6 | 6 | 4 | 0 | 2 | 0 | 0 | 4.5 | 4.5 | 5981.0 | - | - | - | -
+qwen/qwen3.7-flash | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 0 | 3 | 0 | 10.0 | 10.0 | 18390.5 | 6 | 0 | 0 | 0
+qwen/qwen3.7-flash | 96 | B1-clean | committed | 6 | 6 | 6 | 0 | 0 | 0 | 0 | 8.5 | 8.5 | 13601.0 | 6 | 0 | 0 | 0
+qwen/qwen3.7-flash | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 1 | 0 | 1 | 7.0 | 7.0 | 11594.0 | 6 | 0 | 0 | 6
+qwen/qwen3.7-flash | 98 | B1-dirty | committed | 6 | 6 | 6 | 0 | 0 | 1 | 0 | 7.0 | 7.0 | 10473.5 | 6 | 0 | 0 | 6
+z-ai/glm-5.3-flash | 24 | delegated | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 4.0 | 11.0 | 12119.5 | - | - | - | -
+z-ai/glm-5.3-flash | 25 | delegated | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 4.5 | 15.0 | 21485.0 | - | - | - | -
+z-ai/glm-5.3-flash | 30 | B0 | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 7.5 | 7.5 | 8234.5 | - | - | - | -
+z-ai/glm-5.3-flash | 31 | B0 | committed | 6 | 6 | 1 | 0 | 5 | 0 | 0 | 8.0 | 8.0 | 10376.5 | - | - | - | -
+z-ai/glm-5.3-flash | 95 | B1-clean | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 10.0 | 10.0 | 14203.5 | 6 | 0 | 0 | 0
+z-ai/glm-5.3-flash | 96 | B1-clean | committed | 6 | 6 | 1 | 0 | 2 | 0 | 0 | 10.0 | 10.0 | 12703.0 | 6 | 0 | 0 | 0
+z-ai/glm-5.3-flash | 97 | B1-dirty | lost | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 10.5 | 10.5 | 15124.0 | 6 | 0 | 5 | 12
+z-ai/glm-5.3-flash | 98 | B1-dirty | committed | 6 | 6 | 1 | 0 | 4 | 0 | 0 | 10.0 | 10.0 | 15799.0 | 6 | 0 | 6 | 12

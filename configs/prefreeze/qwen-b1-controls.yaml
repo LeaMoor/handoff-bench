@@ -1,0 +1,9 @@
+model:
+  model: qwen/qwen3.7-flash
+  provider: alibaba
+run_id: prefreeze-qwen-b1-controls
+cells: [24, 25, 30, 31]
+templates: [1, 2, 3]
+seeds: [1, 2]
+parallel: 2
+budget_usd: 0.04

@@ -1,0 +1,9 @@
+model:
+  model: openai/gpt-4o-mini-2024-07-18
+  provider: openai
+run_id: prefreeze-4omini-b1-controls
+cells: [24, 25, 30, 31]
+templates: [1, 2, 3]
+seeds: [1, 2]
+parallel: 2
+budget_usd: 0.05

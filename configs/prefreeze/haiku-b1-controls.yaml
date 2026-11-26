@@ -1,0 +1,9 @@
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+run_id: prefreeze-haiku-b1-controls
+cells: [24, 25, 30, 31]
+templates: [1, 2, 3]
+seeds: [1, 2]
+parallel: 2
+budget_usd: 0.12

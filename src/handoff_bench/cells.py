@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 Block = Literal[
     "control", "calibration", "main", "keys", "processing", "partial_execution",
-    "ownership", "capture",
+    "ownership", "capture", "single_workflow",
 ]
 Fault = Literal[
     "none",
@@ -223,6 +223,24 @@ for number, (fault, channel) in enumerate(
     start=86,
 ):
     _cells.append(Cell(number=number, block="capture", fault=fault, channel=channel, rules=False))
+# M1: mirror B0's two timeout worlds, adding a read-only workflow to the single agent.
+for number, fault in (
+    (95, "timeout_lost"),
+    (96, "timeout_committed"),
+    (97, "timeout_lost"),
+    (98, "timeout_committed"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="single_workflow",
+            fault=fault,
+            channel="none",
+            delay="long",
+            rules=False,
+            agent="single",
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 

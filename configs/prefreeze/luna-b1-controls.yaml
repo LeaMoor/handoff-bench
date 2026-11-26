@@ -1,0 +1,9 @@
+model:
+  model: openai/gpt-6-luna
+  provider: openai
+run_id: prefreeze-luna-b1-controls
+cells: [24, 25, 30, 31]
+templates: [1, 2, 3]
+seeds: [1, 2]
+parallel: 2
+budget_usd: 0.10
