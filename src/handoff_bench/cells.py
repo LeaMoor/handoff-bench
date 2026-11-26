@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing"]
+Block = Literal["control", "calibration", "main", "keys", "processing", "partial_execution"]
 Fault = Literal[
     "none",
     "pre",
@@ -13,6 +13,8 @@ Fault = Literal[
     "redeliver",
     "processing_settles",
     "processing_fails",
+    "partial_after_one",
+    "partial_after_two",
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
@@ -148,6 +150,24 @@ for rules in (True, False):
                 rules=rules,
             )
         )
+# M8 uses 74-76. M3 partial keeps one control and varies the stop threshold and visibility.
+for number, fault, delay in (
+    (77, "none", "short"),
+    (78, "partial_after_one", "short"),
+    (79, "partial_after_two", "short"),
+    (80, "partial_after_one", "long"),
+    (81, "partial_after_two", "long"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="partial_execution",
+            fault=fault,
+            channel="text",
+            delay=delay,
+            key="none",
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 
