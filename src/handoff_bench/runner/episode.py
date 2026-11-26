@@ -285,7 +285,7 @@ async def run_episode(
         orchestrator_responses=[
             len(m["tool_calls"]) for m in trace.messages if m.get("tool_calls")
         ],
-        # Bank faults fired if a call came back as a timeout or as a processing charge.
+        # Bank faults fired if a call returned a timeout, processing charge or capture order.
         fault_fired=fault.injector.fired or any(_bank_fault(r) for r in gateway.journal.rows),
         finish_args=trace.finish_args,
         sub_claim=_faulted_claim(subagents, gateway.journal.rows, fault.injector.fired_on),
