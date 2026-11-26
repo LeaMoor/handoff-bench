@@ -11,7 +11,7 @@ To add a channel, add an entry to RENDERERS; `cells.py` already names all of the
 
 import re
 
-from handoff_bench.agents.call_journal import CallRow, is_processing
+from handoff_bench.agents.call_journal import CallRow, capture_status, is_processing
 from handoff_bench.agents.delegation import Renderer
 from handoff_bench.agents.loop import AgentTrace
 from handoff_bench.billing.protocol import READ_TOOLS
@@ -130,6 +130,9 @@ def _outcome(r: CallRow) -> str:
         return f"error {r.error_code}"
     if is_processing(r):
         return f"processing, final outcome not known yet, charge {r.result['charge_id']}"
+    if capture_status(r) == "declined":
+        # The statement reads the capture, as PayPal asks: the order's `completed` is not money.
+        return f"declined, charge {r.result['charge_id']}"
     if r.tool == "create_charge":
         return f"success, charge {r.result['charge_id']}"
     if r.tool == "get_invoice":
@@ -142,6 +145,9 @@ def _outcome(r: CallRow) -> str:
 
 def _listed(charge: dict) -> str:
     status = charge.get("status", "succeeded")
+    if status == "completed":
+        status = charge["captures"][0]["status"]
+        status = "succeeded" if status == "completed" else status
     return charge["charge_id"] if status == "succeeded" else f"{charge['charge_id']} {status}"
 
 

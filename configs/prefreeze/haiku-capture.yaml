@@ -1,0 +1,9 @@
+model:
+  model: anthropic/claude-haiku-5.5
+  provider: anthropic
+run_id: prefreeze-haiku-capture
+cells: [86, 87, 88, 89, 90, 91]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 4
+budget_usd: 1.0

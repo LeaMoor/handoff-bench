@@ -3,7 +3,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 Block = Literal[
-    "control", "calibration", "main", "keys", "processing", "partial_execution", "ownership"
+    "control", "calibration", "main", "keys", "processing", "partial_execution",
+    "ownership", "capture",
 ]
 Fault = Literal[
     "none",
@@ -15,6 +16,8 @@ Fault = Literal[
     "redeliver",
     "processing_settles",
     "processing_fails",
+    "capture_completed",
+    "capture_declined",
     "partial_after_one",
     "partial_after_two",
 ]
@@ -208,6 +211,18 @@ for number, delay, rules, fault in (
             rules=rules,
         )
     )
+# M3, cells 86-91: the bank answers the first focal charge with a `completed` order whose capture
+# is `completed` or `declined` (PayPal orders); the money's fate is in the answer, one level down.
+# Set up like 64-69. Numbers are explicit: 74-85 are taken by open PRs (M8, M3 partial, M2).
+for number, (fault, channel) in enumerate(
+    [
+        (f, ch)
+        for ch in ("text", "struct", "code")
+        for f in ("capture_completed", "capture_declined")
+    ],
+    start=86,
+):
+    _cells.append(Cell(number=number, block="capture", fault=fault, channel=channel, rules=False))
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 

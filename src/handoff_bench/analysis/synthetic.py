@@ -53,7 +53,7 @@ def _episode(cell: int, reaction: str, rng: random.Random) -> dict[str, object]:
             "false_done": outcome != "eos",
         }
     # Main block and M3 processing: the charge went through in one world of the pair.
-    paid = c.fault in ("timeout_committed", "processing_settles")
+    paid = c.fault in ("timeout_committed", "processing_settles", "capture_completed")
     channel = {"none": "text", "code_key": "code", "code_hedged": "code", "retell": "text"}.get(
         c.channel, c.channel
     )

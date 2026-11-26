@@ -91,7 +91,7 @@ def cell_table(df: pd.DataFrame) -> pd.DataFrame:
     out["self_checked"] = g["self_checked"].mean()
     # Where a false "done" was born: the subagent the fault hit already said "done". Only where
     # the orchestrator got that report (bank faults); elsewhere the fault lost it, so NaN.
-    seen = v["block"].isin(["main", "processing"])
+    seen = v["block"].isin(["main", "processing", "capture"])
     out["sub_done"] = (v["sub_claim"] == "done").astype(float).where(seen).groupby(v["cell"]).mean()
     out["retried"] = (v["retries"] > 0).groupby(v["cell"]).mean()
     out["tokens_mean"] = (v["prompt_tokens"] + v["completion_tokens"]).groupby(v["cell"]).mean()
