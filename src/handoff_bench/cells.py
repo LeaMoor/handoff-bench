@@ -2,7 +2,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing", "partial_execution"]
+Block = Literal[
+    "control", "calibration", "main", "keys", "processing", "partial_execution", "ownership"
+]
 Fault = Literal[
     "none",
     "pre",
@@ -24,6 +26,9 @@ Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
 
+Ownership = Literal["disjoint", "overlap", "d12", "d12_owner"]
+
+
 class Cell(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -36,6 +41,8 @@ class Cell(BaseModel):
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
     key: KeySource = "subagent"  # who sets the idempotency key (M4)
+
+    ownership: Ownership | None = None
 
 
 _TIMEOUTS: tuple[Fault, ...] = ("timeout_lost", "timeout_committed")
@@ -150,6 +157,19 @@ for rules in (True, False):
                 rules=rules,
             )
         )
+# M8 uses 74–76 and 94. Cell 94 reveals the assigned owner in the denial.
+_cells.extend(
+    Cell(
+        number=number,
+        block="ownership",
+        fault="none",
+        channel="text",
+        key="none",
+        ownership=condition,
+    )
+    for number, condition in ((74, "disjoint"), (75, "overlap"), (76, "d12"), (94, "d12_owner"))
+)
+
 # M8 uses 74-76. M3 partial keeps one control and varies the stop threshold and visibility.
 for number, fault, delay in (
     (77, "none", "short"),

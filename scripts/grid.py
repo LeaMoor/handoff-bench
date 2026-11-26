@@ -18,7 +18,9 @@ for run in runs:
     if not (run / "results.csv").exists():
         continue
     df = r.load_results(run)
-    frames.append(df[df["cell"].between(6, 31) | df["cell"].between(70, 73)])
+    grid_cells = df["cell"].between(6, 31) | df["cell"].between(70, 73)
+    # The historical M8 pilot also used 70-72.
+    frames.append(df[df["block"].eq("main") & grid_cells])
 df = pd.concat(frames, ignore_index=True)
 df["model"] = df["model"].str.split("/").str[-1]
 # Cells 28-29 were also run next to code_key: the same episode twice, keep one valid copy.

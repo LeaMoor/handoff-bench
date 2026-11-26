@@ -152,12 +152,22 @@ class Delegation:
         self.hide_key = hide_key
         self.subagents: list[AgentTrace] = []
         self._task_count = 0
-        gateway.register(
-            "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
-        )
+        self._actor_count = 0
+        self._register_delegation_tool()
         _register_report_tool(
             gateway, "finish_report", "text", "Finish the task and report the outcome."
         )
+
+    def _register_delegation_tool(self) -> None:
+        self.gateway.register(
+            "delegate", self._delegate, description=DELEGATE_DESCRIPTION, parameters=DELEGATE_PARAMS
+        )
+
+    def _reserve_actor(self, task: str) -> str:
+        self._actor_count += 1
+        actor = f"sub-{self._actor_count}"
+        self.tasks[actor] = task
+        return actor
 
     def _new_task(self) -> str:
         self._task_count += 1
@@ -173,9 +183,18 @@ class Delegation:
         return out
 
     async def _run_subagent(self, goal: str, task: str) -> tuple[AgentTrace, bool]:
-        # A fresh actor per run: logs and the call journal stay separable per run.
-        actor = f"sub-{len(self.subagents) + 1}"
-        self.tasks[actor] = task
+        actor = self._reserve_actor(task)
+        child = await self._run_actor(goal, actor)
+        self.subagents.append(child)
+        return child, self._lost_report(child)
+
+    def _lost_report(self, child: AgentTrace) -> bool:
+        if child.stop_reason in INVALID_STOPS:
+            # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
+            raise InfraError(child.stop_reason, child.error or "")
+        return self.report_lost is not None and self.report_lost(child.actor)
+
+    async def _run_actor(self, goal: str, actor: str) -> AgentTrace:
         spec = AgentSpec(
             actor=actor,
             system_prompt=self.config.subagent_prompt,
@@ -183,18 +202,13 @@ class Delegation:
             tools=self._subagent_tools(),
             finish_tools=frozenset({"finish_report"}),
         )
-        child = await run_agent(
+        return await run_agent(
             spec,
             f"{goal}\n\n{self.config.subagent_rules}" if self.config.subagent_rules else goal,
             model=self.model,
             gateway=self.gateway,
             log=self.log,
         )
-        self.subagents.append(child)
-        if child.stop_reason in INVALID_STOPS:
-            # A stand failure, not the subagent's behaviour: stop the episode, show nothing.
-            raise InfraError(child.stop_reason, child.error or "")
-        return child, self.report_lost is not None and self.report_lost(actor)
 
     async def _delegate(self, actor: str, args: dict[str, Any]) -> dict[str, Any]:
         goal = args.get("goal")

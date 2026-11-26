@@ -10,6 +10,7 @@ from handoff_bench.agents.tools import StopReason
 from handoff_bench.cells import Agent, Block, Channel, Delay, Fault, KeySource
 from handoff_bench.grading.coder import Action
 from handoff_bench.grading.grader import Claim, Effect, Outcome
+from handoff_bench.grading.ownership import OwnershipGrade
 
 
 class ResultRow(BaseModel):
@@ -58,6 +59,7 @@ class ResultRow(BaseModel):
     cost: float
     commit: str
     error: str | None
+    ownership: OwnershipGrade | None = None
 
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
@@ -91,5 +93,8 @@ class ResultsCsv:
             csv.DictWriter(f, self.fields).writeheader()
 
     def append(self, row: ResultRow) -> None:
+        values = row.model_dump()
+        if row.ownership is not None:
+            values["ownership"] = row.ownership.model_dump_json()
         with self.path.open("a", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, self.fields).writerow(row.model_dump())
+            csv.DictWriter(f, self.fields).writerow(values)

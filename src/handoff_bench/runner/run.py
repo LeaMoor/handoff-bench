@@ -10,6 +10,7 @@ from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.setup import FAULTS
 from handoff_bench.grading.coder import code_behaviour
 from handoff_bench.grading.grader import grade
+from handoff_bench.grading.ownership import grade_m8
 from handoff_bench.grading.partial import grade_partial
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import ORCHESTRATOR, EpisodeConfig, run_episode
@@ -37,21 +38,34 @@ async def run_one(
     config: EpisodeConfig, model: ModelClient, *, run_dir: Path, run_id: str
 ) -> ResultRow:
     """Episode → grade → `results.csv` row, also saved as `result.json` next to the logs."""
+    is_ownership = config.ownership is not None
     world = generate(config.world, config.seed, config.template)
     episode_dir = run_dir / config.episode_id
     result = await run_episode(model, world, config, episode_dir=episode_dir)
     effects = EffectJournal.read(episode_dir / "effects.jsonl")
     calls = CallJournal.read(episode_dir / "calls.jsonl")
-    whole_batch = config.block == "partial_execution"
-    g = grade(
-        effects,
-        world=world,
-        finish_args=result.finish_args,
-        stop_reason=result.stop_reason,
-        whole_batch=whole_batch,
-        final_text=result.final_text,
-    )
-    if whole_batch:
+    ownership = None
+    if is_ownership:
+        g, ownership = grade_m8(
+            effects,
+            calls,
+            world=world,
+            finish_args=result.finish_args,
+            stop_reason=result.stop_reason,
+            final_text=result.final_text,
+            concurrent=result.parallel_overlap,
+            child_actors=set(result.parallel_tasks or {}),
+        )
+    else:
+        g = grade(
+            effects,
+            world=world,
+            finish_args=result.finish_args,
+            stop_reason=result.stop_reason,
+            whole_batch=config.block == "partial_execution",
+            final_text=result.final_text,
+        )
+    if config.block == "partial_execution":
         partial = grade_partial(
             effects,
             calls,
@@ -105,6 +119,7 @@ async def run_one(
         cost=result.cost,
         commit=config.commit,
         error=result.error,
+        ownership=ownership,
     )
     (episode_dir / "result.json").write_text(
         json.dumps(row.model_dump(mode="json"), indent=2, ensure_ascii=False), encoding="utf-8"

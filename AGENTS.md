@@ -46,7 +46,7 @@ schemas, bank behaviour, faults, worlds or grading of existing ones.
 | Cells | What | Where |
 |---|---|---|
 | 1–73 | control, calibration, main block, B0, M4 keys, statement with key, M3 processing, hedged statement | `main` |
-| 74–76 | M8 overlapping worklists and D12 ownership | #15 |
+| 74–76, 94 | M8 overlapping worklists and D12 ownership, including an owner-aware denial | #15 |
 | 77–81 | M3 partial execution, visible and hidden charges | #20 |
 | 82–85 | M2 retell channel | #21 |
 | 86–93 | Claude Code's own subagents (variant B) | `main-for-harness`, not merged into `main` |

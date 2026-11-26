@@ -21,16 +21,28 @@ from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
 from handoff_bench.agents.mcp_backend import McpBackend
 from handoff_bench.agents.model_client import ModelClient, ModelSettings, Usage
+from handoff_bench.agents.parallel import PARALLEL_SYSTEM_PROMPT, PARALLEL_TOOLS, ParallelDelegation
 from handoff_bench.agents.tools import INVALID_STOPS
 from handoff_bench.billing import BillingService, EffectJournal
 from handoff_bench.billing.server import running_server
-from handoff_bench.cells import CELLS, Agent, Block, Cell, Channel, Delay, Fault, KeySource
+from handoff_bench.cells import (
+    CELLS,
+    Agent,
+    Block,
+    Cell,
+    Channel,
+    Delay,
+    Fault,
+    KeySource,
+    Ownership,
+)
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.partial import PartialExecution
 from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
+from handoff_bench.ownership import prepare_ownership
 from handoff_bench.worlds import BATCH_TEMPLATE, World
 
 ORCHESTRATOR = "orchestrator"
@@ -38,10 +50,11 @@ ORCHESTRATOR = "orchestrator"
 
 def validate_cell_template(cell: Cell, template: int) -> None:
     """Keep the three-invoice task paired with its batch grader."""
-    if cell.block == "partial_execution" and template != BATCH_TEMPLATE:
+    batch = cell.block in ("partial_execution", "ownership")
+    if batch and template != BATCH_TEMPLATE:
         raise ValueError(f"cell {cell.number} requires template {BATCH_TEMPLATE}")
-    if cell.block != "partial_execution" and template == BATCH_TEMPLATE:
-        raise ValueError(f"template {BATCH_TEMPLATE} requires a partial-execution cell")
+    if not batch and template == BATCH_TEMPLATE:
+        raise ValueError(f"template {BATCH_TEMPLATE} requires a partial-execution or M8 cell")
 
 
 class EpisodeConfig(BaseModel):
@@ -67,7 +80,7 @@ class EpisodeConfig(BaseModel):
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
-        for name in ("block", "fault", "channel", "delay", "rules", "agent", "key"):
+        for name in ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership"):
             if name in data and data.pop(name) != getattr(cell, name):
                 raise ValueError(f"{name} does not match cell {cell.number}")
         data.pop("episode_id", None)
@@ -120,8 +133,17 @@ class EpisodeConfig(BaseModel):
     def key(self) -> KeySource:
         return CELLS[self.cell].key
 
+    @computed_field
+    @property
+    def ownership(self) -> Ownership | None:
+        return CELLS[self.cell].ownership
+
 
 def _agents_for(cell: Cell) -> AgentsConfig:
+    if cell.ownership is not None:
+        return AgentsConfig(
+            orchestrator_tools=PARALLEL_TOOLS, orchestrator_prompt=PARALLEL_SYSTEM_PROMPT
+        )
     if cell.agent == "single":
         return AgentsConfig(
             orchestrator_tools=SINGLE_TOOLS, orchestrator_prompt=SINGLE_SYSTEM_PROMPT
@@ -156,6 +178,8 @@ class EpisodeResult(BaseModel):
     cached_tokens: int
     retries: int
     error: str | None
+    parallel_overlap: bool = False
+    parallel_tasks: dict[str, str] | None = None
 
 
 def _write_json(path: Path, data: Any) -> None:
@@ -170,9 +194,17 @@ async def run_episode(
     episode_dir.mkdir(parents=True, exist_ok=True)
     effects = EffectJournal(episode_dir / "effects.jsonl")
     fault = with_delay(FAULTS[config.fault](world, effects), config.delay, world)
+    tasks: dict[str, str] = {}
+    ownership = prepare_ownership(world, CELLS[config.cell], tasks)
     _write_json(
         episode_dir / "config.json",
-        {"episode": config.model_dump(mode="json"), "bank": fault.bank.model_dump(mode="json")},
+        {
+            "episode": config.model_dump(
+                mode="json", exclude={"ownership"} if not ownership.goals else None
+            ),
+            "bank": fault.bank.model_dump(mode="json"),
+            **ownership.settings,
+        },
     )
     service = BillingService(
         episode_id=config.episode_id,
@@ -185,29 +217,37 @@ async def run_episode(
     if config.delay == "long" and isinstance(fault.injector, PartialExecution):
         fault.injector.hide_committed = service.hide_charges
 
-    tasks: dict[str, str] = {}
-    keys = KeyHook(config.key, tasks)
+    parallel: ParallelDelegation | None = None
     with service, running_server(service) as url:
         async with McpBackend(url) as bank:
             gateway = ToolGateway(
                 episode_id=config.episode_id,
                 journal=CallJournal(episode_dir / "calls.jsonl"),
                 backends=[bank],
-                hooks=[keys, fault.injector],
+                hooks=[*ownership.hooks, KeyHook(config.key, tasks), fault.injector],
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
-            delegation = Delegation(
-                gateway,
+            delegate_options = dict(
                 model=model,
                 log=log,
                 report_lost=fault.injector.report_lost,
                 config=agents,
                 render=RENDERERS[config.channel],
-                deliveries=fault.deliveries,
-                respawn_on_lost=fault.respawn_on_lost,
                 tasks=tasks,
                 hide_key=config.key == "none",
             )
+            delegation: Delegation
+            if ownership.goals:
+                parallel = ParallelDelegation(gateway, goals=ownership.goals, **delegate_options)
+                await bank.prepare_actors(parallel.actors)
+                delegation = parallel
+            else:
+                delegation = Delegation(
+                    gateway,
+                    **delegate_options,
+                    deliveries=fault.deliveries,
+                    respawn_on_lost=fault.respawn_on_lost,
+                )
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,
@@ -216,20 +256,20 @@ async def run_episode(
                 tools=gateway.openai_tools(list(agents.orchestrator_tools)),
                 finish_tools=frozenset({"finish"}),
             )
-            trace = await run_agent(spec, world.task, model=model, gateway=gateway, log=log)
+            trace = await run_agent(
+                spec, ownership.task or world.task, model=model, gateway=gateway, log=log
+            )
 
     subagents = delegation.subagents
-    fault_trace = {}
+    trace_data = {
+        "orchestrator": trace.model_dump(mode="json"),
+        "subagents": [s.model_dump(mode="json") for s in subagents],
+    }
+    if parallel is not None:
+        trace_data.update(tasks=tasks, parallel_overlap=parallel.overlap)
     if isinstance(fault.injector, PartialExecution) and fault.injector.stop is not None:
-        fault_trace["partial_stop"] = fault.injector.stop.model_dump(mode="json")
-    _write_json(
-        episode_dir / "trace.json",
-        {
-            "orchestrator": trace.model_dump(mode="json"),
-            "subagents": [s.model_dump(mode="json") for s in subagents],
-            **fault_trace,
-        },
-    )
+        trace_data["partial_stop"] = fault.injector.stop.model_dump(mode="json")
+    _write_json(episode_dir / "trace.json", trace_data)
     traces = [trace, *subagents]
     usage = sum((t.usage for t in traces), Usage())
     # A subagent's API / stand failure invalidates the whole episode.
@@ -254,6 +294,8 @@ async def run_episode(
         cached_tokens=usage.cached_tokens,
         retries=sum(t.retries for t in traces),
         error=broken.error if broken else trace.error,
+        parallel_overlap=parallel.overlap if parallel else False,
+        parallel_tasks=tasks if parallel else None,
     )
 
 

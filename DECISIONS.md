@@ -6,6 +6,44 @@
 
 Что запланировано, но ещё не сделано, — в [BACKLOG.md](BACKLOG.md).
 
+## 2026-11-25 · M8 shared batch template and owner-aware denial
+
+Cells 74–76 and 94 now use template 4 and the common whole-batch grade. The middle payment
+is shared between worklists. Cell 94 adds the assigned owner and a do-not-retry instruction
+to the D12 denial. Assignments, tool schemas, child prompts, and the bank are matched to
+cell 76. A denial names the owner regardless of whether the owner has paid. Historical
+template-2 pilots are reported separately from this comparison.
+
+Across 504 valid template-4 episodes, overlap produced a shared duplicate in 119 of 126.
+Both D12 variants recorded zero shared duplicates in 126 episodes each. Parent `unknown` fell from 46 to
+29 of 126 with the owner-aware denial. Both bundles were fully paid in 125 matched pairs,
+with 45 and 29 unknowns. See [the report and tables](docs/results/2026-11-25/m8-owner-aware.md).
+
+## 2026-11-23 · M8 worklist overlap and D12 ownership
+
+**Decision.** The harness supplies fixed worklists. The orchestrator starts them with
+`delegate_parallel`. M8 measures how two concurrent workers handle an assigned overlap and
+whether D12 prevents a duplicate write. It leaves the orchestrator's assignment choices outside
+the experiment. The control, overlap and overlap with D12 use cells 74–76. The historical pilot
+recorded them as 70–72.
+
+**Pilot result.** In the Haiku pilot, the shared invoice was charged twice in four of four
+overlap episodes. D12 prevented all four duplicates without skipping a payment. With the text
+channel, the orchestrator left the shared invoice unresolved in all four D12 episodes. A
+reported a successful charge and B reported an authorization denial for its own attempt.
+[Haiku pilot](docs/results/2026-11-21/m8-overlapping-ownership.md).
+
+**Six-model follow-up.** On 24 overlap episodes, 23 duplicated the shared payment. D12
+prevented all duplicates. Both conditions recorded zero omitted payments. With D12, 12 of 24
+parents returned
+`unknown` and one ended without a structured report.
+[Six-model pilot](docs/results/2026-11-23/m8-six-model-pilot.md).
+
+**Comparison scope.** M8 uses the same orchestrator prompt across its three conditions. The
+prompt explicitly requires exactly one successful payment per requested invoice for a `done`
+report. Other blocks use their own prompts, so differences in final report rates cannot be
+attributed to worklist overlap or D12 across blocks.
+
 ## 2026-11-25 · M3 k=2 stays scoped to the first paying child
 
 Keep the fault threshold per first paying child so that the second step interrupts one worker

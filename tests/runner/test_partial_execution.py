@@ -364,7 +364,7 @@ def test_three_invoice_template_and_batch_grader_must_be_used_together(
     cell: int, template: int
 ) -> None:
     with pytest.raises(
-        ValidationError, match=r"requires .*template 4|requires a partial-execution cell"
+        ValidationError, match=r"requires .*template 4|requires a partial-execution or M8 cell"
     ):
         EpisodeConfig.model_validate({"cell": cell, "template": str(template), "seed": 1})
     with pytest.raises(ValidationError, match="requires"):

@@ -40,6 +40,11 @@ class McpBackend:
         self._clients.clear()
         await self._stack.__aexit__(*exc)
 
+    async def prepare_actors(self, actors: tuple[str, ...]) -> None:
+        """Open actor sessions in the task that owns the backend's exit stack."""
+        for actor in actors:
+            await self._client(actor)
+
     def specs(self) -> list[ToolSpec]:
         return list(self._specs)
 

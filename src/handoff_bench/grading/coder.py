@@ -70,7 +70,7 @@ def code_behaviour(
         return "other"
 
     def anchor(row: CallRow) -> bool:
-        return (row.tool == "delegate" and row.outcome == "ok") or (
+        return (row.tool in ("delegate", "delegate_parallel") and row.outcome == "ok") or (
             row.tool == "create_charge" and row.outcome == "timeout"
         )
 

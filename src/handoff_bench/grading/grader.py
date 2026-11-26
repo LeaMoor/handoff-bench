@@ -23,6 +23,7 @@ Outcome = Literal[
     "false_done",
     "false_failed",
     "skip",
+    "misreported",
     "no_finish",
     "invalid",
 ]
