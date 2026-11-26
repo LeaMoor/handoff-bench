@@ -34,6 +34,15 @@ def _subagents(own: list[CallRow]) -> dict[int, str]:
     return {r.seq: f"sub-{i}" for i, r in enumerate(ran, 1)}
 
 
+def calls_by_response(own: list[CallRow], responses: list[int]) -> list[list[CallRow]]:
+    """Split one actor's calls in sequence order into model responses."""
+    batches, start = [], 0
+    for n in responses:
+        batches.append(own[start : start + n])
+        start += n
+    return batches
+
+
 def code_behaviour(
     calls: list[CallRow], *, orchestrator: str, responses: list[int], final_text: str | None
 ) -> Behaviour:
@@ -61,14 +70,11 @@ def code_behaviour(
         return "other"
 
     def anchor(row: CallRow) -> bool:
-        return (row.tool == "delegate" and row.outcome == "ok") or (
+        return (row.tool in ("delegate", "delegate_parallel") and row.outcome == "ok") or (
             row.tool == "create_charge" and row.outcome == "timeout"
         )
 
-    batches, start = [], 0
-    for n in responses:
-        batches.append(own[start : start + n])
-        start += n
+    batches = calls_by_response(own, responses)
     first = next((i for i, b in enumerate(batches) if any(anchor(r) for r in b)), None)
     if first is None:
         return Behaviour(first_action="none", decision="none", self_checked=False)

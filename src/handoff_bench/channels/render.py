@@ -4,6 +4,7 @@ text: the subagent's own words (C-text).
 code: a statement the code builds from the subagent's call journal (C-code) — never from the
       effect journal, which only the grader reads.
 struct: the subagent's report form — status, done, uncertain and text (C-struct).
+retell: the subagent's run as plain text; `Delegation` has a model retell it (M2).
 
 To add a channel, add an entry to RENDERERS; `cells.py` already names all of them.
 """
@@ -56,6 +57,25 @@ def form(child: AgentTrace) -> str:
             f"text: {report['text']}",
         ]
     )
+
+
+def transcript(child: AgentTrace) -> str:
+    """The subagent's run for the retell: its goal, each tool call with what came back, and any
+    text it wrote. Built from the trace, so it differs only where the subagent saw something
+    different (call ids are left out)."""
+    lines: list[str] = []
+    called: dict[str, str] = {}
+    for m in child.messages:
+        if m["role"] == "user":
+            lines.append(f"Task: {m['content']}")
+        elif m["role"] == "assistant":
+            if m.get("content"):
+                lines.append(f"Subagent: {m['content']}")
+            for tc in m.get("tool_calls") or []:
+                called[tc["id"]] = f"{tc['function']['name']}({tc['function']['arguments']})"
+        elif m["role"] == "tool":
+            lines.append(f"Call {called.get(m['tool_call_id'], '?')} -> {m['content']}")
+    return "\n".join(lines)
 
 
 def _items(name: str, items: list[str]) -> str:
@@ -138,6 +158,8 @@ RENDERERS: dict[Channel, Renderer] = {
     "code": lambda child, calls, report_lost: statement(calls),
     "code_key": lambda child, calls, report_lost: statement(calls, show_key=True),
     "code_hedged": lambda child, calls, report_lost: statement(calls, hedge=True),
+    # The run, not the report: a lost report would still show in it, so nothing is passed on.
+    "retell": lambda child, calls, report_lost: "" if report_lost else transcript(child),
     # A single agent never delegates; the entry only keeps the episode wiring uniform.
     "none": lambda child, calls, report_lost: subagent_words(child),
 }
