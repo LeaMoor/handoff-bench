@@ -134,10 +134,11 @@ class OpenRouterClient:
             "messages": with_cache_breakpoints(messages)
             if s.model.startswith("anthropic/")
             else messages,
-            "tools": tools,
-            "tool_choice": s.tool_choice,
             "extra_body": extra_body,
         }
+        if tools:  # a plain text call (the M2 retell) sends none: an empty list is rejected
+            params["tools"] = tools
+            params["tool_choice"] = s.tool_choice
         for name in ("temperature", "seed", "max_tokens"):
             value = getattr(s, name)
             if value is not None:

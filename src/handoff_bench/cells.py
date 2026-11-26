@@ -2,7 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing", "single_workflow"]
+Block = Literal[
+    "control", "calibration", "main", "keys", "processing", "partial_execution",
+    "ownership", "capture", "single_workflow",
+]
 Fault = Literal[
     "none",
     "pre",
@@ -13,13 +16,21 @@ Fault = Literal[
     "redeliver",
     "processing_settles",
     "processing_fails",
+    "capture_completed",
+    "capture_declined",
+    "partial_after_one",
+    "partial_after_two",
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
-# a note that a timed-out charge may have gone through unseen; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
+# a note that a timed-out charge may have gone through unseen; retell: another model call retells
+# the subagent run (M2); none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "retell", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
+
+
+Ownership = Literal["disjoint", "overlap", "d12", "d12_owner"]
 
 
 class Cell(BaseModel):
@@ -34,6 +45,8 @@ class Cell(BaseModel):
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
     key: KeySource = "subagent"  # who sets the idempotency key (M4)
+
+    ownership: Ownership | None = None
 
 
 _TIMEOUTS: tuple[Fault, ...] = ("timeout_lost", "timeout_committed")
@@ -148,6 +161,68 @@ for rules in (True, False):
                 rules=rules,
             )
         )
+# M8 uses 74–76 and 94. Cell 94 reveals the assigned owner in the denial.
+_cells.extend(
+    Cell(
+        number=number,
+        block="ownership",
+        fault="none",
+        channel="text",
+        key="none",
+        ownership=condition,
+    )
+    for number, condition in ((74, "disjoint"), (75, "overlap"), (76, "d12"), (94, "d12_owner"))
+)
+
+# M8 uses 74-76. M3 partial keeps one control and varies the stop threshold and visibility.
+for number, fault, delay in (
+    (77, "none", "short"),
+    (78, "partial_after_one", "short"),
+    (79, "partial_after_two", "short"),
+    (80, "partial_after_one", "long"),
+    (81, "partial_after_two", "long"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="partial_execution",
+            fault=fault,
+            channel="text",
+            delay=delay,
+            key="none",
+        )
+    )
+# M2, cells 82-85: like 6-7 (short delay, rules) and 24-25 (long delay, no rules), but the
+# orchestrator gets a retell of the subagent's run, not its words. Numbers are explicit:
+# 74-81 are occupied by M8 and M3 partial execution.
+for number, delay, rules, fault in (
+    (82, "short", True, "timeout_lost"),
+    (83, "short", True, "timeout_committed"),
+    (84, "long", False, "timeout_lost"),
+    (85, "long", False, "timeout_committed"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="main",
+            fault=fault,
+            channel="retell",
+            delay=delay,
+            rules=rules,
+        )
+    )
+# M3, cells 86-91: the bank answers the first focal charge with a `completed` order whose capture
+# is `completed` or `declined` (PayPal orders); the money's fate is in the answer, one level down.
+# Set up like 64-69. Numbers are explicit: 74-85 are taken by open PRs (M8, M3 partial, M2).
+for number, (fault, channel) in enumerate(
+    [
+        (f, ch)
+        for ch in ("text", "struct", "code")
+        for f in ("capture_completed", "capture_declined")
+    ],
+    start=86,
+):
+    _cells.append(Cell(number=number, block="capture", fault=fault, channel=channel, rules=False))
 # M1: mirror B0's two timeout worlds, adding a read-only workflow to the single agent.
 for number, fault in (
     (95, "timeout_lost"),

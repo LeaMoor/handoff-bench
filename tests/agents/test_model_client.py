@@ -129,13 +129,24 @@ def test_model_seed_is_not_sent_by_default() -> None:
     assert "seed" not in client.request_params([], [])
 
 
+TOOL = {"type": "function", "function": {"name": "t", "parameters": {}}}
+
+
 def test_tool_choice_defaults_to_auto_and_can_be_required() -> None:
     def params(**kw: object) -> dict:
         settings = ModelSettings(model="m", provider="p", **kw)
-        return OpenRouterClient(settings, api_key="k").request_params([], [])
+        return OpenRouterClient(settings, api_key="k").request_params([], [TOOL])
 
     assert params()["tool_choice"] == "auto"
     assert params(tool_choice="required")["tool_choice"] == "required"
+
+
+def test_a_call_without_tools_sends_no_tools_and_no_tool_choice() -> None:
+    params = OpenRouterClient(ModelSettings(model="m", provider="p"), api_key="k").request_params(
+        [], []
+    )
+
+    assert "tools" not in params and "tool_choice" not in params
 
 
 def test_anthropic_models_get_cache_breakpoints_others_do_not() -> None:

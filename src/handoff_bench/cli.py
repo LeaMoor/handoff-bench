@@ -58,7 +58,8 @@ def run(
         str,
         typer.Option(
             help="none | pre | post | timeout_lost | timeout_committed | respawn | redeliver"
-            " | processing_settles | processing_fails (processing: with --no-rules)"
+            " | processing_settles | processing_fails | capture_completed | capture_declined"
+            " (processing, capture: with --no-rules)"
         ),
     ] = "none",
     channel: Annotated[

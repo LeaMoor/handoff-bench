@@ -9,6 +9,7 @@ from handoff_bench.billing.errors import (
 from handoff_bench.billing.journal import EffectJournal
 from handoff_bench.billing.models import (
     BankConfig,
+    CaptureRule,
     ChargeView,
     EffectRow,
     Invoice,
@@ -23,6 +24,7 @@ __all__ = [
     "BankTimeout",
     "BillingError",
     "BillingService",
+    "CaptureRule",
     "ChargeView",
     "CustomerMismatch",
     "EffectJournal",

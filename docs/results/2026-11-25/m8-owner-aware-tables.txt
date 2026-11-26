@@ -1,0 +1,48 @@
+Run | model | provider | rows | invalid | spend | commit
+prefreeze-4omini-ownership-template4 | openai/gpt-4o-mini-2024-07-18 | openai | 84 | 0 | $0.08717145 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+prefreeze-ds-ownership-template4 | deepseek/deepseek-v4.1-flash-1017 | fireworks | 84 | 0 | $0.18918791 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+prefreeze-glm-ownership-template4 | z-ai/glm-5.3-flash | z-ai | 84 | 0 | $0.14662462 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+prefreeze-haiku-ownership-template4 | anthropic/claude-haiku-5.5 | anthropic | 84 | 0 | $0.12742528 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+prefreeze-luna-ownership-template4 | openai/gpt-6-luna | openai | 84 | 0 | $0.06845120 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+prefreeze-qwen-ownership-template4 | qwen/qwen3.7-flash | alibaba | 84 | 0 | $0.05691401 | 5ba2c8c2b31640974a3c1c1a341ea6253dce7fda
+
+Cohort | Template | Cell | Model | valid | concurrent | both_attempted | shared_duplicate | denied | episodes_with_denial | reports_with_owner_id | all_exact | all_exact_unknown | denied_all_exact | denied_all_exact_unknown | skipped | wrong_amount | off_target | message_conflict | parent_done | parent_unknown | parent_failed | parent_none | shared_uncertain
+template4 | 4 | 74 | anthropic/claude-haiku-5.5 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0
+template4 | 4 | 74 | deepseek/deepseek-v4.1-flash-1017 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0
+template4 | 4 | 74 | openai/gpt-4o-mini-2024-07-18 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 10 | 9 | 2 | 0 | 10
+template4 | 4 | 74 | openai/gpt-6-luna | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 1 | 0 | 0 | 1
+template4 | 4 | 74 | qwen/qwen3.7-flash | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0
+template4 | 4 | 74 | z-ai/glm-5.3-flash | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0
+template4 | 4 | 75 | anthropic/claude-haiku-5.5 | 21 | 21 | 20 | 20 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 19 | 0 | 14
+template4 | 4 | 75 | deepseek/deepseek-v4.1-flash-1017 | 21 | 21 | 18 | 18 | 0 | 0 | 0 | 3 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 1 | 18 | 0 | 19
+template4 | 4 | 75 | openai/gpt-4o-mini-2024-07-18 | 21 | 21 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 18 | 2 | 1 | 0 | 2
+template4 | 4 | 75 | openai/gpt-6-luna | 21 | 21 | 20 | 20 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 20 | 0 | 0 | 20
+template4 | 4 | 75 | qwen/qwen3.7-flash | 21 | 19 | 19 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 0 | 0 | 0 | 3 | 1 | 2 | 15 | 3
+template4 | 4 | 75 | z-ai/glm-5.3-flash | 21 | 21 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 6 | 14 | 6
+template4 | 4 | 76 | anthropic/claude-haiku-5.5 | 21 | 21 | 21 | 0 | 21 | 21 | 0 | 21 | 21 | 21 | 21 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 21
+template4 | 4 | 76 | deepseek/deepseek-v4.1-flash-1017 | 21 | 21 | 20 | 0 | 20 | 20 | 0 | 21 | 1 | 20 | 1 | 0 | 0 | 0 | 0 | 20 | 1 | 0 | 0 | 1
+template4 | 4 | 76 | openai/gpt-4o-mini-2024-07-18 | 21 | 21 | 21 | 0 | 21 | 21 | 0 | 21 | 2 | 21 | 2 | 0 | 0 | 0 | 2 | 18 | 2 | 1 | 0 | 2
+template4 | 4 | 76 | openai/gpt-6-luna | 21 | 21 | 20 | 0 | 20 | 20 | 0 | 21 | 15 | 20 | 14 | 0 | 0 | 0 | 1 | 1 | 15 | 5 | 0 | 18
+template4 | 4 | 76 | qwen/qwen3.7-flash | 21 | 21 | 21 | 0 | 21 | 21 | 0 | 21 | 4 | 21 | 4 | 0 | 0 | 0 | 0 | 7 | 4 | 0 | 10 | 2
+template4 | 4 | 76 | z-ai/glm-5.3-flash | 21 | 21 | 21 | 0 | 21 | 21 | 0 | 21 | 3 | 21 | 3 | 0 | 0 | 0 | 0 | 10 | 3 | 0 | 8 | 1
+template4 | 4 | 94 | anthropic/claude-haiku-5.5 | 21 | 21 | 21 | 0 | 21 | 21 | 21 | 21 | 12 | 21 | 12 | 0 | 0 | 0 | 0 | 9 | 12 | 0 | 0 | 12
+template4 | 4 | 94 | deepseek/deepseek-v4.1-flash-1017 | 21 | 21 | 20 | 0 | 20 | 20 | 20 | 21 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 | 0 | 0
+template4 | 4 | 94 | openai/gpt-4o-mini-2024-07-18 | 21 | 21 | 21 | 0 | 22 | 21 | 0 | 21 | 8 | 21 | 8 | 0 | 0 | 0 | 0 | 10 | 8 | 3 | 0 | 11
+template4 | 4 | 94 | openai/gpt-6-luna | 21 | 21 | 21 | 0 | 21 | 21 | 20 | 21 | 2 | 21 | 2 | 0 | 0 | 0 | 0 | 19 | 2 | 0 | 0 | 2
+template4 | 4 | 94 | qwen/qwen3.7-flash | 21 | 20 | 20 | 0 | 20 | 20 | 11 | 20 | 4 | 20 | 4 | 3 | 0 | 0 | 0 | 12 | 4 | 1 | 4 | 1
+template4 | 4 | 94 | z-ai/glm-5.3-flash | 21 | 21 | 20 | 0 | 20 | 20 | 17 | 21 | 3 | 20 | 3 | 0 | 0 | 0 | 0 | 17 | 3 | 0 | 1 | 0
+
+Totals by cohort and cell
+template4 | 4 | 74 | all | 126 | 126 | 0 | 0 | 0 | 0 | 0 | 126 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 114 | 10 | 2 | 0 | 11
+template4 | 4 | 75 | all | 126 | 124 | 119 | 119 | 0 | 0 | 0 | 5 | 1 | 0 | 0 | 6 | 0 | 0 | 0 | 25 | 26 | 46 | 29 | 64
+template4 | 4 | 76 | all | 126 | 126 | 124 | 0 | 124 | 124 | 0 | 126 | 46 | 124 | 45 | 0 | 0 | 0 | 3 | 56 | 46 | 6 | 18 | 45
+template4 | 4 | 94 | all | 126 | 125 | 123 | 0 | 124 | 123 | 89 | 125 | 29 | 123 | 29 | 3 | 0 | 0 | 0 | 88 | 29 | 4 | 5 | 26
+
+Matched D12 pair | both valid | 76 unknown | 94 unknown | both exact | both exact and denied | 76 unknown when both exact | 94 unknown when both exact | unknown to done when both exact | done to unknown when both exact
+all | 126 | 46 | 29 | 125 | 122 | 45 | 29 | 28 | 6
+anthropic/claude-haiku-5.5 | 21 | 21 | 12 | 21 | 21 | 21 | 12 | 9 | 0
+deepseek/deepseek-v4.1-flash-1017 | 21 | 1 | 0 | 21 | 20 | 1 | 0 | 1 | 0
+openai/gpt-4o-mini-2024-07-18 | 21 | 2 | 8 | 21 | 21 | 2 | 8 | 0 | 5
+openai/gpt-6-luna | 21 | 15 | 2 | 21 | 20 | 15 | 2 | 13 | 0
+qwen/qwen3.7-flash | 21 | 4 | 4 | 20 | 20 | 3 | 4 | 2 | 0
+z-ai/glm-5.3-flash | 21 | 3 | 3 | 21 | 20 | 3 | 3 | 3 | 1

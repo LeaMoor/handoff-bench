@@ -91,7 +91,7 @@ def cell_table(df: pd.DataFrame) -> pd.DataFrame:
     out["self_checked"] = g["self_checked"].mean()
     # Where a false "done" was born: the subagent the fault hit already said "done". Only where
     # the orchestrator got that report (bank faults); elsewhere the fault lost it, so NaN.
-    seen = v["block"].isin(["main", "processing"])
+    seen = v["block"].isin(["main", "processing", "capture"])
     out["sub_done"] = (v["sub_claim"] == "done").astype(float).where(seen).groupby(v["cell"]).mean()
     out["retried"] = (v["retries"] > 0).groupby(v["cell"]).mean()
     out["tokens_mean"] = (v["prompt_tokens"] + v["completion_tokens"]).groupby(v["cell"]).mean()
@@ -109,7 +109,9 @@ def _main(df: pd.DataFrame) -> pd.DataFrame:
     """Valid main-block episodes whose fault fired; a timeout that did not fire is a control run
     in disguise (counted in `fault_not_fired`)."""
     m = valid(df)
-    return m[m["cell"].isin(MAIN_CELLS) & m["fault_fired"]]
+    # Historical pilot cells 70-72 were reused for hedged statements. The CSV records
+    # the experiment block that actually ran.
+    return m[m["block"].eq("main") & m["fault_fired"]]
 
 
 def main_by_channel(

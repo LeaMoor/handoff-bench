@@ -3,6 +3,8 @@
 Does the orchestrator pass on a key it can see? Old: every charge on the focal invoice was hidden
 in 34, 35, 60, 61. New: only the first one is (DECISIONS, 2026-11-21); the pre world (34, 60) from
 the v2 rerun, the post world (35, 61) from v3. 28, 29, 62, 63 are the same in both.
+`key_forwarded` looks at the second delegation whatever it is for (in template 2, usually the other
+invoice); `focal_key.py` counts only re-delegations of the focal invoice.
 
 Usage: uv run python scripts/code_key.py
 """

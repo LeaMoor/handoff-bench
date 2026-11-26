@@ -1,0 +1,35 @@
+Run | model | provider | rows | invalid | spend | commit
+prefreeze-4omini-ownership-v2 | openai/gpt-4o-mini-2024-07-18 | openai | 12 | 0 | $0.01170660 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-ds-deepinfra-ownership-v2 | deepseek/deepseek-v4.1-flash-1017 | deepinfra/fp8 | 12 | 0 | $0.01223767 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-ds-ownership-v2 | deepseek/deepseek-v4.1-flash-1017 | deepseek | 12 | 12 | $0.00000000 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-glm-ownership-v2 | z-ai/glm-5.3-flash | z-ai | 12 | 0 | $0.02026002 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-haiku-ownership-v2 | anthropic/claude-haiku-5.5 | anthropic | 12 | 0 | $0.01740580 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-luna-ownership-v2 | openai/gpt-6-luna | openai | 12 | 0 | $0.01005350 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+prefreeze-qwen-ownership-v2 | qwen/qwen3.7-flash | alibaba | 12 | 0 | $0.00779489 | 100945c7ba65a22d5f6448ed33523b475bdb37c2
+
+Cohort | Template | Cell | Model | valid | concurrent | both_attempted | shared_duplicate | denied | episodes_with_denial | reports_with_owner_id | all_exact | all_exact_unknown | denied_all_exact | denied_all_exact_unknown | skipped | wrong_amount | off_target | message_conflict | parent_done | parent_unknown | parent_failed | parent_none | shared_uncertain
+six-model-pilot | 2 | 74 | anthropic/claude-haiku-5.5 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 74 | deepseek/deepseek-v4.1-flash-1017 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 74 | openai/gpt-4o-mini-2024-07-18 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 1 | 0 | 0 | 1
+six-model-pilot | 2 | 74 | openai/gpt-6-luna | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 2
+six-model-pilot | 2 | 74 | qwen/qwen3.7-flash | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 74 | z-ai/glm-5.3-flash | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 75 | anthropic/claude-haiku-5.5 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 3
+six-model-pilot | 2 | 75 | deepseek/deepseek-v4.1-flash-1017 | 4 | 4 | 3 | 3 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 3 | 0 | 3
+six-model-pilot | 2 | 75 | openai/gpt-4o-mini-2024-07-18 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 0 | 1 | 0 | 1
+six-model-pilot | 2 | 75 | openai/gpt-6-luna | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 2
+six-model-pilot | 2 | 75 | qwen/qwen3.7-flash | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 3 | 0
+six-model-pilot | 2 | 75 | z-ai/glm-5.3-flash | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0
+six-model-pilot | 2 | 76 | anthropic/claude-haiku-5.5 | 4 | 4 | 4 | 0 | 4 | 4 | 0 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 4
+six-model-pilot | 2 | 76 | deepseek/deepseek-v4.1-flash-1017 | 4 | 4 | 3 | 0 | 3 | 3 | 0 | 4 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 76 | openai/gpt-4o-mini-2024-07-18 | 4 | 4 | 4 | 0 | 4 | 4 | 0 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 0 | 0
+six-model-pilot | 2 | 76 | openai/gpt-6-luna | 4 | 4 | 4 | 0 | 4 | 4 | 0 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 4
+six-model-pilot | 2 | 76 | qwen/qwen3.7-flash | 4 | 4 | 3 | 0 | 3 | 3 | 0 | 4 | 2 | 3 | 1 | 0 | 0 | 0 | 0 | 1 | 2 | 0 | 1 | 1
+six-model-pilot | 2 | 76 | z-ai/glm-5.3-flash | 4 | 4 | 4 | 0 | 4 | 4 | 0 | 4 | 2 | 4 | 2 | 0 | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 2
+
+Totals by cohort and cell
+six-model-pilot | 2 | 74 | all | 24 | 24 | 0 | 0 | 0 | 0 | 0 | 24 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 3 | 0 | 0 | 3
+six-model-pilot | 2 | 75 | all | 24 | 24 | 23 | 23 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 5 | 4 | 8 | 7 | 9
+six-model-pilot | 2 | 76 | all | 24 | 24 | 22 | 0 | 22 | 22 | 0 | 24 | 12 | 22 | 11 | 0 | 0 | 0 | 0 | 11 | 12 | 0 | 1 | 11
+
+Matched D12 pair | both valid | 76 unknown | 94 unknown | both exact | both exact and denied | 76 unknown when both exact | 94 unknown when both exact | unknown to done when both exact | done to unknown when both exact
