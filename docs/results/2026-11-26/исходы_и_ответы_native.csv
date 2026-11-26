@@ -1,0 +1,7 @@
+run,condition,n,completed,any_unpaid,reported_done,reported_unknown,reported_failed,same_actor_retried,multiple_actors_attempted,done_incomplete
+harness-cc-native,timeout_lost,84,28,56,27,57,0,28,1,0
+harness-cc-native,timeout_committed,84,76,1,6,78,0,25,1,6
+harness-hermes-native,timeout_lost,84,32,52,31,51,2,33,1,0
+harness-hermes-native,timeout_committed,84,70,3,10,71,3,41,3,10
+harness-codex-native,timeout_lost,84,64,20,64,20,0,64,7,0
+harness-codex-native,timeout_committed,84,66,0,18,66,0,69,7,18
