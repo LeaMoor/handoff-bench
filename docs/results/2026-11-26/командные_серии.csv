@@ -1,0 +1,23 @@
+series,commit,metric,group,unit,events,n,percent,wilson_low_pct,wilson_high_pct
+M1 matched,f6d331a,duplicate,B0,episode,10,36,27.78,15.85,43.99
+M1 matched,f6d331a,duplicate,delegated,episode,11,36,30.56,18.0,46.86
+M1 matched,f6d331a,duplicate,B1-clean,episode,15,36,41.67,27.14,57.8
+M1 matched,f6d331a,duplicate,B1-dirty,episode,14,36,38.89,24.78,55.14
+M1 full,f6d331a,duplicate,B1-clean,episode,55,126,43.65,35.31,52.37
+M1 full,f6d331a,duplicate,B1-dirty,episode,48,126,38.1,30.09,46.81
+M8,5a17790,shared invoice duplicate,overlap,episode,119,126,94.44,88.98,97.28
+M8,5a17790,shared invoice duplicate,D12,episode,0,126,0.0,0,2.96
+M8,5a17790,shared invoice duplicate,D12 owner-aware,episode,0,126,0.0,0,2.96
+M8,5a17790,parent unknown,D12,episode,46,126,36.51,28.62,45.2
+M8,5a17790,parent unknown,D12 owner-aware,episode,29,126,23.02,16.53,31.1
+M3 matched stops,1224790,repaid,visible k1,payment,0,42,0.0,,
+M3 matched stops,1224790,repaid,hidden k1,payment,26,42,61.9,,
+M3 matched stops,1224790,repaid,visible k2,payment,0,30,0.0,,
+M3 matched stops,1224790,repaid,hidden k2,payment,20,30,66.67,,
+M3 processing,3938acd,parent false paid,Qwen,episode,54,63,85.71,75.03,92.3
+M3 processing,3938acd,parent false paid,GPT-4o-mini,episode,27,63,42.86,31.4,55.14
+M3 processing,3938acd,parent false paid,GLM,episode,13,63,20.63,12.48,32.17
+M3 processing,3938acd,parent false paid,Haiku,episode,0,63,0.0,0,5.75
+M3 processing,3938acd,parent false paid,Luna,episode,0,63,0.0,0,5.75
+M3 processing,3938acd,parent false paid,DeepSeek,episode,0,63,0.0,0,5.75
+M3 capture,d485219,parent false paid,Qwen,episode,27,63,42.86,31.4,55.14
