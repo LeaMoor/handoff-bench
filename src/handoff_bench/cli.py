@@ -31,10 +31,11 @@ def _run_batch(
     import anyio
 
     from handoff_bench.agents.model_client import OpenRouterClient
+    from handoff_bench.harness.codex_native import CodexSettings
     from handoff_bench.runner.batch import DirtyCheckout, run_batch
     from handoff_bench.runner.results import git_commit
 
-    client = OpenRouterClient(cfg.model)
+    client = None if isinstance(cfg.orchestrator, CodexSettings) else OpenRouterClient(cfg.model)
     run_id = _run_id(cfg.run_id, label)
     try:
         return anyio.run(

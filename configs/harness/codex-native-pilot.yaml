@@ -1,0 +1,16 @@
+# Matched pilot, one episode per cell on the Codex subscription.
+run_id: harness-codex-native-pilot
+orchestrator:
+  harness: codex
+  model: gpt-6.2-sol
+  subagent_model: gpt-6-luna
+model:
+  model: gpt-6-luna
+  provider: codex-subscription
+cells: [102, 103, 104, 105, 106, 107, 108, 109]
+templates: [1]
+seeds: [1]
+parallel: 1
+# Required by the shared config schema. Codex reports tokens and enforces its own usage limit.
+budget_usd: 1
+allow_dirty: true

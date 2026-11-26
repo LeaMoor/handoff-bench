@@ -11,6 +11,7 @@ from handoff_bench.agents.loop import ModelCallLog
 from handoff_bench.agents.model_client import ModelClient, ModelSettings
 from handoff_bench.cells import CELLS
 from handoff_bench.harness.claude_code import HarnessSettings, UsageLimitReached
+from handoff_bench.harness.codex_native import CodexSettings
 from handoff_bench.harness.hermes import HermesSettings
 from handoff_bench.jsonl import read_rows
 from handoff_bench.runner.episode import EpisodeConfig
@@ -24,7 +25,8 @@ class BatchConfig(BaseModel):
 
     run_id: str | None = None
     model: ModelSettings
-    orchestrator: HarnessSettings | HermesSettings | None = None  # None: our loop on `model`
+    # None runs our loop on `model`.
+    orchestrator: HarnessSettings | HermesSettings | CodexSettings | None = None
     cells: list[int]
     world: int = 1
     templates: list[int]
@@ -47,7 +49,12 @@ class BatchConfig(BaseModel):
         for number in self.cells:
             if number not in CELLS:
                 raise ValueError(f"unknown cell {number}")
-            check_supported(CELLS[number])
+            cell = CELLS[number]
+            if (cell.block == "codex_native") != isinstance(self.orchestrator, CodexSettings):
+                raise ValueError("Codex native cells require Codex and a separate batch")
+            check_supported(cell)
+        if isinstance(self.orchestrator, CodexSettings) and self.parallel != 1:
+            raise ValueError("Codex batches require parallel: 1")
         if isinstance(self.orchestrator, HermesSettings) and self.parallel != 1:
             raise ValueError("Hermes batches currently require parallel: 1")
         return self
@@ -111,7 +118,7 @@ class BatchSummary(BaseModel):
 
 async def run_batch(
     config: BatchConfig,
-    make_model: Callable[[EpisodeConfig], ModelClient],
+    make_model: Callable[[EpisodeConfig], ModelClient | None],
     *,
     run_dir: Path,
     run_id: str,
@@ -135,11 +142,13 @@ async def run_batch(
     finished, crashed, skipped, cost_missing = 0, 0, 0, False
     spent = sum(float(r["cost"] or 0) for r in results.kept)
     limit: UsageLimitReached | None = None
+    codex = isinstance(config.orchestrator, CodexSettings)
+    codex_failed = False
 
     async def one(episode: EpisodeConfig) -> None:
-        nonlocal finished, crashed, skipped, spent, cost_missing, limit
+        nonlocal finished, crashed, skipped, spent, cost_missing, limit, codex_failed
         async with limiter:
-            if limit is not None or cost_missing or spent >= config.budget_usd:
+            if limit is not None or cost_missing or codex_failed or spent >= config.budget_usd:
                 skipped += 1
                 return
             try:
@@ -147,15 +156,21 @@ async def run_batch(
             except Exception as e:
                 if (hit := _usage_limit(e)) is None:
                     crashed += 1
+                    codex_failed = codex
                     _write_crash(run_dir / episode.episode_id)
                     spent += _spent_before_crash(run_dir / episode.episode_id)
                     return
                 limit = limit or hit
                 skipped += 1
-                shutil.rmtree(run_dir / episode.episode_id, ignore_errors=True)
+                if not codex:
+                    shutil.rmtree(run_dir / episode.episode_id, ignore_errors=True)
                 return
             spent += row.cost
-            cost_missing = cost_missing or (row.cost == 0 and row.prompt_tokens > 0)
+            # Codex reports subscription token usage without a billed dollar amount.
+            if codex:
+                codex_failed = row.outcome == "invalid"
+            else:
+                cost_missing = cost_missing or (row.cost == 0 and row.prompt_tokens > 0)
             finished += 1
             results.append(row)
 

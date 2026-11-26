@@ -126,23 +126,29 @@ def make_server(tools: StandTools) -> Server[Any]:
 
 
 @asynccontextmanager
-async def serving(tools: StandTools, *, host: str = "127.0.0.1") -> AsyncIterator[str]:
+async def serving(
+    tools: StandTools | None = None, *, host: str = "127.0.0.1", server: Server[Any] | None = None
+) -> AsyncIterator[str]:
     """Runs the server on this event loop on a free port; yields its MCP URL."""
+    if server is None:
+        if tools is None:
+            raise ValueError("MCP serving requires tools or a server")
+        server = make_server(tools)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((host, 0))
     port = sock.getsockname()[1]
-    app = make_server(tools).streamable_http_app(streamable_http_path="/mcp", host=host)
-    server = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
-    task = asyncio.create_task(server.serve(sockets=[sock]))
+    app = server.streamable_http_app(streamable_http_path="/mcp", host=host)
+    http = uvicorn.Server(uvicorn.Config(app, log_level="warning"))
+    task = asyncio.create_task(http.serve(sockets=[sock]))
     try:
-        while not server.started:
+        while not http.started:
             if task.done():
                 task.result()  # raises the startup error
                 raise RuntimeError(f"stand MCP server did not start on port {port}")
             await asyncio.sleep(0.02)
         yield f"http://{host}:{port}/mcp"
     finally:
-        server.should_exit = True
+        http.should_exit = True
         await task
         sock.close()

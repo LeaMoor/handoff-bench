@@ -2,7 +2,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Block = Literal["control", "calibration", "main", "keys", "processing", "native", "hermes_native"]
+Block = Literal[
+    "control", "calibration", "main", "keys", "processing", "native",
+    "hermes_native", "codex_native",
+]
 Fault = Literal[
     "none",
     "pre",
@@ -182,6 +185,16 @@ for fault in _TIMEOUTS:
                 key=key,
             )
         )
+# Cells 102–109: the same matrix with Codex native children.
+for offset, (fault, key) in enumerate(
+    (fault, key) for fault in _TIMEOUTS for key in ("none", "subagent", "task", "intent")
+):
+    _cells.append(
+        Cell(
+            number=102 + offset, block="codex_native", fault=fault, channel="native",
+            delay="long", rules=False, key=key,
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 
