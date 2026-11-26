@@ -1,4 +1,6 @@
-"""Main grid (cells 6-31, hedged statement 70-73) for every model: outcome shares by condition.
+"""Main grid for every model: outcome shares by condition.
+
+Cells 6-31, hedged statement 70-73, and retell 82-85.
 
 Usage: uv run python scripts/grid.py [runs/prefreeze-*]
 """
@@ -18,7 +20,7 @@ for run in runs:
     if not (run / "results.csv").exists():
         continue
     df = r.load_results(run)
-    grid_cells = df["cell"].between(6, 31) | df["cell"].between(70, 73)
+    grid_cells = df["cell"].between(6, 31) | df["cell"].between(70, 73) | df["cell"].between(82, 85)
     # The historical M8 pilot also used 70-72.
     frames.append(df[df["block"].eq("main") & grid_cells])
 df = pd.concat(frames, ignore_index=True)

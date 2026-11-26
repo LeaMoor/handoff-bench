@@ -247,6 +247,7 @@ async def run_episode(
                     **delegate_options,
                     deliveries=fault.deliveries,
                     respawn_on_lost=fault.respawn_on_lost,
+                    retell=config.channel == "retell",
                 )
             register_finish(gateway)
             spec = AgentSpec(
@@ -264,16 +265,18 @@ async def run_episode(
     trace_data = {
         "orchestrator": trace.model_dump(mode="json"),
         "subagents": [s.model_dump(mode="json") for s in subagents],
+        "retells": [r.model_dump(mode="json") for r in delegation.retells],
     }
     if parallel is not None:
         trace_data.update(tasks=tasks, parallel_overlap=parallel.overlap)
     if isinstance(fault.injector, PartialExecution) and fault.injector.stop is not None:
         trace_data["partial_stop"] = fault.injector.stop.model_dump(mode="json")
     _write_json(episode_dir / "trace.json", trace_data)
-    traces = [trace, *subagents]
+    helpers = [*subagents, *delegation.retells]
+    traces = [trace, *helpers]
     usage = sum((t.usage for t in traces), Usage())
-    # A subagent's API / stand failure invalidates the whole episode.
-    broken = next((s for s in subagents if s.stop_reason in INVALID_STOPS), None)
+    # A subagent or retell API / stand failure invalidates the whole episode.
+    broken = next((s for s in helpers if s.stop_reason in INVALID_STOPS), None)
     return EpisodeResult(
         episode_dir=episode_dir,
         stop_reason=broken.stop_reason if broken else trace.stop_reason,

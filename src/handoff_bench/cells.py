@@ -20,8 +20,9 @@ Fault = Literal[
 ]
 KeySource = Literal["none", "subagent", "orchestrator", "task", "intent", "pinned"]
 # code_key: the statement plus the idempotency key of each charge; code_hedged: the statement plus
-# a note that a timed-out charge may have gone through unseen; none: a single agent.
-Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "none"]
+# a note that a timed-out charge may have gone through unseen; retell: another model call retells
+# the subagent run (M2); none: a single agent.
+Channel = Literal["text", "struct", "code", "code_key", "code_hedged", "retell", "none"]
 Delay = Literal["short", "long"]
 Agent = Literal["delegated", "single"]
 
@@ -186,6 +187,25 @@ for number, fault, delay in (
             channel="text",
             delay=delay,
             key="none",
+        )
+    )
+# M2, cells 82-85: like 6-7 (short delay, rules) and 24-25 (long delay, no rules), but the
+# orchestrator gets a retell of the subagent's run, not its words. Numbers are explicit:
+# 74-81 are occupied by M8 and M3 partial execution.
+for number, delay, rules, fault in (
+    (82, "short", True, "timeout_lost"),
+    (83, "short", True, "timeout_committed"),
+    (84, "long", False, "timeout_lost"),
+    (85, "long", False, "timeout_committed"),
+):
+    _cells.append(
+        Cell(
+            number=number,
+            block="main",
+            fault=fault,
+            channel="retell",
+            delay=delay,
+            rules=rules,
         )
     )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
