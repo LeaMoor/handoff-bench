@@ -1,3 +1,12 @@
+## 2026-11-27 · CLI text in English
+
+**Decision.** All `stand` text is in English: help for commands and options, docstrings, report
+section titles and status messages. This closes open question 10 with option (a); the CLI gets no
+exception from the English-only rule in `CLAUDE.md`.
+
+**Rationale.** One language for code and docs, and no exception to document. The change touches
+only text printed to people: no options, defaults, cells, prompts or grading change.
+
 ## 2026-11-26 · M2 retelling integrated into the shared runner (cells 82–85)
 
 M2 was moved from `feat/m2-retell` on top of the M8 and M3 changes. Cells 82–85 have their own
@@ -664,7 +673,7 @@ Code starting in week 3.
 7. **Orchestrator tools in the control (cell 1).** The plan is silent; currently the tools match calibration (`delegate`, `finish`). Alternative: provide the main-block tools, including checks.
 8. **`ask_user`.** Currently defined as finishing with plain text containing `?`. Options: (a) keep this definition and compare it with manual labels; (b) classify any text without `finish` as `ask_user`.
 9. **`results.csv` in Git.** The plan says to commit `results.csv`, not `runs/`, but the file is written to `runs/<run_id>/`. Options: (a) copy it after each batch to `results/<run_id>.csv`; (b) add a `.gitignore` exception: `!runs/*/results.csv`.
-10. **CLI language.** `CLAUDE.md` says code and docstrings are English, while `stand` help text is Russian. Options: (a) translate it; (b) document a CLI exception.
+10. **CLI language.** Resolved on 2026-11-27: option (a), the CLI is in English (see the dated entry).
 11. **Duplicate on the first invoice in template 2, cell 4.** The outcome does not count it (it has a separate column, see the grader decision above), but the correct action in cell 4 is to delegate again, and the new subagent may pay the first invoice twice. Decide before the pilot whether this episode counts as correct (Dima).
 12. **`failed` + `uncertain` without an invoice number.** Two groups (see `docs/results/2026-11-19/manual-labels.md`): “why it failed” (calibration, honest “it did not work”) and “did it go through? I don't know” (main block, honest uncertainty). Options: (a) keep the current rule; (b) use wording-based rules; (c) manually label this group or use a model judge.
 13. **The new grid produces no errors on Haiku 5.5.** Options: (a) run the same grid on GPT-6 Luna (which had isolated `false_done` / `false_failed` cases overnight) and Opus; (b) measure EOS in the “did not go through” world as well as `correct`, since “I don't know” counts as correct; (c) make the subagent report lose details (a short summary without status), as in real harnesses; (d) retry with a new key from a new subagent, the main route to duplicates.

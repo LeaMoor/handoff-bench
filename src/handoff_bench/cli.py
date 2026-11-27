@@ -7,8 +7,8 @@ import typer
 if TYPE_CHECKING:
     from handoff_bench.runner.batch import BatchConfig, BatchSummary
 
-app = typer.Typer(help="Стенд handoff-bench.", no_args_is_help=True)
-bank_app = typer.Typer(help="Банк (MCP-сервер billing).", no_args_is_help=True)
+app = typer.Typer(help="The handoff-bench stand.", no_args_is_help=True)
+bank_app = typer.Typer(help="Bank (billing MCP server).", no_args_is_help=True)
 app.add_typer(bank_app, name="bank")
 
 
@@ -18,7 +18,7 @@ def _run_id(run_id: str | None, label: str) -> str:
 
 @app.callback()
 def main() -> None:
-    """Стенд handoff-bench."""
+    """The handoff-bench stand."""
     from dotenv import load_dotenv
 
     # Before the subcommand parses its options: model and provider can come from .env.
@@ -51,9 +51,9 @@ def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary"
 
 @app.command()
 def run(
-    world: Annotated[int, typer.Option(help="Номер мира")] = 1,
-    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
-    seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 1,
+    world: Annotated[int, typer.Option(help="World number")] = 1,
+    template: Annotated[int, typer.Option(help="Task template: 1 | 2 | 3")] = 1,
+    seed: Annotated[int, typer.Option(help="World variant seed")] = 1,
     fault: Annotated[
         str,
         typer.Option(
@@ -68,27 +68,25 @@ def run(
     delay: Annotated[
         str, typer.Option(help="short | long (long: the timed-out charge never shows)")
     ] = "short",
-    rules: Annotated[bool, typer.Option(help="Блок правил у субагента")] = True,
+    rules: Annotated[bool, typer.Option(help="Rules block for the subagent")] = True,
     agent: Annotated[
-        str, typer.Option(help="delegated | single (B0: платит сам оркестратор)")
+        str, typer.Option(help="delegated | single (B0: the orchestrator pays itself)")
     ] = "delegated",
     model: Annotated[
-        str, typer.Option(envvar="OPENROUTER_MODEL", help="ID модели в OpenRouter")
+        str, typer.Option(envvar="OPENROUTER_MODEL", help="OpenRouter model ID")
     ] = "qwen/qwen3.7-flash",
     provider: Annotated[
-        str, typer.Option(envvar="OPENROUTER_PROVIDER", help="Провайдер в OpenRouter (закреплён)")
+        str, typer.Option(envvar="OPENROUTER_PROVIDER", help="OpenRouter provider (pinned)")
     ] = "alibaba",
-    model_seed: Annotated[
-        int | None, typer.Option(help="Сид модели; не задан — не передаём")
-    ] = None,
-    temperature: Annotated[float | None, typer.Option(help="Не задано — не передаём")] = None,
+    model_seed: Annotated[int | None, typer.Option(help="Model seed; not sent if unset")] = None,
+    temperature: Annotated[float | None, typer.Option(help="Not sent if unset")] = None,
     reasoning_effort: Annotated[str | None, typer.Option(help="low | medium | high")] = None,
-    run_id: Annotated[str | None, typer.Option(help="Имя прогона (по умолчанию — время)")] = None,
-    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
+    run_id: Annotated[str | None, typer.Option(help="Run name (default: timestamp)")] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Where to write logs")] = Path("runs"),
 ) -> None:
-    """Один эпизод — пачка из одного: журналы в runs/<run_id>/<episode_id>/, строка в results.csv.
+    """Run one episode as a batch of one: logs in runs/<run_id>/<episode_id>/, a row in results.csv.
 
-    Нужен OPENROUTER_API_KEY в .env.
+    Requires OPENROUTER_API_KEY in .env.
     """
     import math
 
@@ -120,16 +118,16 @@ def run(
     summary = _run_batch(cfg, "single", runs_dir)
     typer.echo((summary.run_dir / "results.csv").read_text(encoding="utf-8"))
     if summary.crashed:
-        typer.echo(f"эпизод упал, см. crash.txt в {summary.run_dir}")
+        typer.echo(f"episode crashed, see crash.txt in {summary.run_dir}")
         raise typer.Exit(code=1)
 
 
 @app.command()
 def batch(
-    config: Annotated[Path, typer.Argument(help="YAML-конфиг пачки, например configs/debug.yaml")],
-    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
+    config: Annotated[Path, typer.Argument(help="Batch YAML config, e.g. configs/debug.yaml")],
+    runs_dir: Annotated[Path, typer.Option(help="Where to write logs")] = Path("runs"),
 ) -> None:
-    """Пачка эпизодов параллельно, с остановкой по бюджету. Нужен OPENROUTER_API_KEY в .env."""
+    """Run episodes in parallel, stopping at the budget. Requires OPENROUTER_API_KEY in .env."""
     from handoff_bench.runner.batch import BatchConfig
 
     summary = _run_batch(BatchConfig.load(config), config.stem, runs_dir)
@@ -139,10 +137,10 @@ def batch(
 @app.command()
 def report(
     paths: Annotated[
-        list[Path], typer.Argument(help="Папки прогонов runs/<run_id> или файлы results.csv")
+        list[Path], typer.Argument(help="Run folders runs/<run_id> or results.csv files")
     ],
 ) -> None:
-    """Таблица по ячейкам, главные числа, предсказания и критерии пилота."""
+    """Per-cell table, headline numbers, predictions and pilot criteria."""
     import pandas as pd
 
     from handoff_bench.analysis import report as r
@@ -152,16 +150,16 @@ def report(
     pd.set_option("display.max_columns", None)
     pd.set_option("display.precision", 2)
     sections = [
-        ("По ячейкам", r.cell_table(df)),
-        ("Первое действие оркестратора", r.first_actions(df)),
+        ("By cell", r.cell_table(df)),
+        ("Orchestrator first action", r.first_actions(df)),
         (
-            "Главное число 1: главный блок по каналам (где проверка не спасает)",
+            "Headline number 1: main block by channel (where checking does not help)",
             r.main_by_channel(df, **r.PRIMARY),
         ),
-        ("Главный блок по условиям", r.main_grid(df)),
-        ("Главное число 2: калибровка", r.calibration_summary(df)),
-        ("Предсказания", r.predictions(df)),
-        ("Критерии пилота", r.pilot_checks(df)),
+        ("Main block by condition", r.main_grid(df)),
+        ("Headline number 2: calibration", r.calibration_summary(df)),
+        ("Predictions", r.predictions(df)),
+        ("Pilot criteria", r.pilot_checks(df)),
     ]
     for title, table in sections:
         typer.echo(f"\n== {title} ==\n{table.to_string()}")
@@ -169,11 +167,11 @@ def report(
 
 @app.command()
 def world(
-    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")],
-    seed: Annotated[int, typer.Option(help="Сид варианта мира")],
-    world: Annotated[int, typer.Option(help="Номер мира")] = 1,
+    template: Annotated[int, typer.Option(help="Task template: 1 | 2 | 3")],
+    seed: Annotated[int, typer.Option(help="World variant seed")],
+    world: Annotated[int, typer.Option(help="World number")] = 1,
 ) -> None:
-    """Показать мир: счета в банке, что оплатить, где ломаем и текст задачи."""
+    """Show a world: bank invoices, what to pay, where the fault hits, and the task text."""
     from handoff_bench.worlds import generate
 
     try:
@@ -185,7 +183,7 @@ def world(
 
 @app.command()
 def version() -> None:
-    """Версия стенда."""
+    """Stand version."""
     from handoff_bench import __version__
 
     typer.echo(__version__)
@@ -193,23 +191,21 @@ def version() -> None:
 
 @bank_app.command("serve")
 def bank_serve(
-    port: Annotated[int, typer.Option(help="HTTP-порт")] = 8765,
-    host: Annotated[str, typer.Option(help="Адрес")] = "127.0.0.1",
-    episode_id: Annotated[
-        str | None, typer.Option(help="ID эпизода (по умолчанию — время)")
-    ] = None,
-    runs_dir: Annotated[Path, typer.Option(help="Куда писать журналы")] = Path("runs"),
-    template: Annotated[int, typer.Option(help="Шаблон задачи: 1 | 2 | 3")] = 1,
-    seed: Annotated[int, typer.Option(help="Сид варианта мира")] = 1,
-    visibility_delay: Annotated[int, typer.Option(help="Задержка видимости списания")] = 0,
+    port: Annotated[int, typer.Option(help="HTTP port")] = 8765,
+    host: Annotated[str, typer.Option(help="Host address")] = "127.0.0.1",
+    episode_id: Annotated[str | None, typer.Option(help="Episode ID (default: timestamp)")] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Where to write logs")] = Path("runs"),
+    template: Annotated[int, typer.Option(help="Task template: 1 | 2 | 3")] = 1,
+    seed: Annotated[int, typer.Option(help="World variant seed")] = 1,
+    visibility_delay: Annotated[int, typer.Option(help="Charge visibility delay")] = 0,
     timeout_invoice: Annotated[
-        str | None, typer.Option(help="Счёт, на котором create_charge ответит таймаутом")
+        str | None, typer.Option(help="Invoice on which create_charge times out")
     ] = None,
     timeout_commits: Annotated[
-        bool, typer.Option(help="При таймауте списание всё равно проходит")
+        bool, typer.Option(help="The charge still goes through on timeout")
     ] = False,
 ) -> None:
-    """Поднять банк одного эпизода по HTTP: http://<host>:<port>/mcp, со счетами мира 1."""
+    """Serve one episode's bank over HTTP at http://<host>:<port>/mcp, with world 1 invoices."""
     from handoff_bench.billing import BankConfig, BillingService, EffectJournal, TimeoutRule
     from handoff_bench.billing.protocol import MCP_PATH
     from handoff_bench.billing.server import serve
@@ -232,5 +228,5 @@ def bank_serve(
     service.add_invoices(generate(1, seed, template).invoices)
 
     typer.echo(f"bank: http://{host}:{port}{MCP_PATH}  episode={episode_id}")
-    typer.echo(f"журнал эффектов: {episode_dir / 'effects.jsonl'}")
+    typer.echo(f"effects journal: {episode_dir / 'effects.jsonl'}")
     serve(service, host=host, port=port)
