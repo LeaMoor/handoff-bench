@@ -11,11 +11,14 @@ from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
     ORCHESTRATOR_SYSTEM_PROMPT,
+    SAFE_ACTIONS,
     SINGLE_SYSTEM_PROMPT,
     SINGLE_TOOLS,
+    SUBAGENT_TOOLS,
     AgentsConfig,
     Delegation,
     register_finish,
+    register_wait,
 )
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
@@ -39,7 +42,7 @@ from handoff_bench.cells import (
 )
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.partial import PartialExecution
-from handoff_bench.faults.setup import FAULTS, with_delay
+from handoff_bench.faults.setup import FAULTS, VISIBILITY_DELAY, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
@@ -83,7 +86,8 @@ class EpisodeConfig(BaseModel):
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
-        for name in ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership"):
+        derived = ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership")
+        for name in (*derived, "safe_actions"):
             if name in data and data.pop(name) != getattr(cell, name):
                 raise ValueError(f"{name} does not match cell {cell.number}")
         data.pop("episode_id", None)
@@ -138,6 +142,11 @@ class EpisodeConfig(BaseModel):
 
     @computed_field
     @property
+    def safe_actions(self) -> bool:
+        return CELLS[self.cell].safe_actions
+
+    @computed_field
+    @property
     def ownership(self) -> Ownership | None:
         return CELLS[self.cell].ownership
 
@@ -164,6 +173,8 @@ def _agents_for(cell: Cell) -> AgentsConfig:
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
+    if cell.safe_actions:
+        extra["subagent_tools"] = (*SUBAGENT_TOOLS, *SAFE_ACTIONS)
     if cell.key == "orchestrator":
         extra["orchestrator_prompt"] = ORCHESTRATOR_SYSTEM_PROMPT + ORCHESTRATOR_KEY_PROMPT
     return AgentsConfig(orchestrator_tools=tools, **extra)
@@ -264,6 +275,8 @@ async def run_episode(
                 )
             if config.block == "single_workflow":
                 register_review(gateway, dirty=config.cell in (97, 98))
+            if "wait" in agents.subagent_tools:
+                register_wait(gateway, service.tick, VISIBILITY_DELAY)
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,

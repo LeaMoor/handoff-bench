@@ -45,6 +45,8 @@ class Cell(BaseModel):
     rules: bool = True  # the subagent gets the rules block
     agent: Agent = "delegated"
     key: KeySource = "subagent"  # who sets the idempotency key (M4)
+    # M7: the subagent also has `wait` and `escalate`, safe actions besides a guess.
+    safe_actions: bool = False
 
     ownership: Ownership | None = None
 
@@ -241,6 +243,15 @@ for number, fault in (
             agent="single",
         )
     )
+# M7, cells 103-106: like 12-13 (short delay, a check helps) and 24-25 (long delay, a check shows
+# nothing), words channel, no rules, but the subagent can also `wait` or `escalate`. Numbers are
+# explicit: 99-102 are taken by an open PR (M4 capture keys).
+for number, base in ((103, 12), (104, 13), (105, 24), (106, 25)):
+    _cells.append(
+        next(c for c in _cells if c.number == base).model_copy(
+            update={"number": number, "safe_actions": True}
+        )
+    )
 CELLS: dict[int, Cell] = {c.number: c for c in _cells}
 assert len(CELLS) == len(_cells), "two cells share a number"
 
@@ -257,10 +268,12 @@ def find_cell(
     rules: bool = True,
     agent: str = "delegated",
     key: str = "subagent",
+    safe_actions: bool = False,
 ) -> Cell:
-    wanted = (fault, channel, delay, rules, agent, key)
+    wanted = (fault, channel, delay, rules, agent, key, safe_actions)
     for cell in CELLS.values():
-        if (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key) == wanted:
+        got = (cell.fault, cell.channel, cell.delay, cell.rules, cell.agent, cell.key)
+        if (*got, cell.safe_actions) == wanted:
             return cell
     raise UnsupportedCell(
         f"no cell with fault={fault!r}, channel={channel!r}, delay={delay!r}, "
