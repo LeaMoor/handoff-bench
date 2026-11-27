@@ -1,73 +1,54 @@
-# Добивка до 21 эпизода на ячейку, 20 ноября 2026
+# Top-up to 21 episodes per cell, November 20, 2026
 
-Все прогоны помечены `prefreeze`, как и [прогоны 19 ноября](../2026-11-19/README.md). 3431 эпизод,
-$6,9 на OpenRouter, invalid нет. Теперь у всех шести моделей (Haiku 5.5, GPT-6 Luna, Qwen 3.7 Flash,
-GLM-5.3-Flash, DeepSeek V4.1 Flash, GPT-4o-mini) по 21 эпизоду в ячейках 1–35, 48–59 и 70–73
-(выписка с оговоркой; в прогонах записаны старые номера 64–67, см. DECISIONS).
+All runs are marked `prefreeze`, like the [November 19 runs](../2026-11-19/README.md). There were 3,431 episodes, $6.90 on OpenRouter, and no invalid episodes. All six models (Haiku 5.5, GPT-6 Luna, Qwen 3.7 Flash, GLM-5.3-Flash, DeepSeek V4.1 Flash, GPT-4o-mini) now have 21 episodes in cells 1–35, 48–59, and 70–73 (statement with caveat; runs originally used cell numbers 64–67, see DECISIONS).
 
-## Что здесь
+## Contents
 
-| Файл | Что |
+| File | Description |
 |---|---|
-| [grid-tables.txt](grid-tables.txt) | сетка 6–31 и выписка с оговоркой 70–73: исходы по условию (задержка, правила, B0) и каналу, все модели (`scripts/grid.py`) |
-| [who-duplicates.txt](who-duplicates.txt) | кто сделал второе списание: тот же субагент или новый (`scripts/who_duplicates.py`) |
-| [keys-hidden-tables.txt](keys-hidden-tables.txt) | M4 при невидимом списании (48–59), все модели, старое правило скрытия (`scripts/keys.py`) |
-| [hidden-rerun-tables.txt](hidden-rerun-tables.txt) | калибровка без лазейки (32–35) и выписка с ключом (60–61): старое правило скрытия против исправленного (`scripts/hidden_rerun.py`) |
-| [keys-rerun-tables.txt](keys-rerun-tables.txt) | M4 при невидимом списании (48–59): старое правило скрытия против исправленного и Claude Opus 5.5 (`scripts/keys_rerun.py`) |
-| [code-key-tables.txt](code-key-tables.txt) | выписка с ключом (60–63) против обычной: исходы по ячейкам, старое правило скрытия против исправленного (`scripts/code_key.py`; его счёт передачи берёт любое второе поручение — см. focal-key) |
-| [focal-key-tables.txt](focal-key-tables.txt) | передаёт ли оркестратор ключ субагента, когда снова поручает тот же счёт (`scripts/focal_key.py`) |
+| [grid-tables.txt](grid-tables.txt) | Grid 6–31 and statement-with-caveat cells 70–73: outcomes by condition (delay, rules, B0) and channel, all models (`scripts/grid.py`) |
+| [who-duplicates.txt](who-duplicates.txt) | Who made the second charge: the same subagent or a new one (`scripts/who_duplicates.py`) |
+| [keys-hidden-tables.txt](keys-hidden-tables.txt) | M4 when the charge is hidden (48–59), all models, old hiding rule (`scripts/keys.py`) |
+| [hidden-rerun-tables.txt](hidden-rerun-tables.txt) | Calibration without the loophole (32–35) and statement with key (60–61): old vs. corrected hiding rule (`scripts/hidden_rerun.py`) |
+| [keys-rerun-tables.txt](keys-rerun-tables.txt) | M4 when the charge is hidden (48–59): old vs. corrected hiding rule and Claude Opus 5.5 (`scripts/keys_rerun.py`) |
+| [code-key-tables.txt](code-key-tables.txt) | Statement with key (60–63) vs. ordinary statement: outcomes by cell, old vs. corrected hiding rule (`scripts/code_key.py`; its transfer count includes any second delegation—see focal-key) |
+| [focal-key-tables.txt](focal-key-tables.txt) | Does the orchestrator pass on the subagent's key when delegating the same invoice again? (`scripts/focal_key.py`) |
 
-## Прогоны
+## Runs
 
-| Прогоны | Модель | Ячейки | Эпизодов |
-|---|---|---|---|
+| Runs | Model | Cells | Episodes |
+|---|---|---|---:|
 | `haiku-grid-t3`, `haiku-grid-s3to7` | Haiku 5.5 | 12–27, 30, 31 | 306 |
 | `ds-grid-*`, `ds-keys-hidden-topup*` | DeepSeek V4.1 Flash | 12–27, 30, 31; 48–59 | 353 |
 | `glm-grid-*`, `glm-grid12to23-*`, `glm-keys-hidden*` | GLM-5.3-Flash | 12–27, 30, 31; 48–59 | 558 |
 | `4omini-grid-*` | GPT-4o-mini | 12–31 | 340 |
 | `qwen-grid-*`, `qwen-keys-hidden` | Qwen 3.7 Flash | 12–31; 48–59 | 592 |
 | `luna-cal`, `luna-grid`, `luna-keys-hidden` | GPT-6 Luna | 1–5; 12–31; 48–59 | 777 |
-| `*-hedged` | все шесть | 70–73 (сначала были 64–67, см. DECISIONS) | 504 |
-| `*-hidden-v2` (32, 34, 60), `*-hidden-v3` (33, 35, 61) | все шесть | 32–35; 60–61 у Haiku, DeepSeek, GLM | 630 |
-| `*-keys-hidden-v3` | все шесть | 48–59 | 1512 |
-| `opus-cal-keys` | Claude Opus 5.5 | 32–35; 48, 49, 50, 52, 54, 55, 56, 58 (по 9) | 108 |
+| `*-hedged` | all six | 70–73 (originally 64–67; see DECISIONS) | 504 |
+| `*-hidden-v2` (32, 34, 60), `*-hidden-v3` (33, 35, 61) | all six | 32–35; 60–61 for Haiku, DeepSeek, GLM | 630 |
+| `*-keys-hidden-v3` | all six | 48–59 | 1,512 |
+| `opus-cal-keys` | Claude Opus 5.5 | 32–35; 48, 49, 50, 52, 54, 55, 56, 58 (9 each) | 108 |
 
-Новые эпизоды дополняют старые: шаблон 3 со всеми сидами и шаблоны 1–2 с сидами 3–7; старые 4 —
-шаблоны 1–2 с сидами 1–2. `*-fill` — 3 эпизода, пропущенных по бюджету, и 1, упавший на сетевой
-ошибке (`httpx ReadError`). Для M4 у GPT-4o-mini берётся `4omini-keys-hidden-rerun`; сломанный
-лимитом ключа `4omini-keys-hidden` лежит в `runs/_broken-403/`.
+New episodes fill in template 3 for all seeds and templates 1–2 for seeds 3–7; the original four were templates 1–2 for seeds 1–2. `*-fill` contains three episodes missed because of budget and one that failed with a network error (`httpx ReadError`). For GPT-4o-mini M4, use `4omini-keys-hidden-rerun`; the run interrupted by a key limit, `4omini-keys-hidden`, is in `runs/_broken-403/`.
 
-**Код прогонов.** В `results.csv` записан коммит. `-dirty` до 2026-11-21 ставился и за
-неотслеживаемые файлы (DECISIONS). Прогоны на `947858c` и `cea0986`: этих коммитов нет в истории
-`main`, они под тегами `runs/prefreeze-947858c` и `runs/prefreeze-cea0986`.
+**Run code.** Each `results.csv` records its commit. Before November 21, `-dirty` was also set for untracked files (DECISIONS). Commits `947858c` and `cea0986` are not in `main` history; they are tagged `runs/prefreeze-947858c` and `runs/prefreeze-cea0986`.
 
-| Коммит | Прогоны |
+| Commit | Runs |
 |---|---|
-| `5e9b6a7` (в `main`) | `*-grid-t3`, `*-grid-s3to7`, `*-fill`, `glm-grid12to23-*`, `luna-cal`, `luna-grid`, `glm-`, `luna-`, `qwen-keys-hidden`, `ds-keys-hidden-topup*` |
-| `947858c` (тег) | `*-hedged`, `*-hidden-v2`, `*-hidden-v3`, `opus-cal-keys` — на незакоммиченном коде, итог в `cea0986` |
-| `cea0986` (тег) | `*-keys-hidden-v3`, кроме DeepSeek |
-| `32d1d40` (в этом PR) | `ds-keys-hidden-v3` |
+| `5e9b6a7` (in `main`) | `*-grid-t3`, `*-grid-s3to7`, `*-fill`, `glm-grid12to23-*`, `luna-cal`, `luna-grid`, `glm-`, `luna-`, `qwen-keys-hidden`, `ds-keys-hidden-topup*` |
+| `947858c` (tag) | `*-hedged`, `*-hidden-v2`, `*-hidden-v3`, `opus-cal-keys`—used uncommitted code; final version is `cea0986` |
+| `cea0986` (tag) | `*-keys-hidden-v3`, except DeepSeek |
+| `32d1d40` (in this PR) | `ds-keys-hidden-v3` |
 
-## Главное
+## Main findings
 
-**M4 держится на всех шести моделях.** Дубли при повторе, когда проверить нельзя: ключа нет — 98–100%,
-ключ субагента — 57–100%, ключ оркестратора в задании — 0–26%, ключ от номера поручения — 36–67%,
-ключ системы (по смыслу платежа или закреплённый) — 0% у всех. Перепрогон на исправленном правиле
-скрытия (`*-keys-hidden-v3`, все шесть моделей) даёт то же в пределах шума.
+**M4 holds across all six models.** When verification is unavailable, duplicate rates on retry are 98–100% with no key, 57–100% with a subagent key, 0–26% with an orchestrator-provided key, 36–67% with a task-number key, and 0% for system keys based on payment intent or a pinned first request. Reruns with the corrected hiding rule (`*-keys-hidden-v3`) show the same pattern within noise.
 
-**Выписка в главном блоке добавляет дубли.** При долгой задержке в мире, где списание прошло, но не
-видно: DeepSeek 5% (слова) → 38% (выписка), GLM 29% → 71%, Luna с правилами 14% → 76%; у Haiku
-без изменений (5%). Выписка показывает «create_charge: timeout, outcome unknown» и «list_charges:
-no charges» как факты, проверка оркестратора тоже пуста, и он поручает оплатить снова. В словах
-субагент обычно добавляет «не повторяй». В калибровке без лазейки выписка, наоборот, снимает дубли:
-там в ней видно успешное списание.
+**A statement increases duplicates in the main block.** With a long delay, in the world where the charge succeeded but is not visible, DeepSeek rises from 5% with words to 38% with the statement; GLM from 29% to 71%; Luna with rules from 14% to 76%. Haiku is unchanged (5%). The statement shows “create_charge: timeout, outcome unknown” and “list_charges: no charges” as facts; the orchestrator's own check is also empty, so it delegates another payment. In words, the subagent usually adds “do not retry.” In calibration without the loophole, the statement instead removes duplicates because it shows the successful charge.
 
-**Оговорка в выписке снимает дубли на границе — у части моделей.** Ячейки 70–73 (`*-hedged`,
-6 × 84 эпизода, $1,1): выписка плюс строка «таймаут мог пройти, проверки могут отставать». Кто
-сделал второе списание в мире, где оно прошло (`scripts/who_duplicates.py`, по журналу эффектов),
-доля эпизодов:
+**A caveat in the statement reduces boundary duplicates for some models.** Cells 70–73 (`*-hedged`, six × 84 episodes, $1.10) add “the timeout may have succeeded; checks may lag.” The table shows episodes in the world where the first payment succeeded, grouped by who made the second charge (`scripts/who_duplicates.py`, from the effects log):
 
-| Модель | новый субагент: слова / выписка / с оговоркой | тот же субагент (от канала не зависит) |
+| Model | New subagent: words / statement / caveat | Same subagent (independent of channel) |
 |---|---|---|
 | Haiku 5.5 | 0% / 0% / 0% | 0–2% |
 | GPT-6 Luna | 12% / 57% / **5%** | 0% |
@@ -76,28 +57,10 @@ no charges» как факты, проверка оркестратора тож
 | Qwen 3.7 Flash | 2% / 12% / 7% | 21–26% |
 | GPT-4o-mini | 5% / 7% / 5% | 83–90% |
 
-В мире, где списания не было, доля правильных не падает; растёт доля честных «не знаю». GLM
-оговорку пересказывает («this may be lag»), но поручает «сверить», и новый субагент видит пустую
-проверку и платит. Дубли самого субагента канал отчёта не лечит — их лечит ключ от системы (M4).
+In the world where the charge did not happen, correctness does not fall; honest “I don't know” responses increase. GLM repeats the caveat (“this may be lag”) but asks for a check, and the new subagent sees an empty ledger and pays. The report channel does not prevent duplicates made by the same subagent; the system-issued key (M4) addresses those.
 
-**Калибровка без лазейки после исправления стенда.** Раньше скрывались все списания по счёту,
-в том числе законная повторная оплата, и в мире «до оплаты» появлялись ложные дубли (DeepSeek 33%,
-GLM 62% с выпиской). Теперь скрыто только первое списание (DECISIONS, 2026-11-21). Ложные дубли
-ушли; ошибка пары (среднее по двум мирам) — слова / выписка / выписка с ключом: Haiku 21% / 2% /
-0%, DeepSeek 43% / 21% / 7%, GLM 40% / 17% / 12%, Luna 48% / 7%, GPT-4o-mini 52% / 33%, Qwen 83% /
-76%. Вывод прежний: со словами в мире «после оплаты» много дублей, выписка их снимает. Ключ из
-выписки оркестратор передаёт так же, как до исправления (`scripts/focal_key.py`): из эпизодов, где
-он снова поручил тот же счёт после оплаты первого субагента с его ключом, ключ попал в новое
-задание у DeepSeek в 22 из 34, у GLM в 21 из 37, у Haiku в 7 из 27; с обычной выпиской — ни разу.
-Передачи — в калибровке «после оплаты» (61) и в главном блоке, где списание прошло (63); в мире
-«до оплаты» (60) — ни одной.
+**Calibration without the loophole after the stand fix.** Previously, all charges on an invoice were hidden, including a legitimate retry, creating false duplicates in the “before payment” world (DeepSeek 33%, GLM 62% with the statement). Now only the first charge is hidden (DECISIONS, 2026-11-21). Those false duplicates disappeared. Pair error (mean across both worlds)—words / statement / statement with key: Haiku 21% / 2% / 0%, DeepSeek 43% / 21% / 7%, GLM 40% / 17% / 12%, Luna 48% / 7%, GPT-4o-mini 52% / 33%, Qwen 83% / 76%. The conclusion remains: with words, the “after payment” world has many duplicates; the statement removes them. The orchestrator passes a key from the statement about as often as before (`scripts/focal_key.py`): among episodes where it delegated the same invoice again after the first subagent paid with its key, the key reached the new task in 22/34 DeepSeek episodes, 21/37 GLM, and 7/27 Haiku; never with the ordinary statement. These transfers occurred in calibration “after payment” (61) and in the main block where the charge went through (63), never “before payment” (60).
 
-**Claude Opus 5.5 сам выход не находит** (`opus-cal-keys`, 9 эпизодов на ячейку, $7,55, на
-исправленном стенде). Калибровка без лазейки, мир «после оплаты»: со словами — дубль в 9 из 9
-(чаще всех моделей: поручает проверку, видит «списаний нет», поручает оплатить снова и пишет
-«оплачено»); с выпиской — 0 дублей, 7 из 9 «не знаю». M4 при невидимом списании: без ключа — 18
-из 18 дублей; ключ субагента — 22% (новый запуск) и 44% (повторная доставка), у остальных 57–100%;
-ключ оркестратора и ключ системы — 0%.
+**Claude Opus 5.5 does not find a workaround on its own** (`opus-cal-keys`, 9 episodes per cell, $7.55, corrected stand). In calibration without the loophole, “after payment”: with words, all 9/9 duplicated (more than any other model: it delegates a check, sees “no charges,” delegates a payment, then reports “paid”); with a statement, there were 0 duplicates and 7/9 “I don't know.” M4 with an invisible charge: 18/18 duplicates with no key; subagent key, 22% on respawn and 44% on redelivery; other delegated keys, 57–100%; orchestrator and system keys, 0%.
 
-**B0 не лучше передачи:** у GLM, Qwen и GPT-4o-mini один агент дублирует 29%, 57% и 71% —
-ошибка от позднего коммита, а не от границы.
+**B0 is no better than delegation:** one agent duplicated in 29% of GLM, 57% of Qwen, and 71% of GPT-4o-mini episodes. The error comes from late commit, not the delegation boundary.

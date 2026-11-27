@@ -6,7 +6,6 @@ How the engineering skills should consume this repo's domain documentation when 
 
 - **`GLOSSARY.md`** at the repo root, if it exists.
 - **`DECISIONS.md`** at the repo root: it plays the role of ADRs (there is no `docs/adr/`) and overrides the plan wherever they disagree.
-- **`docs/plan-weeks-1-2.md`**: the plan the tasks come from.
 
 If `GLOSSARY.md` doesn't exist, **proceed silently**. Don't flag its absence; don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates it lazily when terms actually get resolved.
 
@@ -19,7 +18,6 @@ Single-context repo:
 ├── GLOSSARY.md
 ├── DECISIONS.md        ← decisions (instead of docs/adr/)
 ├── BACKLOG.md
-├── docs/plan-weeks-1-2.md
 └── src/handoff_bench/
 ```
 

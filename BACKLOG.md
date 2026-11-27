@@ -1,28 +1,24 @@
-# BACKLOG
+# Backlog
 
-Что по плану нужно, но ещё не сделано. Номера задач — из [docs/plan-weeks-1-2.md](docs/plan-weeks-1-2.md).
-Решения — в [DECISIONS.md](DECISIONS.md).
+Items that remain open from the project work. Decisions are recorded in [DECISIONS.md](DECISIONS.md).
 
-## Инфраструктура
-- [ ] **CI**: GitHub Actions на каждый PR — `uv sync`, `uv run ruff check .`, `uv run pytest`.
-      Без ключей и платных вызовов модели (тесты уже так устроены).
+## Infrastructure
 
-## Для задач других частей
-- [ ] **10, 11, 17**: сверить грейдер и кодер с ручной разметкой на живых эпизодах; правила —
-      таблицы в `tests/grading/test_tables.py`.
-- [ ] **12**: 10 живых эпизодов одной командой — `uv run stand batch configs/debug.yaml`.
-- [ ] **`stand pack`** (архив пачки для общего диска) из общих команд плана.
-- [ ] **13**: прогнать ноутбук на первых живых `results.csv`.
-- [ ] **12, 13**: считать долю эпизодов `api_error` / `infra_error` по ячейкам. В post субагент
-      работает дольше, чем в pre, поэтому чаще может упасть — исключения не случайны по ячейкам.
-## Архитектура
-- [ ] **Контракты и их версии.** Форматы, на которых держатся части: журналы (`effects.jsonl`,
-      `calls.jsonl`, `model_calls.jsonl`), `config.json` эпизода, `results.csv` (`ResultRow`), ответ
-      `delegate`. Сейчас версий нет: изменение колонки молча ломает старые `results.csv` в ноутбуке.
-      Варианты: поле `schema_version` в строке / проверка колонок при чтении.
-- [ ] **Оркестратор — за интерфейсом (неделя 3).** Сейчас он собирается внутри `run_episode`
-      (`AgentSpec` + `run_agent`). Для Claude Code / Codex нужен интерфейс «получить задачу и
-      инструменты по MCP → вернуть `finish`», чтобы грейдер, кодер и анализ не менялись.
+- [ ] **CI**: GitHub Actions on every PR: `uv sync`, `uv run ruff check .`, `uv run pytest`. No keys or paid model calls are needed; tests already work this way.
 
-## Открыто
-- [ ] Что считать «шагом» — см. DECISIONS, открытый вопрос 1.
+## For tasks in other parts
+
+- [ ] Compare grader and coder with manual labels on real episodes; rules are in `tests/grading/test_tables.py`.
+- [ ] Run 10 real episodes with one command: `uv run stand batch configs/debug.yaml`.
+- [ ] **`stand pack`**: add a command to archive a batch for the shared drive, as listed among the common plan tasks.
+- [ ] Run the notebook on the first real `results.csv` files.
+- [ ] Calculate the `api_error` / `infra_error` rate by cell. In post, the subagent runs longer than in pre, so it may fail more often; failures may not be evenly distributed across cells.
+
+## Architecture
+
+- [ ] **Versioned contracts.** Several components depend on file formats: logs (`effects.jsonl`, `calls.jsonl`, `model_calls.jsonl`), episode `config.json`, `results.csv` (`ResultRow`), and the `delegate` response. There are no versions today: changing a column can silently break old `results.csv` files in the notebook. Options: add `schema_version` to each row or validate columns when reading.
+- [ ] **Put the orchestrator behind an interface (week 3).** It is currently assembled inside `run_episode` (`AgentSpec` + `run_agent`). Claude Code and Codex need an interface that accepts a task and MCP tools and returns `finish`, without changing the grader, coder, or analysis.
+
+## Open
+
+- [ ] What counts as a “step”? See open question 1 in DECISIONS.

@@ -2,7 +2,6 @@
 
 Work is tracked in markdown files at the repo root. Do not create GitHub issues.
 
-- `docs/plan-weeks-1-2.md`: the plan; tasks are numbered 1–17. Never edit it.
 - `BACKLOG.md`: what the plan needs but is not done yet. One `- [ ]` line per item,
   prefixed with the task number. Remove the item in the same PR that finishes it.
 - `DECISIONS.md`: deviations from the plan. Entry format: `## YYYY-MM-DD · <decision>`,
@@ -19,5 +18,5 @@ in `DECISIONS.md` instead.
 
 ## When a skill says "fetch the relevant ticket"
 
-Read the task row in `docs/plan-weeks-1-2.md` by number, its `BACKLOG.md` item, and every
+Read the relevant `BACKLOG.md` item and every
 `DECISIONS.md` entry that mentions it.
