@@ -101,6 +101,8 @@ async def run_batch(
 ) -> BatchSummary:
     """Running episodes finish after the budget is spent: overshoot is up to `parallel` episodes.
     Tokens without a reported cost also stop the batch, or the budget would not hold."""
+    if (config.subagent_model is None) != (subagent_model is None):
+        raise ValueError("subagent_model must be set in the config and passed as a client together")
     if commit.endswith("-dirty") and not config.allow_dirty:
         raise DirtyCheckout("uncommitted changes: commit them or set allow_dirty for a debug run")
     results = ResultsCsv(run_dir / "results.csv")

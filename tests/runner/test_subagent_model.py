@@ -61,3 +61,12 @@ async def test_batch_passes_the_subagent_model_on(tmp_path: Path) -> None:
     )
     assert (summary.finished, summary.crashed) == (1, 0)
     assert len(subagent.requests) == 2
+
+
+async def test_a_subagent_model_without_a_client_is_refused(tmp_path: Path) -> None:
+    cell = find_cell("timeout_committed", "text").number
+    cfg = BatchConfig(
+        model=ORCH, subagent_model=SUB, cells=[cell], templates=[1], seeds=[1], budget_usd=1
+    )
+    with pytest.raises(ValueError, match="subagent_model"):
+        await run_batch(cfg, lambda _: FakeModel([]), run_dir=tmp_path, run_id="t", commit="abc")

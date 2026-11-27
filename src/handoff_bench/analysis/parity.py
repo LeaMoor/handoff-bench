@@ -15,6 +15,7 @@ ONCE = re.compile(r"\bonce\b|duplicat|idempoten|double[- ]charg|charge again", r
 
 
 def role_of(actor: str) -> str:
+    """orchestrator / subagent / retell, from the actor name in the logs."""
     if actor.startswith("retell-"):
         return "retell"
     if actor.startswith("sub-"):
@@ -25,6 +26,15 @@ def role_of(actor: str) -> str:
 def _stop_reasons(trace: dict) -> dict[str, str]:
     agents = [trace["orchestrator"], *trace.get("subagents", []), *trace.get("retells", [])]
     return {a["actor"]: a["stop_reason"] for a in agents}
+
+
+def _served(responses: list[dict], field: str) -> str | None:
+    """Like `runner.run._served`: missing values are skipped; None if nothing was served."""
+    return "|".join(sorted({str(r[field]) for r in responses if r.get(field)})) or None
+
+
+def _flag(value: bool, applies: bool) -> float:
+    return float(value) if applies else float("nan")
 
 
 def episode_roles(episode_dir: Path) -> list[dict]:
@@ -44,22 +54,30 @@ def episode_roles(episode_dir: Path) -> list[dict]:
         task = first.get("user", "")
         rules = agents["subagent_rules"]
         responses = [r.response for r in rows if r.response]
+        settings = (
+            config["model"]
+            if role == "orchestrator"
+            else (config.get("subagent_model") or config["model"])
+        )
+        is_goal = role in ("orchestrator", "subagent")  # a retell's input is a transcript
         out.append(
             {
                 "run": episode_dir.parent.name,
                 "episode_id": config["episode_id"],
                 "cell": config["cell"],
                 "rules": config["rules"],
-                "configured_model": (config["model"] or {}).get("model", "unknown"),
+                "configured_model": (settings or {}).get("model", "unknown"),
                 "role": role,
                 "actor": actor,
-                "served_model": "|".join(sorted({str(r.get("model")) for r in responses})),
-                "served_provider": "|".join(sorted({str(r.get("provider")) for r in responses})),
+                "served_model": _served(responses, "model"),
+                "served_provider": _served(responses, "provider"),
                 "system_prompt": first.get("system", ""),
                 "tools": ",".join(sorted({t for r in rows for t in r.tools})),
                 "task_chars": len(task),
-                "stand_rules": role == "subagent" and bool(rules) and rules in task,
-                "asks_once": bool(ONCE.search(task.replace(rules, "") if rules else task)),
+                "stand_rules": _flag(role == "subagent" and bool(rules) and rules in task, is_goal),
+                "asks_once": _flag(
+                    bool(ONCE.search(task.replace(rules, "") if rules else task)), is_goal
+                ),
                 "steps": len(rows),
                 "max_steps": {
                     "orchestrator": agents["orchestrator_max_steps"],
@@ -72,10 +90,11 @@ def episode_roles(episode_dir: Path) -> list[dict]:
 
 
 def role_rows(run_dirs: list[Path]) -> pd.DataFrame:
+    """All actors of the finished episodes; a crashed or interrupted one has no `trace.json`."""
     rows = [
         row
         for run in run_dirs
-        for episode in sorted(p.parent for p in run.glob("*/model_calls.jsonl"))
+        for episode in sorted(p.parent for p in run.glob("*/trace.json"))
         for row in episode_roles(episode)
     ]
     return pd.DataFrame(rows)
@@ -101,11 +120,10 @@ def parity_table(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def served_mismatches(df: pd.DataFrame) -> pd.DataFrame:
-    """Episodes where the orchestrator and a subagent were served by different models or
+    """Episodes where roles configured with the same model were served by different models or
     providers: a role difference the config does not show."""
     agents = df[df["role"].isin(["orchestrator", "subagent"])]
-    per = agents.groupby(["run", "episode_id"]).agg(
-        configured_model=("configured_model", "first"),
+    per = agents.groupby(["run", "episode_id", "configured_model"]).agg(
         models=("served_model", "nunique"),
         providers=("served_provider", "nunique"),
     )

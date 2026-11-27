@@ -42,7 +42,7 @@ from handoff_bench.cells import (
 )
 from handoff_bench.channels.render import RENDERERS
 from handoff_bench.faults.partial import PartialExecution
-from handoff_bench.faults.setup import FAULTS, VISIBILITY_DELAY, with_delay
+from handoff_bench.faults.setup import FAULTS, with_delay
 from handoff_bench.grading.grader import Claim
 from handoff_bench.jsonl import JsonlWriter
 from handoff_bench.keys import ORCHESTRATOR_KEY_PROMPT, KeyHook
@@ -276,7 +276,7 @@ async def run_episode(
             if config.block == "single_workflow":
                 register_review(gateway, dirty=config.cell in (97, 98))
             if "wait" in agents.subagent_tools:
-                register_wait(gateway, service.tick, VISIBILITY_DELAY)
+                register_wait(gateway, service.tick, fault.bank.visibility_delay)
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,

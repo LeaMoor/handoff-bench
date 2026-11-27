@@ -1,24 +1,24 @@
-1890 episodes, 4859 actors
+2016 episodes, 5160 actors
 
                                                 actors                      served_models  providers  system_prompts                                             tool_sets  stand_rules  asks_once  task_chars  steps_mean  hit_max_steps
 configured_model                  role                                                                                                                                                                                                   
 anthropic/claude-haiku-5.5        orchestrator     336         anthropic/claude-haiku-5.5  Anthropic               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       4.205          0.000
-                                  retell            90         anthropic/claude-haiku-5.5  Anthropic               1                                                              0.000      1.000    3517.678       1.000          0.000
+                                  retell            90         anthropic/claude-haiku-5.5  Anthropic               1                                                                NaN        NaN    3517.678       1.000          0.000
                                   subagent         345         anthropic/claude-haiku-5.5  Anthropic               1  create_charge,finish_report,get_invoice,list_charges        0.130      0.591     536.136       4.893          0.000
-deepseek/deepseek-v4.1-flash-1017 orchestrator     210  deepseek/deepseek-v4.1-flash-1017  Fireworks               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       5.090          0.000
-                                  retell           131  deepseek/deepseek-v4.1-flash-1017  Fireworks               1                                                              0.000      0.969    4448.237       1.000          0.000
-                                  subagent         297  deepseek/deepseek-v4.1-flash-1017  Fireworks               1  create_charge,finish_report,get_invoice,list_charges        0.215      0.215     559.949       5.131          0.003
+deepseek/deepseek-v4.1-flash-1017 orchestrator     336  deepseek/deepseek-v4.1-flash-1017  Fireworks               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       5.092          0.000
+                                  retell           131  deepseek/deepseek-v4.1-flash-1017  Fireworks               1                                                                NaN        NaN    4448.237       1.000          0.000
+                                  subagent         472  deepseek/deepseek-v4.1-flash-1017  Fireworks               1  create_charge,finish_report,get_invoice,list_charges        0.136      0.195     534.280       4.970          0.002
 openai/gpt-4o-mini-2024-07-18     orchestrator     336      openai/gpt-4o-mini-2024-07-18     OpenAI               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       2.592          0.000
-                                  retell           120      openai/gpt-4o-mini-2024-07-18     OpenAI               1                                                              0.000      0.033     858.767       1.000          0.000
+                                  retell           120      openai/gpt-4o-mini-2024-07-18     OpenAI               1                                                                NaN        NaN     858.767       1.000          0.000
                                   subagent         463      openai/gpt-4o-mini-2024-07-18     OpenAI               1  create_charge,finish_report,get_invoice,list_charges        0.125      0.000      63.415       3.706          0.000
 openai/gpt-6-luna                 orchestrator     336                  openai/gpt-6-luna     OpenAI               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       3.015          0.000
-                                  retell           107                  openai/gpt-6-luna     OpenAI               1                                                              0.000      0.850    1597.299       1.000          0.000
+                                  retell           107                  openai/gpt-6-luna     OpenAI               1                                                                NaN        NaN    1597.299       1.000          0.000
                                   subagent         361                  openai/gpt-6-luna     OpenAI               1  create_charge,finish_report,get_invoice,list_charges        0.161      0.042     231.994       4.629          0.000
 qwen/qwen3.7-flash                orchestrator     336                 qwen/qwen3.7-flash    Alibaba               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       2.554          0.000
-                                  retell            89                 qwen/qwen3.7-flash    Alibaba               1                                                              0.000      0.090    1246.225       1.000          0.000
+                                  retell            89                 qwen/qwen3.7-flash    Alibaba               1                                                                NaN        NaN    1246.225       1.000          0.000
                                   subagent         347                 qwen/qwen3.7-flash    Alibaba               1  create_charge,finish_report,get_invoice,list_charges        0.127      0.014     105.839       3.622          0.003
 z-ai/glm-5.3-flash                orchestrator     336                 z-ai/glm-5.3-flash       Z.AI               1              delegate,finish,get_invoice,list_charges        0.000      0.095     126.667       4.845          0.000
-                                  retell           120                 z-ai/glm-5.3-flash       Z.AI               1                                                              0.000      1.000    4147.925       1.000          0.000
+                                  retell           120                 z-ai/glm-5.3-flash       Z.AI               1                                                                NaN        NaN    4147.925       1.000          0.000
                                   subagent         499                 z-ai/glm-5.3-flash       Z.AI               1  create_charge,finish_report,get_invoice,list_charges        0.116      0.120     312.655       5.565          0.048 
 
 episodes where the roles were served by different models or providers: 0
@@ -28,7 +28,7 @@ subagent goals that ask to act once, without the stand's rules (by rules on/off)
 rules                              False  True 
 configured_model                               
 anthropic/claude-haiku-5.5         0.610  0.467
-deepseek/deepseek-v4.1-flash-1017  0.172  0.375
+deepseek/deepseek-v4.1-flash-1017  0.167  0.375
 openai/gpt-4o-mini-2024-07-18      0.000  0.000
 openai/gpt-6-luna                  0.026  0.121
 qwen/qwen3.7-flash                 0.013  0.023

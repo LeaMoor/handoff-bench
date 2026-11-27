@@ -1,8 +1,12 @@
 import pytest
-from helpers.episode import CHARGE, DELEGATE, LIST, finish, report, run
+from helpers.episode import CHARGE, DELEGATE, DEMO_WORLD, LIST, finish, report, run
+from helpers.fake_model import FakeModel
 
 from handoff_bench.agents.delegation import SUBAGENT_RULES
+from handoff_bench.agents.model_client import ModelSettings
 from handoff_bench.analysis.parity import episode_roles, role_rows, served_mismatches
+from handoff_bench.cells import find_cell
+from handoff_bench.runner.episode import EpisodeConfig, run_episode
 
 pytestmark = pytest.mark.anyio
 
@@ -38,3 +42,32 @@ async def test_same_served_model_is_no_mismatch(tmp_path) -> None:
 
     df = role_rows([tmp_path / "run"])
     assert served_mismatches(df).empty
+
+
+async def test_each_role_is_labelled_with_its_own_configured_model(tmp_path) -> None:
+    config = EpisodeConfig(
+        cell=find_cell("timeout_committed", "text").number,
+        template=1,
+        seed=0,
+        model=ModelSettings(model="fake/strong", provider="fake"),
+        subagent_model=ModelSettings(model="fake/weak", provider="fake"),
+    )
+    episode = tmp_path / "run" / "ep"
+    await run_episode(
+        FakeModel([DELEGATE, finish()]),
+        DEMO_WORLD,
+        config,
+        episode_dir=episode,
+        subagent_model=FakeModel([CHARGE, report()]),
+    )
+
+    labels = {r["role"]: r["configured_model"] for r in episode_roles(episode)}
+    assert labels == {"orchestrator": "fake/strong", "subagent": "fake/weak"}
+    assert served_mismatches(role_rows([tmp_path / "run"])).empty
+
+
+async def test_an_unfinished_episode_is_skipped(tmp_path) -> None:
+    await run(tmp_path / "run", SCRIPT, fault="timeout_committed")
+    (tmp_path / "run" / "ep" / "trace.json").unlink()
+
+    assert role_rows([tmp_path / "run"]).empty
