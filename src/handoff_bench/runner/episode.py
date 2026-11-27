@@ -71,6 +71,8 @@ class EpisodeConfig(BaseModel):
     repeat: int = 0
     agents: AgentsConfig
     model: ModelSettings | None = None
+    # M7: subagents (and retells) run on another model; None means the orchestrator's model.
+    subagent_model: ModelSettings | None = None
     commit: str = "unknown"
 
     @model_validator(mode="before")
@@ -193,7 +195,12 @@ def _write_json(path: Path, data: Any) -> None:
 
 
 async def run_episode(
-    model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
+    model: ModelClient,
+    world: World,
+    config: EpisodeConfig,
+    *,
+    episode_dir: Path,
+    subagent_model: ModelClient | None = None,
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
     agents = config.agents
@@ -234,7 +241,7 @@ async def run_episode(
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
             delegate_options = dict(
-                model=model,
+                model=subagent_model or model,
                 log=log,
                 report_lost=fault.injector.report_lost,
                 config=agents,

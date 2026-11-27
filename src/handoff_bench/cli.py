@@ -33,6 +33,7 @@ def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary"
     from handoff_bench.runner.results import git_commit
 
     client = OpenRouterClient(cfg.model)
+    sub_client = OpenRouterClient(cfg.subagent_model) if cfg.subagent_model else None
     run_id = _run_id(cfg.run_id, label)
     try:
         return anyio.run(
@@ -42,6 +43,7 @@ def _run_batch(cfg: "BatchConfig", label: str, runs_dir: Path) -> "BatchSummary"
                 run_dir=runs_dir / run_id,
                 run_id=run_id,
                 commit=git_commit(),
+                subagent_model=sub_client,
             )
         )
     except DirtyCheckout as e:

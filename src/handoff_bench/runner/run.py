@@ -35,13 +35,20 @@ def _served(log_path: Path) -> tuple[str, str]:
 
 
 async def run_one(
-    config: EpisodeConfig, model: ModelClient, *, run_dir: Path, run_id: str
+    config: EpisodeConfig,
+    model: ModelClient,
+    *,
+    run_dir: Path,
+    run_id: str,
+    subagent_model: ModelClient | None = None,
 ) -> ResultRow:
     """Episode → grade → `results.csv` row, also saved as `result.json` next to the logs."""
     is_ownership = config.ownership is not None
     world = generate(config.world, config.seed, config.template)
     episode_dir = run_dir / config.episode_id
-    result = await run_episode(model, world, config, episode_dir=episode_dir)
+    result = await run_episode(
+        model, world, config, episode_dir=episode_dir, subagent_model=subagent_model
+    )
     effects = EffectJournal.read(episode_dir / "effects.jsonl")
     calls = CallJournal.read(episode_dir / "calls.jsonl")
     ownership = None
