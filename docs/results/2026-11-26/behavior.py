@@ -1,4 +1,4 @@
-"""Run from the repo: uv run python docs/results/2026-11-26/поведение.py"""
+"""Run from the repo: uv run python docs/results/2026-11-26/behavior.py"""
 
 import csv
 import json
@@ -40,7 +40,7 @@ def main():
                     checked=int(row["self_checked"] == "True"),
                     said_unknown=int(row["claim"] == "unknown"),
                 )
-    export("проверки_первый_прогон.csv", pilots)
+    export("first_run_checks.csv", pilots)
     for harness in ("cc", "hermes", "codex"):
         run = f"harness-{harness}-native"
         with (RUNS / run / "results.csv").open() as stream:
@@ -76,7 +76,7 @@ def main():
                 multiple_actors_attempted=int(len(payers) > 1),
                 done_incomplete=int(r["claim"] == "done" and not completed),
             )
-    export("исходы_и_ответы_native.csv", groups)
+    export("native_outcomes_and_reports.csv", groups)
 
 
 if __name__ == "__main__":

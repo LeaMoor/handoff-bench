@@ -1,4 +1,4 @@
-ACTOR_HEADER = "x-actor"  # ставит стенд, а не модель: actor не должен попасть в аргументы
+ACTOR_HEADER = "x-actor"  # set by the stand, not the model: actor must not end up in the arguments
 UNKNOWN_ACTOR = "unknown"
 MCP_PATH = "/mcp"
 

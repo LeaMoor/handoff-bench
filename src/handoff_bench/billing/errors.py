@@ -34,5 +34,5 @@ class BankTimeout(BillingError):
     code = "timeout"
 
     def __init__(self) -> None:
-        # Текст фиксирован: в мирах «прошло» и «не прошло» агент получает одно и то же.
+        # Fixed text: the agent gets the same message in the "went through" and "did not" worlds.
         super().__init__("Request to billing timed out; the outcome is unknown.")

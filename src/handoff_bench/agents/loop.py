@@ -59,7 +59,7 @@ class AgentTrace(BaseModel):
 
 
 def render_tool_result(result: ToolResult) -> str:
-    """Детерминированно: от этого зависит эквивалентность pre / post."""
+    """Deterministic: pre / post equivalence depends on it."""
     if result.outcome == "ok":
         return json.dumps(result.data, sort_keys=True, ensure_ascii=False)
     return f"Error ({result.error_code}): {result.error_message}"
@@ -161,7 +161,7 @@ async def run_agent(
                 try:
                     result = await gateway.call(spec.actor, tc.name, args)
                 except InfraError as e:
-                    # Сбой стенда, не поведение модели: агенту не показываем.
+                    # A stand failure, not model behaviour: not shown to the agent.
                     return trace("infra_error", error=str(e))
 
             if result.outcome == "dropped":

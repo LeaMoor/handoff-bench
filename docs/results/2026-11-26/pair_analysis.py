@@ -1,4 +1,4 @@
-"""Пересчёт описательных интервалов и точных парных тестов из results.csv."""
+"""Recompute descriptive intervals and exact paired tests from results.csv."""
 
 import csv
 from collections import defaultdict
@@ -102,7 +102,7 @@ def main():
     for i, row in enumerate(sorted(out, key=lambda r: r["mcnemar_two_sided"])):
         running = max(running, (len(out) - i) * row["mcnemar_two_sided"])
         row["holm_all_exploratory"] = min(1.0, running)
-    with (HERE / "результаты_пар.csv").open("w", newline="") as f:
+    with (HERE / "pair_results.csv").open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=out[0])
         writer.writeheader()
         writer.writerows(out)

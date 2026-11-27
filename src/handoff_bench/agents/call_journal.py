@@ -1,4 +1,4 @@
-"""Канал «выписка» строится только отсюда, не из журнала эффектов."""
+"""The "statement" channel is built only from here, not from the effects journal."""
 
 from pathlib import Path
 from typing import Any

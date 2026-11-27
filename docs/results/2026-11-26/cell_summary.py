@@ -4,7 +4,7 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
-from анализ_пар import interval
+from pair_analysis import interval
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE.parents[2] / "runs"
@@ -56,7 +56,7 @@ metrics = {
     "false_done_flag": lambda r: r["false_done"] == "True",
     "fault_fired": lambda r: r["fault_fired"] == "True",
 }
-with (HERE / "сводка_ячеек.csv").open("w", newline="") as stream:
+with (HERE / "cell_summary.csv").open("w", newline="") as stream:
     w = csv.writer(stream)
     w.writerow(
         [

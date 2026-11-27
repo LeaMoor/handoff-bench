@@ -19,7 +19,7 @@ class InvoiceView(_Frozen):
     customer_id: str
     amount: int
     description: str
-    # Статус учитывает задержку видимости, иначе get_invoice выдавал бы оплату раньше выписки.
+    # Status respects the visibility delay, so get_invoice cannot show payment before the statement.
     status: Literal["open", "paid"]
 
 
@@ -43,7 +43,7 @@ class ChargeView(_Frozen):
 class TimeoutRule(_Frozen):
     invoice_id: str
     calls: int = Field(default=1, ge=1)
-    # True — мир «списание прошло», False — «не прошло»; вызывающий в обоих получает таймаут.
+    # True: the "charge went through" world; False: "did not". The caller gets a timeout in both.
     commits: bool
     # A late commit: the committed charge never shows in list_charges / get_invoice status.
     hidden: bool = False

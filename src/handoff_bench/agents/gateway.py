@@ -24,8 +24,8 @@ class PendingCall:
 
 
 class CallHook:
-    """Инжектор: pre — before_call возвращает dropped; post — after_call отмечает субагента,
-    чей отчёт теряется (см. faults/injector.py)."""
+    """Injector: pre: before_call returns dropped; post: after_call marks the subagent
+    whose report is lost (see faults/injector.py)."""
 
     def rewrite(self, call: PendingCall) -> PendingCall:
         """A harness-side change of the arguments before the call runs (the journal keeps

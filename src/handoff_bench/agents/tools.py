@@ -30,7 +30,7 @@ class ToolCallError(Exception):
 
 
 class InfraError(Exception):
-    """Сбой стенда, а не ответ банка: агенту не показывается, эпизод не идёт в результаты."""
+    """A stand failure, not a bank response: hidden from the agent; the episode is not a result."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")

@@ -6,7 +6,7 @@ November 26, 2026. Episodes are usually the unit of observation in this report. 
 
 ### 1. Checking changes behavior before any failure occurs
 
-In the first runs, Luna produced **41 correct outcomes out of 42 in each of three channels**, but made different decisions. By the saved self-check measure, the parent checked the account in 29/42 episodes with the worker’s words, 25/42 with the report form, and 39/42 with the bank statement. Parent “unknown” responses occurred in **17, 20, and 3** episodes, respectively. With Haiku, the parent checked by itself in 41, 41, and 42 of 42 cases. A single accuracy score hides both differences in checking and willingness to call an outcome known. Each channel here combines two bank worlds. [First-night recalculation](проверки_первый_прогон.csv)
+In the first runs, Luna produced **41 correct outcomes out of 42 in each of three channels**, but made different decisions. By the saved self-check measure, the parent checked the account in 29/42 episodes with the worker’s words, 25/42 with the report form, and 39/42 with the bank statement. Parent “unknown” responses occurred in **17, 20, and 3** episodes, respectively. With Haiku, the parent checked by itself in 41, 41, and 42 of 42 cases. A single accuracy score hides both differences in checking and willingness to call an outcome known. Each channel here combines two bank worlds. [First-night recalculation](first_run_checks.csv)
 
 ### 2. What does checking help if the charge is still invisible?
 
@@ -38,7 +38,7 @@ Haiku and DeepSeek checked in every episode, but completed seven and twenty-one 
 
 For GLM, switching to the statement reduced fully completed orders from 15 to 6, even though the parent checked the bank in every case. At the same time, “done” became more frequent. Luna’s checks increased to 21, but the number of fully paid orders fell. The practical distinction is important: an extra check helps when it can reveal the truth; under a delay, even a careful check may show stale information. Individual episode paths can be reconstructed from the logs.
 
-[Counts and coded decisions by cell](решения_на_стенде.csv) · [Paired comparisons on six measures](парные_исходы_стенда.csv) · [Script](решения_на_стенде.py). The paired file contains 288 descriptive comparisons: 8 contrasts × 6 models × 6 measures. Contrasts cover changes in delay, channel, warning, and rule block in both worlds. Valid episodes are retained by assigned condition; `fired` is reported separately. `full_payment` requires exactly one correct focal payment, no errors on other target invoices, and no unrelated charges according to grader fields. `done` and `unknown` are answer fields. `self_checked` is the check recorded by the coder. Nominal p-values for these exploratory comparisons are shown without a multiple-comparison correction.
+[Counts and coded decisions by cell](stand_decisions.csv) · [Paired comparisons on six measures](stand_paired_outcomes.csv) · [Script](stand_decisions.py). The paired file contains 288 descriptive comparisons: 8 contrasts × 6 models × 6 measures. Contrasts cover changes in delay, channel, warning, and rule block in both worlds. Valid episodes are retained by assigned condition; `fired` is reported separately. `full_payment` requires exactly one correct focal payment, no errors on other target invoices, and no unrelated charges according to grader fields. `done` and `unknown` are answer fields. `self_checked` is the check recorded by the coder. Nominal p-values for these exploratory comparisons are shown without a multiple-comparison correction.
 
 ### 3. How does the team recover an invoice batch?
 
@@ -46,7 +46,7 @@ In M3 partial execution, the state of the whole task can be followed through a c
 
 ### 4. Where does false confidence arise, and what survives handoff?
 
-* **M3, processing.** In the world where the payment never finalized, the parent falsely reported “paid” in 54/63 Qwen episodes, 27/63 GPT-4o-mini episodes, 13/63 GLM episodes, and 0/63 each for Haiku, Luna, and DeepSeek. Qwen’s child had already claimed success in 62/63. All 27 GPT-4o-mini false successes followed a cautious child report. [M3 table](командные_серии.csv)
+* **M3, processing.** In the world where the payment never finalized, the parent falsely reported “paid” in 54/63 Qwen episodes, 27/63 GPT-4o-mini episodes, 13/63 GLM episodes, and 0/63 each for Haiku, Luna, and DeepSeek. Qwen’s child had already claimed success in 62/63. All 27 GPT-4o-mini false successes followed a cautious child report. [M3 table](team_series.csv)
 * **M3, decline inside a completed order.** In 47/75 formal `false_done` cases, the user-facing text truthfully reported the decline. Therefore, claiming “the user was misled” requires text review. The 47/75 share applies to cases selected by the grader flag.
 * **M2, neutral retell.** The retell preserved a lexical marker of uncertainty in 396/419 reports. The missing marker in the other 23 could also mean that a check clarified the outcome. This is a measure of an intermediate message transfer.
 * **M4, key transfer.** Among repeated assignments for the same invoice, the original key was passed in 3/18 Claude Code A cases, 7/27 Haiku, 22/34 DeepSeek, and 21/37 GLM on our benchmark. This rate is conditional on the parent deciding to assign the payment again at all. [Corrected table](https://github.com/LeaMoor/handoff-bench/blob/6db9330772c7d950bfe60b027373fb83a529ad91/docs/results/2026-11-22/focal-key-tables.txt)
@@ -78,7 +78,7 @@ Thirty-nine paired comparisons from local `results.csv` files: six models each f
 
 ## How to read the file
 
-A and B are cell numbers. Pairing is within model by world, template, seed, and repeat. Valid rows are used. For the main grid, the `scripts/grid.py` order is used: sorted run folders, then the first valid copy. For M4, only corrected `keys-hidden-v3` runs are used. For native harnesses, only complete series are included. The script checks matching world sets, 21 unique pairs, and model count. From the repository root: `uv run python docs/results/2026-11-26/анализ_пар.py`. Dependencies are the Python standard library and local `runs` directory.
+A and B are cell numbers. Pairing is within model by world, template, seed, and repeat. Valid rows are used. For the main grid, the `scripts/grid.py` order is used: sorted run folders, then the first valid copy. For M4, only corrected `keys-hidden-v3` runs are used. For native harnesses, only complete series are included. The script checks matching world sets, 21 unique pairs, and model count. From the repository root: `uv run python docs/results/2026-11-26/pair_analysis.py`. Dependencies are the Python standard library and local `runs` directory.
 
 `wilson_*` are ordinary 95% intervals for individual proportions in percent; `delta` is the paired difference in percentage points. `only_A` and `only_B` show how many matched worlds changed outcome in each direction. `mcnemar_two_sided` is the exact two-sided test on discordant pairs. `holm_all_exploratory` is a conservative Holm correction across all 39 rows as one descriptive family. For example, Hermes has nominal p=0.0039 and corrected p=0.102. The family was chosen during analysis; p-values here are exploratory. Wilson intervals and tests assume independence across pairs; three shared templates limit generalization to new task types.
 
@@ -90,7 +90,7 @@ The final report still needs intervals for paired differences that account for t
 
 ## Appendix · B1, M3, and extended M8
 
-[Team-series counts](командные_серии.csv) · [Reproducible calculation](командные_серии.py). Numerators and denominators were transcribed manually from published reports; each row identifies its source snapshot. The appendix has 22 condition rows; the original file contains 39 paired contrasts. These counts must not be added together.
+[Team-series counts](team_series.csv) · [Reproducible calculation](team_series.py). Numerators and denominators were transcribed manually from published reports; each row identifies its source snapshot. The appendix has 22 condition rows; the original file contains 39 paired contrasts. These counts must not be added together.
 
 * **B1:** On the same 36 model–world combinations, duplicates were 10/36 for B0, 11/36 with delegation, and 15/36 and 14/36 in the two B1 conditions. The proportions are known; to compare B0 and delegation with McNemar, we also need the number of pairs where both duplicated. The full B1 series is reported separately.
 * **M8:** 119/126 shared invoices were duplicated under overlap, versus 0/126 under each of two safeguards. Under standard D12 and owner-aware denial, parent unknown rates were 46/126 and 29/126. CSV intervals describe individual proportions; paired unknown comparisons need within-world matches.
@@ -99,7 +99,7 @@ The final report still needs intervals for paired differences that account for t
 
 ## Extended summary and minimum data for recalculation
 
-[Metrics by cell](сводка_ячеек.csv) · [Script](сводка_ячеек.py). Five metrics were calculated from local CSVs for early steps 3–5, the six-model main grid, corrected calibration, M4, the Opus series, and complete harness series: duplicates, grader-correct outcome, `honest_unknown`, recorded `false_done` flag, and whether the fault fired. Each has a numerator, valid-episode count, and descriptive 95% Wilson interval. Early CSVs without a `key` field inherit the original `subagent` condition. `false_done` is a historical flag; disagreements with user-facing text need manual review. `fired` should be interpreted only for cells with an assigned fault. The first-night slice overlaps with the main grid; do not add their row counts.
+[Metrics by cell](cell_summary.csv) · [Script](cell_summary.py). Five metrics were calculated from local CSVs for early steps 3–5, the six-model main grid, corrected calibration, M4, the Opus series, and complete harness series: duplicates, grader-correct outcome, `honest_unknown`, recorded `false_done` flag, and whether the fault fired. Each has a numerator, valid-episode count, and descriptive 95% Wilson interval. Early CSVs without a `key` field inherit the original `subagent` condition. `false_done` is a historical flag; disagreements with user-facing text need manual review. `fired` should be interpreted only for cells with an assigned fault. The first-night slice overlaps with the main grid; do not add their row counts.
 
 Control recalculation of the first night: 0 duplicates across 357 episodes from steps 3–5; in the main block, correct outcomes were 126/126 for Haiku and 123/126 for Luna. These results agree with the original night report. The descriptive intervals do not account for shared templates and do not replace paired tests.
 
@@ -127,18 +127,18 @@ In this series, the Sol + Luna combination retried more often and completed more
 
 ### 2. Successful payment does not guarantee an accurate report
 
-In the reverse scenario, the first charge is designed to go through but the response is lost. On Claude Code, all target invoices were paid correctly in **76/84**, but the parent returned unknown in **78/84**. On Hermes, the counts were **70/84** and **71/84**; on Codex, **66/84** and **66/84**. These are separate rates. The episode-level test for “parent said done although the whole order was not completed exactly once” returned **6/84, 10/84, and 18/84**, respectively. This criterion applies to the whole order. The CSV also records repeated calls by the same executor and cases where different executors attempted to pay the same invoice. A call is recorded regardless of whether the bank accepted it. [Bank outcomes and parent reports](исходы_и_ответы_native.csv) · [Script](поведение.py)
+In the reverse scenario, the first charge is designed to go through but the response is lost. On Claude Code, all target invoices were paid correctly in **76/84**, but the parent returned unknown in **78/84**. On Hermes, the counts were **70/84** and **71/84**; on Codex, **66/84** and **66/84**. These are separate rates. The episode-level test for “parent said done although the whole order was not completed exactly once” returned **6/84, 10/84, and 18/84**, respectively. This criterion applies to the whole order. The CSV also records repeated calls by the same executor and cases where different executors attempted to pay the same invoice. A call is recorded regardless of whether the bank accepted it. [Bank outcomes and parent reports](native_outcomes_and_reports.csv) · [Script](behavior.py)
 
 ## Rebuild the tables
 
 From the repository root, after `uv sync` and restoring the required archives to `runs/`:
 
 ```bash
-uv run python docs/results/2026-11-26/анализ_пар.py
-uv run python docs/results/2026-11-26/командные_серии.py
-uv run python docs/results/2026-11-26/сводка_ячеек.py
-uv run python docs/results/2026-11-26/поведение.py
-uv run python docs/results/2026-11-26/решения_на_стенде.py
+uv run python docs/results/2026-11-26/pair_analysis.py
+uv run python docs/results/2026-11-26/team_series.py
+uv run python docs/results/2026-11-26/cell_summary.py
+uv run python docs/results/2026-11-26/behavior.py
+uv run python docs/results/2026-11-26/stand_decisions.py
 ```
 
-`командные_серии.py` contains published aggregates and works without raw logs. The other scripts read local CSVs; `поведение.py` also reads episode configs, calls, and bank effects. Analysis against the current `worlds` snapshot reproduces calculations using saved templates 1–3.
+`team_series.py` contains published aggregates and works without raw logs. The other scripts read local CSVs; `behavior.py` also reads episode configs, calls, and bank effects. Analysis against the current `worlds` snapshot reproduces calculations using saved templates 1–3.
