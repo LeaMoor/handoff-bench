@@ -223,6 +223,16 @@ for number, (fault, channel) in enumerate(
     start=86,
 ):
     _cells.append(Cell(number=number, block="capture", fault=fault, channel=channel, rules=False))
+# M4 cost, cells 99-102: cells 86-87 (words channel) with a system key. A legitimate retry after a
+# declined capture gets the same key, so the bank (intent) or the harness (pinned) replays the
+# declined order: the pinned-failure side of the key. Cells 86-87 are the subagent-key control.
+for number, (fault, key) in enumerate(
+    [(f, k) for k in ("intent", "pinned") for f in ("capture_completed", "capture_declined")],
+    start=99,
+):
+    _cells.append(
+        Cell(number=number, block="capture", fault=fault, channel="text", rules=False, key=key)
+    )
 # M1: mirror B0's two timeout worlds, adding a read-only workflow to the single agent.
 for number, fault in (
     (95, "timeout_lost"),

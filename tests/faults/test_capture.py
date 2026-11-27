@@ -79,3 +79,53 @@ async def test_outcome_in_each_world(tmp_path, script, completed, declined) -> N
         for world, (_, result) in runs.items()
     }
     assert outcomes == {"capture_completed": completed, "capture_declined": declined}
+
+
+RETRY = [DELEGATE, CHARGE, FAILED, DELEGATE, CHARGE, PAID, finish()]
+
+
+@pytest.mark.parametrize(
+    ("key", "declined_charges", "declined_outcome"),
+    [
+        ("subagent", 1, "eos"),  # the new subagent makes up a new key: the retry pays
+        ("intent", 0, "false_done"),  # same key from the intent: the bank replays the decline
+        ("pinned", 0, "false_done"),  # the harness replays the pinned declined order
+    ],
+)
+async def test_a_system_key_pins_the_declined_capture(
+    tmp_path, key, declined_charges, declined_outcome
+) -> None:
+    runs = await run_both(tmp_path, RETRY, key=key)
+
+    declined = tmp_path / "capture_declined"
+    assert len(effects(declined)) == declined_charges
+    _, result = runs["capture_declined"]
+    outcome = grade(
+        effects(declined),
+        world=DEMO_WORLD,
+        finish_args=result.finish_args,
+        stop_reason=result.stop_reason,
+    ).outcome
+    assert outcome == declined_outcome
+    # In the completed world the same retry is a duplicate only without a system key.
+    assert len(effects(tmp_path / "capture_completed")) == (2 if key == "subagent" else 1)
+
+
+def test_capture_key_cells() -> None:
+    from handoff_bench.cells import CELLS, find_cell
+
+    for number, fault, key in (
+        (99, "capture_completed", "intent"),
+        (100, "capture_declined", "intent"),
+        (101, "capture_completed", "pinned"),
+        (102, "capture_declined", "pinned"),
+    ):
+        cell = CELLS[number]
+        assert (cell.block, cell.fault, cell.channel, cell.rules, cell.key) == (
+            "capture",
+            fault,
+            "text",
+            False,
+            key,
+        )
+        assert find_cell(fault, "text", rules=False, key=key).number == number

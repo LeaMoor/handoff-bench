@@ -1,3 +1,33 @@
+## 2026-11-28 · M4 cost: a system key pins a declined capture (cells 99–102)
+
+**Decision.** Cells 86–87 (M3 capture, words channel, no rules) are repeated with a system key:
+99–100 with the intent key (K4), 101–102 with the pinned first request (K5), each in the
+`capture_completed` and `capture_declined` worlds. Cells 86–87, where each subagent sets its own
+key, are the control and are rerun in the same batch. The bank, capture rule, prompts and grader
+are unchanged: only the key source differs. In the declined world a second attempt on the focal
+invoice is a legitimate retry. With K4 it carries the same key, and the bank replays the stored
+declined order; with K5 the harness replays the pinned order without reaching the bank. In the
+completed world the same retry is a duplicate unless a system key blocks it.
+
+**Rationale.** The M4 result (0 duplicates with K4/K5) was measured only on the side keys
+protect. The research plan asks for the metric in both directions: a coarse key also blocks a
+legitimate payment ("pinned failure"). The declined capture gives a legitimate retry with no new
+world or fault. In the 2026-11-23 runs only GLM and GPT-4o-mini retried after a decline, so the
+cost is expected mainly for them; the other models are kept for comparability. The second side of
+the cost, a legitimate second payment with the same intent fields (instalments), needs a new
+template and is in the backlog.
+
+## 2026-11-28 · Real-harness branches number cells separately
+
+**Decision.** `main-for-harness`, `main-for-harness-hermes` and `main-for-harness-codex` are not
+merged into `main`, so their cells form a separate namespace: Claude Code native 86–93, Hermes
+94–101, Codex 102–109. They may reuse `main` numbers and are not renumbered. Outside those
+branches a harness cell is always named with its series ("Claude Code native cell 90"), and
+analysis scripts select harness runs by `run_id`.
+
+**Rationale.** Renumbering would rewrite episode ids, configs and archived raw logs for branches
+that will not be merged. A namespace rule keeps both registries stable.
+
 ## 2026-11-26 · M2 retelling integrated into the shared runner (cells 82–85)
 
 M2 was moved from `feat/m2-retell` on top of the M8 and M3 changes. Cells 82–85 have their own
