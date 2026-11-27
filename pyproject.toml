@@ -1,7 +1,7 @@
 [project]
 name = "handoff-bench"
 version = "0.1.0"
-description = "Стенд: проходит ли сбой через границу субагент → оркестратор (exactly-once при делегировании)"
+description = "Benchmark: do failures cross the subagent → orchestrator boundary (exactly-once under delegation)?"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [

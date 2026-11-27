@@ -14,9 +14,9 @@ result. Coding principles are in [CLAUDE.md](CLAUDE.md); they apply here too.
 
 ## Language
 
-- Code, comments, docstrings, commit messages, PR titles and descriptions: English.
-- `DECISIONS.md`, `docs/results/`, review comments and team docs (`README.md`, `docs/README.md`,
-  `docs/raw-logs.md`): Russian, as they are now.
+- Repository documentation, READMEs, commit messages, PR titles and descriptions: English.
+- Code, comments and docstrings: English.
+- Run artifacts and generated/raw data are not translated.
 
 ## Adding an experiment
 
@@ -95,16 +95,16 @@ in the same PR as the code or right after it.
 Follow the existing ones (`docs/results/2026-11-20/README.md`, `2026-11-23/README.md`):
 
 1. Title with the date; one paragraph: models, cells, episodes, invalid, cost, `prefreeze`.
-2. **Что здесь**: each tables file, what it shows, the script that builds it.
-3. **Прогоны**: `run_id`, model, cells, episodes, commit.
-4. **Ячейки** (if new): what each cell changes, in one or two sentences.
-5. **Главное**: the findings, each with its numbers and denominators.
+2. **Contents**: each tables file, what it shows, and the script that builds it.
+3. **Runs**: `run_id`, model, cells, episodes, and commit.
+4. **Cells** (if new): what each cell changes, in one or two sentences.
+5. **Main findings**: each finding with its numbers and denominators.
 6. What was not tested and what could change the conclusion.
 
 ### DECISIONS entry
 
-Add an entry at the top: `## <date> · <title>`, then **Решили** (what and how it is built),
-**Почему**, and, once there are results, **Что вышло** with a link to the results README. Record
+Add an entry at the top: `## <date> · <title>`, then **Decision** (what is built and how),
+**Rationale**, and, once there are results, **Results** with a link to the results README. Record
 the design choices a reader could not guess: what the stand fixes and what the model decides,
 prompt differences from other blocks, grading rules, renumbered cells.
 

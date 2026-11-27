@@ -83,7 +83,7 @@ How to add cells, run batches, build tables and write up results: [AGENTS.md](AG
 
 ### Issue tracker
 
-Tasks live in `BACKLOG.md` (numbered per `docs/plan-weeks-1-2.md`), not in GitHub Issues. See `docs/agents/issue-tracker.md`.
+Open tasks live in `BACKLOG.md`, not in GitHub Issues. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 

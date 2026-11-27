@@ -1,15 +1,9 @@
-# Как работаем с планом
+# Working with project documents
 
-[plan-weeks-1-2.md](plan-weeks-1-2.md) — план стенда и первых прогонов на недели 1–2
-(версия от 10 ноября). По нему берём задачи: номера задач в коммитах, PR и тестах — оттуда.
+The current research overview is in [project hypotheses and design](delegation-and-exactly-once.md). Decisions that changed during implementation are recorded in [DECISIONS.md](../DECISIONS.md), which takes precedence over historical planning notes.
 
-**План не правим.** Всё, что по ходу работы решили иначе или уточнили, записываем
-в [DECISIONS.md](../DECISIONS.md): дата, что решили, почему. Если решение расходится с планом,
-действует решение.
+Work that remains is listed in [BACKLOG.md](../BACKLOG.md). When a task is completed, remove it from the backlog in the same PR.
 
-**Что по плану нужно, но ещё не сделано**, — в [BACKLOG.md](../BACKLOG.md). Сделали — убираем
-оттуда в том же PR.
+Open questions belong at the end of `DECISIONS.md`. Resolve them in a team discussion and move the outcome into the dated decisions above.
 
-**Открытый вопрос** — в конец DECISIONS.md; закрываем на созвоне и переносим в решения.
-
-Если план меняется целиком (например, на неделю 3), кладём новый файл рядом, старый не трогаем.
+The two historical planning files have been removed. The research document, decisions, and backlog describe the project direction.
