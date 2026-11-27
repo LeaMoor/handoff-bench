@@ -1,0 +1,14 @@
+# M7: orchestrator qwen, subagent qwen. Cells 12-13 (short delay, a check helps) and 24-25 (long
+# delay, a check shows nothing); words channel, no rules.
+model:
+  model: qwen/qwen3.7-flash
+  provider: alibaba
+subagent_model:
+  model: qwen/qwen3.7-flash
+  provider: alibaba
+run_id: prefreeze-m7-qwen-qwen
+cells: [12, 13, 24, 25]
+templates: [1, 2, 3]
+seeds: [1, 2, 3, 4, 5, 6, 7]
+parallel: 4
+budget_usd: 0.5
