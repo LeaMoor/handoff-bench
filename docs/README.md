@@ -6,4 +6,4 @@ Work that remains is listed in [BACKLOG.md](../BACKLOG.md). When a task is compl
 
 Open questions belong at the end of `DECISIONS.md`. Resolve them in a team discussion and move the outcome into the dated decisions above.
 
-Historical plans remain available for context but are not linked as current plans. The overview, decisions, and backlog describe the current direction.
+The two historical planning files have been removed. The research document, decisions, and backlog describe the project direction.

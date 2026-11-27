@@ -17,12 +17,12 @@ Relay studies whether a failure survives the “subagent → orchestrator” bou
 
 ```bash
 uv sync
-uv run pytest                 # без ключей и без платных вызовов модели
-uv run stand run --template 1 --seed 1 --fault post --channel code   # один эпизод; ключ и модель — в .env (см. .env.example)
-uv run stand batch configs/debug.yaml        # пачка → runs/<run_id>/results.csv
-uv run stand report runs/<run_id>            # таблицы, главные числа, предсказания
-uv run --group notebook jupyter lab          # ноутбук notebooks/week2_analysis.py
-uv run stand bank serve --template 1 --seed 1   # банк мира 1 по HTTP: http://127.0.0.1:8765/mcp
+uv run pytest                 # no keys or paid model calls
+uv run stand run --template 1 --seed 1 --fault post --channel code   # one episode; key and model in .env (see .env.example)
+uv run stand batch configs/debug.yaml        # batch → runs/<run_id>/results.csv
+uv run stand report runs/<run_id>            # tables, primary metrics, predictions
+uv run --group notebook jupyter lab          # notebook: notebooks/week2_analysis.py
+uv run stand bank serve --template 1 --seed 1   # world 1 bank over HTTP: http://127.0.0.1:8765/mcp
 ```
 
 ## Repository map

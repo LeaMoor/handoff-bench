@@ -429,7 +429,47 @@ The benchmark is about 3–4K lines of Python: a simulated billing service with 
 
 Our billing service is closer to LIMBO than to Madan: Stripe-style key rules, configurable read delay, and fault injection. Madan had one registry and one charge tool; LIMBO had full services, of which we use only billing.
 
-<img src="media/benchmark-architecture.png" style="width:6in;height:5.36607in" alt="Benchmark architecture · 3 zones, 14 components" />
+**Only the grader sees ground truth; safeguards use the call journal.**
+
+Approximate benchmark architecture: orchestrator, environment, evaluation.
+
+```mermaid
+flowchart TB
+    subgraph orchestration["Orchestrator (our stand)"]
+        parent["Parent<br/>writes goal, decides"]
+        spawn["Spawn injector<br/>spawn failure modes"]
+        child["Child<br/>goal + rules block"]
+        compression["Parent compression<br/>C-sum only"]
+        channel["Status channel<br/>C-text · C-sum · C-code"]
+        parent -->|delegate| spawn
+        spawn -->|start| child
+        child -->|report| channel
+        channel --> compression
+        compression --> parent
+    end
+    subgraph environment["Simulated environment"]
+        clock["Virtual clock<br/>late commits"]
+        service_fault["Service injector<br/>timeout_pre / post / late"]
+        billing["Billing service<br/>MCP server, Stripe-style keys"]
+        effects["Effect journal<br/>ground truth; grader only"]
+        calls["Call journal<br/>requests and responses"]
+        clock --> service_fault
+        service_fault --> billing
+        billing --> effects
+        billing --> calls
+    end
+    child -->|MCP calls| billing
+    calls -->|C-code| channel
+    subgraph evaluation["Evaluation"]
+        coder["Behavior coder<br/>parent's first action"]
+        grader["Grader<br/>EOS · dup · miss · overclaim"]
+        analysis["Analysis<br/>Wilson on Kish n, McNemar"]
+        coder --> analysis
+        grader --> analysis
+    end
+    effects --> grader
+    style effects fill:#d5e2ed,stroke:#287de0,stroke-width:3px
+```
 
 Benchmark architecture · 3 zones, 14 components
 
