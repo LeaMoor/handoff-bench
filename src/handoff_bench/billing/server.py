@@ -44,7 +44,7 @@ def make_server(service: BillingService, *, log_level: LogLevel = "WARNING") -> 
     def get_invoice(invoice_id: str) -> InvoiceView:
         return _call(service.get_invoice, invoice_id)
 
-    # Зачем нужен ключ, модели не подсказываем.
+    # We do not tell the model what the key is for.
     @server.tool(
         description=(
             "Charge a customer for an invoice. `amount` is an integer in cents. "

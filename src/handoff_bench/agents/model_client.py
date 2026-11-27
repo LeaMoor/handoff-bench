@@ -1,5 +1,6 @@
-"""Провайдер закреплён: иначе OpenRouter раскидает запросы по хостерам с разной квантизацией.
-`reasoning_details` надо возвращать в историю без изменений."""
+"""The provider is pinned: otherwise OpenRouter spreads requests across hosts with different
+quantization.
+`reasoning_details` must be returned to the history unchanged."""
 
 import copy
 import os
@@ -20,8 +21,8 @@ class ModelSettings(BaseModel):
 
     model: str
     provider: str
-    temperature: float | None = None  # Haiku 5.5 не принимает temperature
-    seed: int | None = None  # сид модели, не сид мира
+    temperature: float | None = None  # Haiku 5.5 does not accept temperature
+    seed: int | None = None  # model seed, not world seed
     reasoning_effort: str | None = None
     max_tokens: int | None = None
     # "required": the agent cannot end with plain text, it has to call a tool (e.g. finish).

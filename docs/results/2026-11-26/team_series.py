@@ -3,7 +3,7 @@
 import csv
 from pathlib import Path
 
-from анализ_пар import interval
+from pair_analysis import interval
 
 here = Path(__file__).resolve().parent
 rows = []
@@ -39,7 +39,7 @@ for group, k in [
 ]:
     add("M3 processing", "3938acd", "parent false paid", group, k, 63)
 add("M3 capture", "d485219", "parent false paid", "Qwen", 27, 63)
-with (here / "командные_серии.csv").open("w", newline="") as f:
+with (here / "team_series.csv").open("w", newline="") as f:
     writer = csv.writer(f)
     writer.writerow(
         "series commit metric group unit events n percent wilson_low_pct wilson_high_pct".split()

@@ -11,7 +11,7 @@
 # # Week 2: first runs
 #
 # Everything here comes from `results.csv` (one row per episode). Definitions of outcomes,
-# pair error and thresholds: `DECISIONS.md` and `docs/plan-weeks-1-2.md`.
+# pair error and thresholds: `DECISIONS.md` and `docs/delegation-and-exactly-once.md`.
 #
 # Set `RESULTS` to the `results.csv` files (or run directories) to analyse.
 # Left empty, the notebook runs on synthetic debug data with known effects.

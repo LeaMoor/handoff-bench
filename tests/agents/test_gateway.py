@@ -76,7 +76,7 @@ async def test_timeout_call_journals_identical_in_both_worlds(serve_bank: ServeB
         lines.append([dumps(r) for r in gw.journal.rows])
         effects.append(len(bank.journal.rows))
 
-    assert lines[0] == lines[1]  # журнал вызовов не выдаёт мир
+    assert lines[0] == lines[1]  # the call journal does not reveal the world
     assert effects == [1, 0]
 
 

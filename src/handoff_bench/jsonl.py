@@ -1,4 +1,4 @@
-"""Формат не менять: на одинаковых байтах держится эквивалентность pre / post."""
+"""Do not change the format: pre / post equivalence relies on identical bytes."""
 
 import json
 from pathlib import Path

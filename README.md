@@ -4,7 +4,7 @@ Relay studies whether a failure survives the “subagent → orchestrator” bou
 
 ## Start here
 
-- [Main research document](docs/delegation-and-exactly-once.md) — full English translation of the project’s hypotheses, literature review, preregistration, and benchmark design.
+- [Main research document](docs/delegation-and-exactly-once.md) — project hypotheses, literature review, preregistration, and benchmark design.
 - [What the Relay experiments show](docs/results/guide.md) — key findings, open checks, and links to experiment reports.
 - [Statistical report](docs/results/2026-11-26/statistical-report.md) — confidence intervals, paired comparisons, and the evidence available so far.
 - [Experiment results](docs/results/) — runs and their analyses; analysis scripts are in `scripts/`.

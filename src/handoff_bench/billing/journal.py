@@ -1,4 +1,4 @@
-"""Пишет только банк, читает только грейдер."""
+"""Written only by the bank, read only by the grader."""
 
 from pathlib import Path
 

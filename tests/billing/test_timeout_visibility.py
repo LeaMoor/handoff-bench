@@ -23,7 +23,7 @@ def test_both_worlds_give_caller_identical_response(make_bank: MakeBank) -> None
 
     assert first_response(committed) == first_response(not_committed)
     assert committed.step == not_committed.step
-    # Сразу проверить нельзя: следующие 2 вызова в обоих мирах видят одно и то же.
+    # Cannot be checked right away: the next 2 calls see the same thing in both worlds.
     for _ in range(2):
         assert committed.list_charges("INV-12") == not_committed.list_charges("INV-12") == []
     assert [r.reported_as for r in committed.journal.rows] == ["timeout"]

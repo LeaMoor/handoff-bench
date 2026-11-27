@@ -152,7 +152,7 @@ class BillingService:
             if amount <= 0:
                 raise InvalidAmount("Amount must be a positive integer (in cents).")
 
-            # «Не прошло»: ключ не сохранён, повтор с ним спишет заново.
+            # "Did not go through": the key is not stored, so a retry with it charges again.
             timed_out = self._take_timeout(invoice_id)
             # Drawn in both worlds: otherwise a later charge gets a different id in each.
             charge_id = self._new_charge_id()
