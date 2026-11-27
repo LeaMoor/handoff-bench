@@ -49,11 +49,18 @@ schemas, bank behaviour, faults, worlds or grading of existing ones.
 | 74–76, 94 | M8 overlapping worklists and D12 ownership, including an owner-aware denial | #15 |
 | 77–81 | M3 partial execution, visible and hidden charges | #20 |
 | 82–85 | M2 retell channel | #21 |
-| 86–93 | Claude Code's own subagents (variant B) | `main-for-harness`, not merged into `main` |
-| 86–91 | M3 declined capture | #24, separate from the harness branch |
-| 95–98 | M1 B1-clean and B1-dirty | M1 B1 |
+| 86–91 | M3 declined capture | #24 |
+| 95–98 | M1 B1-clean and B1-dirty | #25 |
+| 99–102 | M4 cost: a system key after a declined capture | `feat/m4-capture-keys` |
 
 Take the next free number after the highest one here. Update the table when a PR merges or closes.
+
+**Real-harness branches number their cells separately.** `main-for-harness`,
+`main-for-harness-hermes` and `main-for-harness-codex` are not merged into `main`, so their
+cells (Claude Code 86–93, Hermes 94–101, Codex 102–109) are a separate namespace and may reuse
+`main` numbers. Outside those branches, always name the series with the number, for example
+"Claude Code native cell 90", never a bare "cell 90". Within the harness branches, new cells
+still take the next free number there.
 
 ## Running
 
