@@ -11,11 +11,14 @@ from handoff_bench.agents.delegation import (
     ORCH_TOOLS_CALIBRATION,
     ORCH_TOOLS_MAIN,
     ORCHESTRATOR_SYSTEM_PROMPT,
+    SAFE_ACTIONS,
     SINGLE_SYSTEM_PROMPT,
     SINGLE_TOOLS,
+    SUBAGENT_TOOLS,
     AgentsConfig,
     Delegation,
     register_finish,
+    register_wait,
 )
 from handoff_bench.agents.gateway import ToolGateway
 from handoff_bench.agents.loop import AgentSpec, AgentTrace, ModelCallLog, StopReason, run_agent
@@ -71,6 +74,8 @@ class EpisodeConfig(BaseModel):
     repeat: int = 0
     agents: AgentsConfig
     model: ModelSettings | None = None
+    # M7: subagents (and retells) run on another model; None means the orchestrator's model.
+    subagent_model: ModelSettings | None = None
     commit: str = "unknown"
 
     @model_validator(mode="before")
@@ -81,7 +86,8 @@ class EpisodeConfig(BaseModel):
         cell = CELLS[data["cell"]]
         # A config.json read back carries the derived fields: they must agree with the cell.
         data = dict(data)
-        for name in ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership"):
+        derived = ("block", "fault", "channel", "delay", "rules", "agent", "key", "ownership")
+        for name in (*derived, "safe_actions"):
             if name in data and data.pop(name) != getattr(cell, name):
                 raise ValueError(f"{name} does not match cell {cell.number}")
         data.pop("episode_id", None)
@@ -136,6 +142,11 @@ class EpisodeConfig(BaseModel):
 
     @computed_field
     @property
+    def safe_actions(self) -> bool:
+        return CELLS[self.cell].safe_actions
+
+    @computed_field
+    @property
     def ownership(self) -> Ownership | None:
         return CELLS[self.cell].ownership
 
@@ -162,6 +173,8 @@ def _agents_for(cell: Cell) -> AgentsConfig:
     extra: dict[str, Any] = {}
     if not cell.rules:
         extra["subagent_rules"] = ""
+    if cell.safe_actions:
+        extra["subagent_tools"] = (*SUBAGENT_TOOLS, *SAFE_ACTIONS)
     if cell.key == "orchestrator":
         extra["orchestrator_prompt"] = ORCHESTRATOR_SYSTEM_PROMPT + ORCHESTRATOR_KEY_PROMPT
     return AgentsConfig(orchestrator_tools=tools, **extra)
@@ -193,7 +206,12 @@ def _write_json(path: Path, data: Any) -> None:
 
 
 async def run_episode(
-    model: ModelClient, world: World, config: EpisodeConfig, *, episode_dir: Path
+    model: ModelClient,
+    world: World,
+    config: EpisodeConfig,
+    *,
+    episode_dir: Path,
+    subagent_model: ModelClient | None = None,
 ) -> EpisodeResult:
     """Writes config, calls, effects, model_calls and trace to episode_dir."""
     agents = config.agents
@@ -234,7 +252,7 @@ async def run_episode(
             )
             log = JsonlWriter[ModelCallLog](episode_dir / "model_calls.jsonl")
             delegate_options = dict(
-                model=model,
+                model=subagent_model or model,
                 log=log,
                 report_lost=fault.injector.report_lost,
                 config=agents,
@@ -257,6 +275,8 @@ async def run_episode(
                 )
             if config.block == "single_workflow":
                 register_review(gateway, dirty=config.cell in (97, 98))
+            if "wait" in agents.subagent_tools:
+                register_wait(gateway, service.tick, fault.bank.visibility_delay)
             register_finish(gateway)
             spec = AgentSpec(
                 actor=ORCHESTRATOR,

@@ -21,6 +21,7 @@ class BatchConfig(BaseModel):
 
     run_id: str | None = None
     model: ModelSettings
+    subagent_model: ModelSettings | None = None  # M7: a different model for subagents
     cells: list[int]
     world: int = 1
     templates: list[int]
@@ -61,6 +62,7 @@ class BatchConfig(BaseModel):
                 seed=s,
                 repeat=r,
                 model=self.model,
+                subagent_model=self.subagent_model,
                 commit=commit,
             )
             for t in self.templates
@@ -95,9 +97,12 @@ async def run_batch(
     run_dir: Path,
     run_id: str,
     commit: str,
+    subagent_model: ModelClient | None = None,
 ) -> BatchSummary:
     """Running episodes finish after the budget is spent: overshoot is up to `parallel` episodes.
     Tokens without a reported cost also stop the batch, or the budget would not hold."""
+    if (config.subagent_model is None) != (subagent_model is None):
+        raise ValueError("subagent_model must be set in the config and passed as a client together")
     if commit.endswith("-dirty") and not config.allow_dirty:
         raise DirtyCheckout("uncommitted changes: commit them or set allow_dirty for a debug run")
     results = ResultsCsv(run_dir / "results.csv")
@@ -111,7 +116,13 @@ async def run_batch(
                 skipped += 1
                 return
             try:
-                row = await run_one(episode, make_model(episode), run_dir=run_dir, run_id=run_id)
+                row = await run_one(
+                    episode,
+                    make_model(episode),
+                    run_dir=run_dir,
+                    run_id=run_id,
+                    subagent_model=subagent_model,
+                )
             except Exception:
                 crashed += 1
                 episode_dir = run_dir / episode.episode_id

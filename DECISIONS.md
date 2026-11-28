@@ -8,6 +8,18 @@ verbatim. Do not confuse this artificial channel with retelling during context c
 
 # DECISIONS
 
+## 2026-11-27 · M7: equal conditions for the two roles (cells 103–106)
+
+Three checks. (1) `scripts/role_parity.py` reads what each role actually received from
+`model_calls.jsonl`: served model and provider, system prompt, tools, task text, step budget.
+(2) `subagent_model` in the batch config runs subagents (and retells) on another model than the
+orchestrator; unset, both share one model as before. (3) Cells 103–106 copy 12, 13, 24 and 25
+and give the subagent `wait()` and `escalate(reason)` with neutral descriptions. `wait` advances
+the bank clock by the visibility delay. `escalate` ends the subagent's run and reaches the
+orchestrator as `{"status": "escalated", "result": reason}` (not as a `completed` report), so
+the new action is measured on its own. Numbers are explicit: 99–102 are taken by an open PR.
+Grader unchanged. See [the M7 report](docs/results/2026-11-27/m7.md).
+
 ## 2026-11-25 · M1 single-agent workflow controls
 
 B1-clean (95–96) and B1-dirty (97–98) pair the lost and committed timeout worlds from B0
