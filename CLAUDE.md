@@ -79,6 +79,52 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 How to add cells, run batches, build tables and write up results: [AGENTS.md](AGENTS.md).
 
+### Upload every run, without being asked
+
+`runs/` is not in git. Raw logs live in the team Google Drive folder `handoff-bench-runs`
+(rclone remote `gdrive:`; one-time setup in [docs/raw-logs.md](docs/raw-logs.md)). A batch is not
+done until it is on Drive:
+
+1. After a batch whose numbers go into a report, upload it as one archive per run:
+
+   ```bash
+   tar -czf "$TMP/<run_id>.tar.gz" -C runs <run_id>
+   rclone copy "$TMP/<run_id>.tar.gz" gdrive:
+   rclone check "$TMP/<run_id>.tar.gz" gdrive: --one-way --include "<run_id>.tar.gz"  # 0 differences
+   ```
+
+2. Broken runs (all episodes invalid, wrong provider, key limit) go to `gdrive:_broken/`.
+   A run stopped early (budget, stalled provider) is still a valid run: upload it as usual and
+   say in the report how many episodes per cell it has.
+3. List every uploaded `run_id` in the report's runs table, and upload before the PR is reviewed.
+4. Never commit `runs/` or `~/.config/rclone/rclone.conf` (it holds a Drive token); never paste
+   the token anywhere.
+
+### What a run contains
+
+`runs/<run_id>/`:
+
+- `results.csv`: one row per finished episode. Cell factors (`cell`, `block`, `fault`, `channel`,
+  `delay`, `rules`, `agent`, `key`), the world (`template`, `seed`, `repeat`), the configured and
+  served model and provider, the grade (`outcome`, `correct`, `effect`, `claim`, `sub_claim`,
+  `false_done`, `focal_charges`, …), behaviour (`first_action`, `self_checked`, `delegations`,
+  `stop_reason`, `steps`), tokens, `cost` and `commit`.
+- `<episode_id>/`, named `c<cell>-w<world>-t<template>-s<seed>-r<repeat>`:
+  - `config.json`: the episode config (cell factors; prompts, tools, rules and step limits per
+    role; `model`, `subagent_model`; `commit`) and the bank's fault settings.
+  - `calls.jsonl`: every tool call by every actor (`orchestrator`, `sub-N`): `seq`, `tool`,
+    `args`, `outcome`, `result` or error. The statement channel is built from it.
+  - `effects.jsonl`: the charges that really happened in the bank. The grader's source of truth.
+  - `model_calls.jsonl`: every model request: actor, step, new messages, tools offered, the raw
+    API response (served model and provider), usage and cost. `agents.loop.rebuild_requests`
+    rebuilds the full prompt of each step.
+  - `trace.json`: `orchestrator`, `subagents`, `retells`: messages, finish tool and arguments,
+    `stop_reason`.
+  - `result.json`: the episode's `results.csv` row. Missing if the episode did not finish.
+  - `bank.sqlite`: the bank's final state. `crash.txt`: only if the episode crashed.
+
+To read one episode: `uv run python scripts/show.py runs/<run_id>/<episode_id>`.
+
 ## Agent skills
 
 ### Issue tracker
